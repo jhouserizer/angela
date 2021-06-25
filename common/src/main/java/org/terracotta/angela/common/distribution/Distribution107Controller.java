@@ -58,8 +58,10 @@ import java.util.stream.Collectors;
 
 import static java.io.File.separator;
 import static java.io.File.separatorChar;
+import java.io.Writer;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.join;
+import java.nio.file.StandardOpenOption;
 import static java.util.regex.Pattern.compile;
 import static org.terracotta.angela.common.AngelaProperties.TMS_FULL_LOGGING;
 import static org.terracotta.angela.common.AngelaProperties.TSA_FULL_LOGGING;
@@ -96,9 +98,6 @@ public class Distribution107Controller extends DistributionController {
             compile("^.*\\QMoved to State[ PASSIVE-STANDBY ]\\E.*$"),
             mr -> stateRef.set(TerracottaServerState.STARTED_AS_PASSIVE))
         .andTriggerOn(
-            compile("^.*\\QL2 Exiting\\E.*$"),
-            mr -> stateRef.set(TerracottaServerState.STOPPED))
-        .andTriggerOn(
             compile("^.*\\QMOVE_TO_ACTIVE not allowed because not enough servers are connected\\E.*$"),
             mr -> stateRef.set(TerracottaServerState.START_SUSPENDED))
         .andTriggerOn(
@@ -107,9 +106,23 @@ public class Distribution107Controller extends DistributionController {
               javaPid.set(parseInt(mr.group(1)));
               stateRef.compareAndSet(TerracottaServerState.STOPPED, TerracottaServerState.STARTING);
             });
-    serverLogOutputStream = tsaFullLogging ?
-        serverLogOutputStream.andForward(line -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), line)) :
-        serverLogOutputStream.andTriggerOn(compile("^.*(WARN|ERROR).*$"), mr -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), mr.group()));
+
+    try {
+      Writer stdout = Files.newBufferedWriter(workingDir.toPath().resolve("stdout.txt"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+      serverLogOutputStream = serverLogOutputStream.andForward(line-> {
+        try {
+          stdout.write(line);
+          stdout.flush();
+        } catch (IOException io) {
+          LOGGER.warn("failed to write to stdout file", io);
+        }
+      });
+    } catch (IOException io) {
+      LOGGER.warn("failed to create stdout file", io);
+      serverLogOutputStream = tsaFullLogging ?
+          serverLogOutputStream.andForward(line -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), line)) :
+          serverLogOutputStream.andTriggerOn(compile("^.*(WARN|ERROR).*$"), mr -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), mr.group()));
+    }
 
     WatchedProcess<TerracottaServerState> watchedProcess = new WatchedProcess<>(
         new ProcessExecutor()
