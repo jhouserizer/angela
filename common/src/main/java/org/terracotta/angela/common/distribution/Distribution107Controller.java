@@ -112,6 +112,7 @@ public class Distribution107Controller extends DistributionController {
       serverLogOutputStream = serverLogOutputStream.andForward(line-> {
         try {
           stdout.write(line);
+          stdout.append('\n');
           stdout.flush();
         } catch (IOException io) {
           LOGGER.warn("failed to write to stdout file", io);
