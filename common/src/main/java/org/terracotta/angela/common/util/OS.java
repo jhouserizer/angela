@@ -16,6 +16,8 @@
 package org.terracotta.angela.common.util;
 
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -227,6 +229,7 @@ public class OS {
     }
   }
 
+  @SuppressFBWarnings("DM_DEFAULT_ENCODING")
   private OsInfo getPlatformNameFromFile(final String name, final String version, final String arch, final String filename) {
     if (filename == null) {
       return null;
@@ -243,6 +246,7 @@ public class OS {
     return null;
   }
 
+  @SuppressFBWarnings("DM_DEFAULT_ENCODING")
   private OsInfo readPlatformName(final String name, final String version, final String arch, final BufferedReader br) throws IOException {
     String line;
     String lineToReturn = null;
@@ -256,6 +260,7 @@ public class OS {
     return new OsInfo(name, version, arch, lineToReturn);
   }
 
+  @SuppressFBWarnings("DM_DEFAULT_ENCODING")
   private OsInfo getPlatformNameFromOsRelease(final String name, final String version, final String arch) {
     String fileName = "/etc/os-release";
     File f = new File(fileName);
@@ -270,6 +275,7 @@ public class OS {
     return null;
   }
 
+  @SuppressFBWarnings("DM_DEFAULT_ENCODING")
   private OsInfo readPlatformNameFromOsRelease(final String name, final String version, final String arch, final BufferedReader br) throws IOException {
     String distribName = "Linux";
     String distribVersion = "";
@@ -284,12 +290,13 @@ public class OS {
       if (line.startsWith("ID="))
         distribId = line.replace("ID=", "").replace("\"", "");
     }
-    if (distribName != null && distribId != null) {
+    if (distribId != null) {
       return new OsInfo(name, version, arch, distribName + " " + distribVersion + "(" + distribId + ")");
     }
     return null;
   }
 
+  @SuppressFBWarnings("DM_DEFAULT_ENCODING")
   private OsInfo getPlatformNameFromLsbRelease(final String name, final String version, final String arch) {
     String fileName = "/etc/lsb-release";
     File f = new File(fileName);

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.awaitility.Awaitility;
 import org.junit.Test;
 import org.terracotta.angela.client.ClientArray;
@@ -50,6 +51,7 @@ import static org.terracotta.angela.common.topology.Version.version;
 /**
  * @author Aurelien Broszniowski
  */
+@SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
 public class GettingStarted {
   private static final String EHCACHE_OS_VERSION = "3.8.1";
   private static final String EHCACHE_VERSION = "3.9-SNAPSHOT";

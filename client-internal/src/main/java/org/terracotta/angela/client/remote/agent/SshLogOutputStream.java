@@ -20,7 +20,7 @@ import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.common.util.ExternalLoggers;
 import org.terracotta.angela.common.util.LogOutputStream;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Aurelien Broszniowski
@@ -30,7 +30,7 @@ class SshLogOutputStream extends LogOutputStream {
 
   private final String serverName;
   private final Session.Command cmd;
-  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final CountDownLatch started = new CountDownLatch(1);
 
   SshLogOutputStream(String serverName, Session.Command cmd) {
     this.serverName = serverName;
@@ -41,21 +41,15 @@ class SshLogOutputStream extends LogOutputStream {
   protected void processLine(String line) {
     ExternalLoggers.sshLogger.info("[{}] {}", serverName, line);
     if (line.contains(Agent.AGENT_IS_READY_MARKER_LOG)) {
-      started.set(true);
+      started.countDown();
     }
   }
 
-  public void waitForStartedState() {
-    while (!started.get()) {
-      if (!cmd.isOpen()) {
-        throw new RuntimeException("agent refused to start");
-      }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+  public void waitForStartedState() throws InterruptedException {
+    if (!cmd.isOpen()) {
+      throw new RuntimeException("agent refused to start");
     }
+    started.await();
   }
 
 }

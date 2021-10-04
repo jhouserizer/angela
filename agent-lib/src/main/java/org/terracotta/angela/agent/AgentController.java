@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.agent;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.IOUtils;
 import org.apache.ignite.Ignite;
 import org.slf4j.Logger;
@@ -638,6 +639,8 @@ public class AgentController {
     return remoteClientManager.spawnClient(instanceId, tcEnv, joinedNodes, ignitePort, portAllocator);
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "REC_CATCH_EXCEPTION"})
   public void downloadFiles(InstanceId instanceId, File installDir) {
     final BlockingQueue<Object> queue = IgniteCommonHelper.fileTransferQueue(ignite, instanceId);
     try {
@@ -707,6 +710,8 @@ public class AgentController {
     return baos.toByteArray();
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   public void uploadFile(String filename, byte[] data) {
     File file = new File(filename);
     file.getParentFile().mkdirs();
@@ -767,7 +772,7 @@ public class AgentController {
     }
 
     static Optional<Dirs> discover(InstanceId instanceId, String hostName, Distribution distribution, License license, String kitInstallationName, String kitInstallationPath) {
-      File kitPath = null;
+      File kitPath;
       if (kitInstallationPath == null) {
         RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
         if (!kitManager.isKitAvailable()) {

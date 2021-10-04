@@ -18,6 +18,7 @@ package org.terracotta.angela.common.util;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 
 /**
  * Base class to connect a logging system to the output and/or
@@ -55,7 +56,7 @@ public abstract class LogOutputStream extends OutputStream {
       // new line is started in case of
       // - CR (regardless of previous character)
       // - LF if previous character was not CR and not LF
-      if (c == '\r' || (c == '\n' && (lastReceivedByte != '\r' && lastReceivedByte != '\n'))) {
+      if (c == '\r' || lastReceivedByte != '\r' && lastReceivedByte != '\n') {
         processBuffer();
       }
     } else {
@@ -126,7 +127,11 @@ public abstract class LogOutputStream extends OutputStream {
    * Converts the buffer to a string and sends it to <code>processLine</code>.
    */
   protected void processBuffer() {
-    processLine(buffer.toString());
+    try {
+      processLine(buffer.toString("UTF-8"));
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError(e);
+    }
     buffer.reset();
   }
 

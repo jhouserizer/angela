@@ -59,6 +59,7 @@ import static org.terracotta.angela.common.topology.Version.version;
 /**
  * @author Aurelien Broszniowski
  */
+@SuppressWarnings("serial")
 public class InstallTest {
   @Test
   public void testHardwareMetricsLogs() throws Exception {

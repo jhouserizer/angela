@@ -39,12 +39,13 @@ public class TmsClientSecurityConfig {
   }
 
   public TrustManagerFactory getTrustManagerFactory() throws IOException, GeneralSecurityException {
-    InputStream truststoreStream = new FileInputStream(trustStoreUri.getPath());
-    KeyStore truststore = KeyStore.getInstance("JKS");
-    truststore.load(truststoreStream, trustStorePassword.toCharArray());
-    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-    trustManagerFactory.init(truststore);
-    return trustManagerFactory;
+    try (InputStream truststoreStream = new FileInputStream(trustStoreUri.getPath())) {
+      KeyStore truststore = KeyStore.getInstance("JKS");
+      truststore.load(truststoreStream, trustStorePassword.toCharArray());
+      TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      trustManagerFactory.init(truststore);
+      return trustManagerFactory;
+    }
   }
 
   public String getUsername() {

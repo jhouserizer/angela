@@ -32,5 +32,6 @@ public interface Disruptor extends AutoCloseable {
    */
   void undisrupt();
 
-
+  @Override
+  void close();
 }

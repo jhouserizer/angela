@@ -80,8 +80,8 @@ public class Distribution107Controller extends DistributionController {
 
   @Override
   public TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir,
-                                                   Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
-                                                   TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
+                                          Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
+                                          TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
     Map<String, String> env = tcEnv.buildEnv(envOverrides);
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(TerracottaServerState.STOPPED);
     AtomicInteger javaPid = new AtomicInteger(-1);
@@ -106,13 +106,14 @@ public class Distribution107Controller extends DistributionController {
               stateRef.compareAndSet(TerracottaServerState.STOPPED, TerracottaServerState.STARTING);
             });
 
+    final AtomicReference<Writer> stdout = new AtomicReference<>();
     try {
-      Writer stdout = Files.newBufferedWriter(workingDir.toPath().resolve("stdout.txt"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-      serverLogOutputStream = serverLogOutputStream.andForward(line-> {
+      stdout.set(Files.newBufferedWriter(workingDir.toPath().resolve("stdout.txt"), StandardOpenOption.CREATE, StandardOpenOption.APPEND));
+      serverLogOutputStream = serverLogOutputStream.andForward(line -> {
         try {
-          stdout.write(line);
-          stdout.append('\n');
-          stdout.flush();
+          stdout.get().write(line);
+          stdout.get().append('\n');
+          stdout.get().flush();
         } catch (IOException io) {
           LOGGER.warn("failed to write to stdout file", io);
         }
@@ -184,6 +185,12 @@ public class Distribution107Controller extends DistributionController {
                   getState()
               )
           );
+        }
+        if (stdout.get() != null) {
+          try {
+            stdout.get().close();
+          } catch (IOException ignored) {
+          }
         }
       }
     };

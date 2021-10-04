@@ -17,7 +17,7 @@ package org.terracotta.angela.client.remote.agent;
 
 public class NoRemoteAgentLauncher implements RemoteAgentLauncher {
   @Override
-  public void close() throws Exception {
+  public void close() {
 
   }
 

@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.tcconfig.holders;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
@@ -85,6 +86,8 @@ public class TcConfig10Holder extends TcConfigHolder {
     return (NodeList) xPath.evaluate("//*[name()='servers']//*[name()='server']", tcConfigXml.getDocumentElement(), XPathConstants.NODESET);
   }
 
+  @SuppressWarnings("deprecation")
+  @SuppressFBWarnings("WHITE_LIST_DEPRECATED_DIR_NAME")
   @Override
   public void updateSecurityRootDirectoryLocation(final String securityRootDirectory) {
     modifyXml((tcConfigXml, xPath) -> {

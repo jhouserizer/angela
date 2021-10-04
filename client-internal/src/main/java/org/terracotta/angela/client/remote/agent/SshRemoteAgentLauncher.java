@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.client.remote.agent;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.connection.ConnectionException;
@@ -40,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -102,6 +104,7 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
     }
   }
 
+  @SuppressFBWarnings({"NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE", "REC_CATCH_EXCEPTION"})
   @Override
   public void remoteStartAgentOn(String hostname, String nodeName, int igniteDiscoveryPort, int igniteComPort, String addressesToDiscover) {
     initAgentJar();
@@ -126,12 +129,12 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
 
       Path baseDir = Agent.ROOT_DIR.resolve(angelaHome);
       Path jarsDir = baseDir.resolve("jars");
-      exec(ssh, "mkdir -p " + baseDir.toString());
+      exec(ssh, "mkdir -p " + baseDir);
       exec(ssh, "chmod a+w " + baseDir.getParent().toString());
-      exec(ssh, "chmod a+w " + baseDir.toString());
-      exec(ssh, "mkdir -p " + jarsDir.toString());
-      exec(ssh, "chmod a+w " + jarsDir.toString());
-      if (agentJarFile.getName().endsWith("-SNAPSHOT.jar") || exec(ssh, "[ -e " + jarsDir.resolve(agentJarFile.getName()).toString() + " ]") != 0) {
+      exec(ssh, "chmod a+w " + baseDir);
+      exec(ssh, "mkdir -p " + jarsDir);
+      exec(ssh, "chmod a+w " + jarsDir);
+      if (agentJarFile.getName().endsWith("-SNAPSHOT.jar") || exec(ssh, "[ -e " + jarsDir.resolve(agentJarFile.getName()) + " ]") != 0) {
         // jar file is a snapshot or does not exist, upload it
         LOGGER.info("uploading agent jar {} ...", agentJarFile.getName());
         uploadJar(ssh, agentJarFile, jarsDir);
@@ -148,8 +151,8 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
           "-Dignite.discovery.port=" + igniteDiscoveryPort + " " +
           "-Dignite.com.port=" + igniteComPort + " " +
           "-D" + DIRECT_JOIN.getPropertyName() + "=" + addressesToDiscover + " " +
-          "-D" + ROOT_DIR.getPropertyName() + "=" + baseDir.toString() + " " +
-          "-jar " + jarsDir.resolve(agentJarFile.getName()).toString());
+          "-D" + ROOT_DIR.getPropertyName() + "=" + baseDir + " " +
+          "-jar " + jarsDir.resolve(agentJarFile.getName()));
 
       SshLogOutputStream sshLogOutputStream = new SshLogOutputStream(hostname, cmd);
       new StreamCopier(cmd.getInputStream(), sshLogOutputStream, net.schmizz.sshj.common.LoggerFactory.DEFAULT).bufSize(MAX_LINE_LENGTH)
@@ -167,6 +170,7 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
     }
   }
 
+  @SuppressFBWarnings("REC_CATCH_EXCEPTION")
   private static Map.Entry<File, Boolean> findAgentJarFile() {
     try {
       if (AngelaVersions.INSTANCE.isSnapshot()) {
@@ -262,22 +266,38 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
     throw new RuntimeException("No JDK configured in remote toolchains.xml is valid; wanted : " + tcEnv + ", found : " + jdks);
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   @Override
-  public void close() throws Exception {
+  public void close() {
     if (agentJarFileShouldBeRemoved) {
       agentJarFile.delete();
     }
+    UncheckedIOException uioe = null;
     for (Map.Entry<String, RemoteAgentHolder> entry : clients.entrySet()) {
       RemoteAgentHolder holder = entry.getValue();
       LOGGER.info("Cleaning up SSH agent on {}", entry.getKey());
 
       // 0x03 is the character for CTRL-C -> send it to the remote PTY
-      holder.session.getOutputStream().write(0x03);
-      safeClose(holder.command);
-      safeClose(holder.session);
-      safeClose(holder.sshClient);
+      try {
+        OutputStream os = holder.session.getOutputStream();
+        os.write(0x03);
+      } catch (IOException e) {
+        if (uioe == null) {
+          uioe = new UncheckedIOException(e);
+        } else {
+          uioe.addSuppressed(e);
+        }
+      } finally {
+        safeClose(holder.command);
+        safeClose(holder.session);
+        safeClose(holder.sshClient);
+      }
     }
     clients.clear();
+    if (uioe != null) {
+      throw uioe;
+    }
   }
 
   private static void safeClose(Closeable closeable) {

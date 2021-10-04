@@ -19,6 +19,7 @@ package org.terracotta.angela.common;
  * @author Aurelien Broszniowski
  */
 public class ToolException extends RuntimeException {
+  private static final long serialVersionUID = 1L;
   private final String commandOutput;
   private final int exitValue;
 

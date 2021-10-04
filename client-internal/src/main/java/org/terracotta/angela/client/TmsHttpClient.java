@@ -147,7 +147,7 @@ public class TmsHttpClient {
       saveHeaders(connection);
       checkResponseCode(connection);
       try (InputStream inputStream = connection.getInputStream()) {
-        return IOUtils.toString(inputStream);
+        return IOUtils.toString(inputStream, UTF_8);
       }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -163,7 +163,7 @@ public class TmsHttpClient {
       saveHeaders(connection);
       checkResponseCode(connection);
       try (InputStream inputStream = connection.getInputStream()) {
-        return IOUtils.toString(inputStream);
+        return IOUtils.toString(inputStream, UTF_8);
       }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -247,6 +247,8 @@ public class TmsHttpClient {
   }
 
   public static class FailedHttpRequestException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
     public FailedHttpRequestException(int responseCode) {
       super("The HTTP request failed with response code : " + responseCode);
     }

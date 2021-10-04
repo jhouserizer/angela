@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.agent.client;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
@@ -87,6 +88,8 @@ public class RemoteClientManager {
     }
   }
 
+  @SuppressWarnings("BusyWait")
+  @SuppressFBWarnings("REC_CATCH_EXCEPTION")
   public int spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv, Collection<String> joinedNodes, int ignitePort, PortAllocator portAllocator) {
     try {
       String javaHome = tcEnv.getJavaHome();

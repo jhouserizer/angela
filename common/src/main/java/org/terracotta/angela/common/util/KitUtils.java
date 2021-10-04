@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -41,6 +42,7 @@ public class KitUtils {
     setCorrectPermissions(kitDest);
   }
 
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   public static void extractArchive(ArchiveInputStream archiveIs, Path pathOutput) throws IOException {
     while (true) {
       ArchiveEntry archiveEntry = archiveIs.getNextEntry();

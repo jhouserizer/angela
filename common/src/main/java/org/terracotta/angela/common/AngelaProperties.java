@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.IpUtils;
@@ -24,6 +25,7 @@ import java.nio.file.Paths;
 /**
  * Listing of all system properties supported in angela
  */
+@SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")
 public enum AngelaProperties {
   // root dir where Angela puts installation, work directories and any file that is needed
   ROOT_DIR("angela.rootDir", Paths.get("/data/angela").toAbsolutePath().toString()),

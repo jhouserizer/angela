@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.tcconfig.holders;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.net.PortAllocator;
@@ -104,6 +105,7 @@ public abstract class TcConfigHolder {
 
   protected abstract NodeList getServersList(Document tcConfigXml, XPath xPath) throws XPathExpressionException;
 
+  @SuppressFBWarnings("REC_CATCH_EXCEPTION")
   public List<TerracottaServer> getServers() {
     if (this.servers.size() == 0) {
       List<TerracottaServer> servers = new ArrayList<>();

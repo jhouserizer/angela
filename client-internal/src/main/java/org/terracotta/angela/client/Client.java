@@ -148,7 +148,7 @@ public class Client implements Closeable {
       return CompletableFuture.completedFuture(null);
     } else {
       IgniteFuture<Void> igniteFuture = IgniteClientHelper.executeRemotelyAsync(ignite, instanceId.toString(), ignitePort, call);
-      return new ClientJobFuture(igniteFuture);
+      return new ClientJobFuture<>(igniteFuture);
     }
   }
 
@@ -268,6 +268,7 @@ public class Client implements Closeable {
   }
 
   public static class RemoteExecutionException extends Exception {
+    private static final long serialVersionUID = 1L;
     private final String remoteStackTrace;
     private String tabulation = "\t";
 

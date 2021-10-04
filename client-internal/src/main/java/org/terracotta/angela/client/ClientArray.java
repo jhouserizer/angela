@@ -93,7 +93,7 @@ public class ClientArray implements AutoCloseable {
     }
   }
 
-  private void uninstallAll() throws IOException {
+  private void uninstallAll() {
     List<Exception> exceptions = new ArrayList<>();
 
     for (ClientId clientId : clientArrayConfigurationContext.getClientArrayTopology().getClientIds()) {
@@ -105,13 +105,13 @@ public class ClientArray implements AutoCloseable {
     }
 
     if (!exceptions.isEmpty()) {
-      IOException ioException = new IOException("Error uninstalling some clients");
-      exceptions.forEach(ioException::addSuppressed);
-      throw ioException;
+      RuntimeException ex = new RuntimeException("Error uninstalling some clients");
+      exceptions.forEach(ex::addSuppressed);
+      throw ex;
     }
   }
 
-  private void uninstall(ClientId clientId) throws IOException {
+  private void uninstall(ClientId clientId) {
     logger.info("uninstalling {}", clientId);
     Client client = clients.get(clientId);
     try {
@@ -200,7 +200,7 @@ public class ClientArray implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     if (closed) {
       return;
     }

@@ -30,7 +30,10 @@ import java.util.Map;
 /**
  * @author vmad
  */
+@SuppressWarnings("DeprecatedIsStillUsed")
 public class SecurityRootDirectory implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   static final String TRUSTED_AUTHORITY_DIR_NAME = "trusted-authority";
   static final String IDENTITY_DIR_NAME = "identity";

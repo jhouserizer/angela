@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.agent.kit;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.KitResolver;
@@ -114,6 +115,7 @@ public class LocalKitManager extends KitManager {
     }
   }
 
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   void unlockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} unlock", Thread.currentThread().getId());
     File file = localInstallerPath.getParent().resolve(INSTALLATION_LOCK_FILE_NAME).toFile();
@@ -125,11 +127,13 @@ public class LocalKitManager extends KitManager {
     }
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"})
   void lockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} lock", Thread.currentThread().getId());
-    Path lockDir = localInstallerPath.getParent();
-    lockDir.toFile().mkdirs();
-    File file = lockDir.resolve(INSTALLATION_LOCK_FILE_NAME).toFile();
+
+    localInstallerPath.toFile().getParentFile().mkdirs();
+    File file = new File(localInstallerPath.toFile().getParentFile(), INSTALLATION_LOCK_FILE_NAME);
     logger.info("Creating Installer lock file at: {}", file);
     try {
       if (!file.createNewFile()) {
@@ -193,6 +197,7 @@ public class LocalKitManager extends KitManager {
     }
   }
 
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   public String getKitInstallationName() {
     return kitInstallationPath.getFileName().toString();
   }

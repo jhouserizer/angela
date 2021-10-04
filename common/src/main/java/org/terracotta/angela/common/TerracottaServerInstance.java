@@ -125,7 +125,7 @@ public class TerracottaServerInstance implements Closeable {
   }
 
   public ToolExecutionResult jcmd(TerracottaCommandLineEnvironment env, String... arguments) {
-    return distributionController.invokeJcmd(getServerHandle(), env, arguments);
+    return DistributionController.invokeJcmd(getServerHandle(), env, arguments);
   }
 
   public void waitForState(Set<TerracottaServerState> terracottaServerStates) {

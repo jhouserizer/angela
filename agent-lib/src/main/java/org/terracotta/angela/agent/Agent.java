@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.agent;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
@@ -81,6 +82,7 @@ public class Agent {
     Runtime.getRuntime().addShutdownHook(new Thread(agent::close));
   }
 
+  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
   public void startLocalCluster() {
     if (!Objects.isNull(controller)) {
       throw new IllegalStateException("controller already initiated");
@@ -97,6 +99,7 @@ public class Agent {
     System.out.flush();
   }
 
+  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
   public void startCluster(Collection<String> peers, String nodeName, int igniteDiscoveryPort, int igniteComPort) {
     if (!Objects.isNull(controller)) {
       throw new IllegalStateException("controller already initiated");
@@ -147,6 +150,7 @@ public class Agent {
     System.out.flush();
   }
 
+  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
   public void close() {
     if (ignite != null) {
       ignite.close();

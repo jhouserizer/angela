@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.metrics;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.ProcessUtil;
@@ -25,9 +26,10 @@ import org.zeroturnaround.process.PidUtil;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,8 +44,10 @@ public class HardwareMetricsCollector {
   public final static String METRICS_DIRECTORY = "metrics";
 
   private FileOutputStream outputStream;
-  private Map<HardwareMetric, StartedProcess> processes = new HashMap<>();
+  private final Map<HardwareMetric, StartedProcess> processes = new HashMap<>();
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   public void startMonitoring(final File installLocation, final Map<HardwareMetric, MonitoringCommand> commands) {
     if (commands != null && commands.size() != 0) {
       File statsDirectory = new File(installLocation, METRICS_DIRECTORY);
@@ -69,8 +73,8 @@ public class HardwareMetricsCollector {
           LOGGER.debug("Starting process with env: {}", pe.getEnvironment());
           processes.put(hardwareMetric, pe.start());
         } catch (IOException e) {
-          try (FileWriter fileWriter = new FileWriter(statsFile)) {
-            fileWriter.write("Error executing command '" + command.getCommandName() + "': " + e.getMessage());
+          try {
+            Files.write(statsFile.toPath(), ("Error executing command '" + command.getCommandName() + "': " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
           } catch (IOException ioe) {
             throw new UncheckedIOException(ioe);
           }

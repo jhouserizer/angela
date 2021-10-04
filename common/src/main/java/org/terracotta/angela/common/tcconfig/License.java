@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 /**
@@ -37,7 +38,7 @@ public class License {
       if (is == null) {
         throw new IllegalArgumentException("License file is not present");
       }
-      licenseContent = IOUtils.toString(is);
+      licenseContent = IOUtils.toString(is, StandardCharsets.UTF_8);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
@@ -48,7 +49,7 @@ public class License {
     // tests are concurrently using a kit so do not re-write a license file
     if(!licenseFile.exists()) {
       try {
-        Files.write(licenseFile.toPath(), licenseContent.getBytes());
+        Files.write(licenseFile.toPath(), licenseContent.getBytes(StandardCharsets.UTF_8));
       } catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }

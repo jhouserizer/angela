@@ -16,7 +16,6 @@
 package org.terracotta.angela.common.tms.security.config;
 
 import org.junit.Test;
-import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 
 import java.util.Map;
 
@@ -30,6 +29,7 @@ import static org.junit.Assert.assertThat;
 public class TmsServerSecurityConfigTest {
 
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testSettersGetters() {
 
@@ -92,6 +92,7 @@ public class TmsServerSecurityConfigTest {
     assertThat(tmsServerSecurityConfig.getDeprecatedSecurityLevel(), is(TmsServerSecurityConfig.NOT_SET_VALUE));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testToMapValues() {
 
@@ -118,6 +119,7 @@ public class TmsServerSecurityConfigTest {
     assertThat(map.get(TmsServerSecurityConfig.DEPRECATED_SECURITY_LEVEL), is("DeprecatedSecurityLevel()"));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testToMapNullValues() {
 
@@ -160,6 +162,7 @@ public class TmsServerSecurityConfigTest {
     assertThat(map.containsKey(TmsServerSecurityConfig.DEPRECATED_SECURITY_LEVEL), is(true));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testToMapEmptyValues() {
 

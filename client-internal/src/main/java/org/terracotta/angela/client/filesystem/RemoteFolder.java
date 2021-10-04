@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.client.filesystem;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.IOUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
@@ -72,6 +73,8 @@ public class RemoteFolder extends RemoteFile {
     }
   }
 
+  @SuppressWarnings("ConstantConditions")
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   private void uploadFolder(String parentName, File folder) throws IOException {
     File[] files = folder.listFiles();
     for (File f : files) {
@@ -98,6 +101,8 @@ public class RemoteFolder extends RemoteFile {
     IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.uploadFile(filename, data));
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   @Override
   public void downloadTo(File localPath) throws IOException {
     String foldername = getAbsoluteName();

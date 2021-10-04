@@ -87,7 +87,7 @@ public class TsaStripeConfig {
     return persistenceDataName;
   }
 
-  public class TsaOffheapConfig {
+  public static class TsaOffheapConfig {
 
     private final String resourceName;
     private final String size;
@@ -112,7 +112,7 @@ public class TsaStripeConfig {
     }
   }
 
-  public class TsaDataDirectory {
+  public static class TsaDataDirectory {
 
     private final String dataName;
     private final String location;

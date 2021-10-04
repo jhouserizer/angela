@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.client.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -156,6 +157,8 @@ public class IgniteClientHelper {
     }
   }
 
+  @SuppressWarnings("ConstantConditions")
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   private static void uploadFile(IgniteFuture<Void> remoteDownloadFuture, BlockingQueue<Object> queue, File file, String path) throws InterruptedException, IOException {
     if (remoteDownloadFuture.isDone()) {
       throw new RuntimeException("Download process failed, cancelling upload");

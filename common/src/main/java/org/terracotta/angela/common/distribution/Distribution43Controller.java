@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance.TerracottaManagementServerInstanceProcess;
+import org.terracotta.angela.common.TerracottaServerHandle;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.TerracottaVoterInstance.TerracottaVoterInstanceProcess;
@@ -36,6 +37,8 @@ import org.terracotta.angela.common.topology.Version;
 import org.terracotta.angela.common.util.ExternalLoggers;
 import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.OS;
+import org.terracotta.angela.common.util.ProcessUtil;
+import org.terracotta.angela.common.util.RetryUtils;
 import org.terracotta.angela.common.util.TriggeringOutputStream;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -43,6 +46,7 @@ import org.zeroturnaround.exec.ProcessResult;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -55,7 +59,6 @@ import java.util.stream.Collectors;
 import static java.io.File.separator;
 import static java.util.regex.Pattern.compile;
 import static org.terracotta.angela.common.AngelaProperties.TSA_FULL_LOGGING;
-import org.terracotta.angela.common.TerracottaServerHandle;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STOPPED;
@@ -64,8 +67,6 @@ import static org.terracotta.angela.common.topology.PackageType.SAG_INSTALLER;
 import static org.terracotta.angela.common.util.HostAndIpValidator.isValidHost;
 import static org.terracotta.angela.common.util.HostAndIpValidator.isValidIPv4;
 import static org.terracotta.angela.common.util.HostAndIpValidator.isValidIPv6;
-import org.terracotta.angela.common.util.ProcessUtil;
-import org.terracotta.angela.common.util.RetryUtils;
 
 /**
  * @author Aurelien Broszniowski
@@ -130,7 +131,6 @@ public class Distribution43Controller extends DistributionController {
         stateRef,
         STOPPED);
 
-    int wrapperPid = watchedProcess.getPid();
     Number javaPid = findWithJcmdJavaPidOf(terracottaServer.getId().toString(), tcEnv);
     return new TerracottaServerHandle() {
       @Override
@@ -297,10 +297,10 @@ public class Distribution43Controller extends DistributionController {
         String modifiedTcConfigPath = tcConfig.getPath()
             .substring(0, tcConfig.getPath()
                 .length() - 4) + "-" + serverSymbolicName.getSymbolicName() + ".xml";
-        String modifiedConfig = FileUtils.readFileToString(new File(tcConfig.getPath())).
+        String modifiedConfig = FileUtils.readFileToString(new File(tcConfig.getPath()), StandardCharsets.UTF_8).
             replaceAll(Pattern.quote("${restart-data}"), "restart-data/" + serverSymbolicName).
             replaceAll(Pattern.quote("${SERVER_NAME_TEMPLATE}"), serverSymbolicName.getSymbolicName());
-        FileUtils.write(new File(modifiedTcConfigPath), modifiedConfig);
+        FileUtils.write(new File(modifiedTcConfigPath), modifiedConfig, StandardCharsets.UTF_8);
         options.add("-f");
         options.add(modifiedTcConfigPath);
       } catch (IOException ioe) {

@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela.client.filesystem;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public class TransportableFile {
 
   private final String name;
@@ -29,6 +31,7 @@ public class TransportableFile {
     return name;
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public byte[] getContent() {
     return content;
   }

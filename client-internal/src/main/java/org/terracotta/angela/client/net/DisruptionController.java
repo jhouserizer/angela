@@ -190,7 +190,7 @@ public class DisruptionController implements AutoCloseable {
 
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     LOGGER.debug("closing disruption controller");
     ArrayList<Disruptor> copy = new ArrayList<>(existingDisruptors);
     for (Disruptor disruption : copy) {

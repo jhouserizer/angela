@@ -160,9 +160,9 @@ public class Distribution107InlineController extends Distribution107Controller {
 
   private static Object invokeOnObject(Object server, String method, Object...args) {
     try {
-      Class[] clazz = new Class[args.length];
+      Class<?>[] clazz = new Class<?>[args.length];
       for (int x=0;x<args.length;x++) {
-        Class sig = args[x] != null ? args[x].getClass() : null;
+        Class<?> sig = args[x] != null ? args[x].getClass() : null;
         clazz[x] = sig;
       }
       Method m = server.getClass().getMethod(method, clazz);
