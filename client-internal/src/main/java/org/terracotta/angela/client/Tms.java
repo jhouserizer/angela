@@ -96,13 +96,13 @@ public class Tms implements AutoCloseable {
 
   public RemoteFolder browse(String root) {
     String tmsHostname = tmsConfigurationContext.getHostname();
-    String path = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.controller.getTmsInstallationPath(instanceId));
+    String path = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().getTmsInstallationPath(instanceId));
     return new RemoteFolder(ignite, tmsHostname, ignitePort, path, root);
   }
 
   public TerracottaManagementServerState getTmsState() {
     return IgniteClientHelper.executeRemotely(ignite, tmsConfigurationContext.getHostname(), ignitePort,
-        () -> Agent.controller.getTmsState(instanceId));
+        () -> Agent.getInstance().getController().getTmsState(instanceId));
   }
 
   public Tms start() {
@@ -112,7 +112,7 @@ public class Tms implements AutoCloseable {
   public Tms start(Map<String, String> envOverrides) {
     String tmsHostname = tmsConfigurationContext.getHostname();
     logger.info("Starting TMS on {}", tmsHostname);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.controller.startTms(instanceId, envOverrides));
+    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().startTms(instanceId, envOverrides));
     return this;
   }
 
@@ -151,7 +151,7 @@ public class Tms implements AutoCloseable {
     logger.info("Uninstalling TMS from {}", tmsHostname);
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort,
-        () -> Agent.controller.uninstallTms(instanceId, tmsConfigurationContext.getDistribution(),
+        () -> Agent.getInstance().getController().uninstallTms(instanceId, tmsConfigurationContext.getDistribution(),
             tmsConfigurationContext.getSecurityConfig(),
             localKitManager.getKitInstallationName(), tmsHostname, kitInstallationPath));
   }
@@ -170,7 +170,7 @@ public class Tms implements AutoCloseable {
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
     logger.info("Attempting to remotely install if distribution already exists on {}", tmsHostname);
-    IgniteCallable<Boolean> callable = () -> Agent.controller.installTms(instanceId, tmsHostname, distribution, license,
+    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installTms(instanceId, tmsHostname, distribution, license,
         tmsServerSecurityConfig, localKitManager.getKitInstallationName(), tcEnv, tmsConfigurationContext.getHostname(), kitInstallationPath);
     boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, callable);
 
@@ -196,7 +196,7 @@ public class Tms implements AutoCloseable {
     }
 
     logger.info("Stopping TMS on {}", tmsHostname);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.controller.stopTms(instanceId));
+    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().stopTms(instanceId));
   }
 
 }

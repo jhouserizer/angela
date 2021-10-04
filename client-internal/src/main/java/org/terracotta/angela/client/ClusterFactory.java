@@ -17,6 +17,7 @@ package org.terracotta.angela.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.MonitoringConfigurationContext;
@@ -28,6 +29,7 @@ import org.terracotta.angela.client.remote.agent.RemoteAgentLauncher;
 import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 
 import java.io.IOException;
@@ -58,6 +60,8 @@ public class ClusterFactory implements AutoCloseable {
   private static final DateTimeFormatter PATH_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-hhmmssSSS");
 
   private final List<AutoCloseable> controllers = new ArrayList<>();
+  private final Agent localAgent;
+  private final PortAllocator portAllocator;
   private final String idPrefix;
   private final AtomicInteger instanceIndex;
   private final Map<String, String> agentsInstance = new HashMap<>();
@@ -66,15 +70,14 @@ public class ClusterFactory implements AutoCloseable {
   private transient RemoteAgentLauncher remoteAgentLauncher;
   private InstanceId monitorInstanceId;
 
-  private final ClusterAgent localAgent;
-
-  public ClusterFactory(ClusterAgent agent, String idPrefix, ConfigurationContext configurationContext) {
+  ClusterFactory(Agent agent, PortAllocator portAllocator, String idPrefix, ConfigurationContext configurationContext) {
     // Using UTC to have consistent layout even in case of timezone skew between client and server.
     this.idPrefix = idPrefix + "-" + LocalDateTime.now(ZoneId.of("UTC")).format(PATH_FORMAT);
     this.instanceIndex = new AtomicInteger();
     this.configurationContext = configurationContext;
     this.remoteAgentLauncher = configurationContext.remoting().buildRemoteAgentLauncher();
     this.localAgent = agent;
+    this.portAllocator = portAllocator;
     agentsInstance.put("localhost", "localhost:" + localAgent.getIgniteDiscoveryPort());
   }
 
@@ -124,7 +127,7 @@ public class ClusterFactory implements AutoCloseable {
     }
     InstanceId instanceId = init(TSA, tsaConfigurationContext.getTopology().getServersHostnames());
 
-    Tsa tsa = new Tsa(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), localAgent.getPortAllocator(), instanceId, tsaConfigurationContext);
+    Tsa tsa = new Tsa(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), portAllocator, instanceId, tsaConfigurationContext);
     controllers.add(tsa);
     return tsa;
   }

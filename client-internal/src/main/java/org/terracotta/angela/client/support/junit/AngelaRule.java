@@ -17,8 +17,8 @@ package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
 import org.junit.runners.model.MultipleFailureException;
+import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
 import org.terracotta.angela.client.ClusterTool;
@@ -46,7 +46,7 @@ import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASS
  */
 public class AngelaRule extends ExtendedTestRule {
 
-  private final ClusterAgent localAgent;
+  private final Supplier<AngelaOrchestrator> angelaOrchestratorSupplier;
   private ConfigurationContext configuration;
   private final boolean autoStart;
   private final boolean autoActivate;
@@ -61,12 +61,16 @@ public class AngelaRule extends ExtendedTestRule {
   private Supplier<ConfigTool> configTool;
   private Supplier<ClusterTool> clusterTool;
 
-  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration) {
-    this(localAgent, configuration, false, false);
+  public AngelaRule(AngelaOrchestrator angelaOrchestrator, ConfigurationContext configuration) {
+    this(angelaOrchestrator, configuration, false, false);
   }
 
-  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
-    this.localAgent = localAgent;
+  public AngelaRule(AngelaOrchestrator angelaOrchestrator, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+    this(() -> angelaOrchestrator, configuration, autoStart, autoActivate);
+  }
+
+  public AngelaRule(Supplier<AngelaOrchestrator> angelaOrchestratorSupplier, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+    this.angelaOrchestratorSupplier = angelaOrchestratorSupplier;
     this.configuration = configuration;
     this.autoStart = autoStart;
     this.autoActivate = autoActivate;
@@ -86,7 +90,9 @@ public class AngelaRule extends ExtendedTestRule {
   protected void before(Description description) throws Throwable {
     final int nodePortCount = computeNodePortCount();
 
-    PortAllocator.PortReservation nodePortReservation = localAgent.getPortAllocator().reserve(nodePortCount);
+    AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
+
+    PortAllocator.PortReservation nodePortReservation = angelaOrchestrator.getPortAllocator().reserve(nodePortCount);
 
     // assign generated ports to nodes
     for (TerracottaServer node : configuration.tsa().getTopology().getServers()) {
@@ -103,7 +109,7 @@ public class AngelaRule extends ExtendedTestRule {
       id += "." + description.getMethodName();
     }
 
-    this.clusterFactory = new ClusterFactory(localAgent, id, configuration);
+    this.clusterFactory = angelaOrchestrator.newClusterFactory(id, configuration);
 
     tsa = memoize(clusterFactory::tsa);
     cluster = memoize(clusterFactory::cluster);

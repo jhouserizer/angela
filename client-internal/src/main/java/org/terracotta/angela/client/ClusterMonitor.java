@@ -61,7 +61,7 @@ public class ClusterMonitor implements AutoCloseable {
 
     for (String hostname : hostnames) {
       try {
-        IgniteRunnable igniteRunnable = () -> Agent.controller.startHardwareMonitoring(workingPath.toString(), commands);
+        IgniteRunnable igniteRunnable = () -> Agent.getInstance().getController().startHardwareMonitoring(workingPath.toString(), commands);
         IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, igniteRunnable);
       } catch (Exception e) {
         exceptions.add(new RuntimeException("Error starting hardware monitoring on " + hostname, e));
@@ -81,7 +81,7 @@ public class ClusterMonitor implements AutoCloseable {
 
     for (String hostname : hostnames) {
       try {
-        IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.stopHardwareMonitoring());
+        IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.getInstance().getController().stopHardwareMonitoring());
       } catch (Exception e) {
         exceptions.add(e);
       }
@@ -135,7 +135,7 @@ public class ClusterMonitor implements AutoCloseable {
 
   public boolean isMonitoringRunning(HardwareMetric metric) {
     for (String hostname : hostnames) {
-      boolean running = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.isMonitoringRunning(metric));
+      boolean running = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.getInstance().getController().isMonitoringRunning(metric));
       if (!running) {
         return false;
       }

@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.terracotta.angela.common.AngelaProperties.DIRECT_JOIN;
 import static org.terracotta.angela.common.AngelaProperties.IGNITE_LOGGING;
@@ -50,15 +49,15 @@ import static org.terracotta.angela.common.util.FileUtils.createAndValidateDir;
  * @author Ludovic Orban
  */
 public class Agent {
-  public static final String AGENT_IS_READY_MARKER_LOG = "Agent is ready";
-  private final static Logger logger;
-  private Ignite ignite;
 
+  public static final String AGENT_IS_READY_MARKER_LOG = "Agent is ready";
   public static final Path ROOT_DIR;
   public static final Path WORK_DIR;
   public static final Path IGNITE_DIR;
-  //  should this really be static?
-  public static volatile AgentController controller;
+
+  private static final Logger logger;
+
+  private static volatile Agent instance;
 
   static {
     // the angela-agent jar may end up on the classpath, so its logback config cannot have the default filename
@@ -74,36 +73,47 @@ public class Agent {
     IGNITE_DIR = ROOT_DIR.resolve("ignite");
   }
 
-  public static void main(String[] args) {
-    final Agent agent = new Agent();
-    int igniteDiscoveryPort = Integer.parseInt(System.getProperty("ignite.discovery.port"));
-    int igniteComPort = Integer.parseInt(System.getProperty("ignite.com.port"));
-    agent.startCluster(Arrays.asList(DIRECT_JOIN.getValue().split(",")), NODE_NAME.getValue(), igniteDiscoveryPort, igniteComPort);
-    Runtime.getRuntime().addShutdownHook(new Thread(agent::close));
+  private final AgentController controller;
+  private final Ignite ignite;
+  private final int igniteDiscoveryPort;
+  private final int igniteComPort;
+
+  private Agent(AgentController controller, Ignite ignite, int igniteDiscoveryPort, int igniteComPort) {
+    this.controller = controller;
+    this.ignite = ignite;
+    this.igniteDiscoveryPort = igniteDiscoveryPort;
+    this.igniteComPort = igniteComPort;
   }
 
-  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-  public void startLocalCluster() {
-    if (!Objects.isNull(controller)) {
-      throw new IllegalStateException("controller already initiated");
-    }
+  @Override
+  public String toString() {
+    return ignite == null ? "local" : ("localhost:" + igniteDiscoveryPort);
+  }
 
+  public static void main(String[] args) {
+    int igniteDiscoveryPort = Integer.parseInt(System.getProperty("ignite.discovery.port"));
+    int igniteComPort = Integer.parseInt(System.getProperty("ignite.com.port"));
+    Agent agent = startCluster(Arrays.asList(DIRECT_JOIN.getValue().split(",")), NODE_NAME.getValue(), igniteDiscoveryPort, igniteComPort);
+    Agent.setUniqueInstance(agent);
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> Agent.getInstance().close()));
+  }
+
+  public static Agent startLocalCluster() {
     logger.info("Root directory is: {}", ROOT_DIR);
     logger.info("Starting local only cluster");
     createAndValidateDir(ROOT_DIR);
     createAndValidateDir(WORK_DIR);
-    
-    controller = new LocalAgentController(new DefaultPortAllocator());
+
+    Agent agent = new Agent(new LocalAgentController(new DefaultPortAllocator()), null, 0, 0);
+
     // Do not use logger here as the marker is being grep'ed at and we do not want to depend upon the logger config
     System.out.println(AGENT_IS_READY_MARKER_LOG);
     System.out.flush();
+
+    return agent;
   }
 
-  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-  public void startCluster(Collection<String> peers, String nodeName, int igniteDiscoveryPort, int igniteComPort) {
-    if (!Objects.isNull(controller)) {
-      throw new IllegalStateException("controller already initiated");
-    }
+  public static Agent startCluster(Collection<String> peers, String nodeName, int igniteDiscoveryPort, int igniteComPort) {
     logger.info("Root directory is: {}", ROOT_DIR);
     logger.info("Nodename: {} added to cluster", nodeName);
     createAndValidateDir(ROOT_DIR);
@@ -135,6 +145,7 @@ public class Agent {
         .setLocalPort(igniteComPort)
         .setLocalPortRange(0)); // we must not use the range otherwise Ignite might bind to a port not reserved
 
+    Ignite ignite;
     try {
       logger.info("Starting ignite on {}", nodeName);
       ignite = Ignition.start(cfg);
@@ -143,23 +154,61 @@ public class Agent {
     } catch (IgniteException e) {
       throw new RuntimeException("Error starting node " + nodeName, e);
     }
-    controller = new AgentController(ignite, peers, igniteDiscoveryPort, new DefaultPortAllocator());
+    Agent agent = new Agent(new AgentController(ignite, peers, igniteDiscoveryPort, new DefaultPortAllocator()), ignite, igniteDiscoveryPort, igniteComPort);
 
     // Do not use logger here as the marker is being grep'ed at and we do not want to depend upon the logger config
     System.out.println(AGENT_IS_READY_MARKER_LOG);
     System.out.flush();
+
+    return agent;
+  }
+
+  public int getIgniteDiscoveryPort() {
+    return igniteDiscoveryPort;
+  }
+
+  public int getIgniteComPort() {
+    return igniteComPort;
+  }
+
+  public Ignite getIgnite() {
+    return ignite;
+  }
+
+  public AgentController getController() {
+    return controller;
   }
 
   @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
   public void close() {
     if (ignite != null) {
       ignite.close();
-      ignite = null;
     }
-    controller = null;
   }
 
-  public Ignite getIgnite() {
-    return this.ignite;
+  public static synchronized Agent getInstance() {
+    if (instance == null) {
+      throw new IllegalStateException("Agent not initialized");
+    }
+    return instance;
+  }
+
+  public static synchronized void setUniqueInstance(Agent agent) {
+    if (Agent.instance != null) {
+      throw new IllegalStateException("Agent already initialized to: " + Agent.instance);
+    }
+    logger.info("Installing agent: " + agent);
+    Agent.instance = agent;
+  }
+
+  public static synchronized void removeUniqueInstance(Agent agent) {
+    if (Agent.instance == null) {
+      throw new IllegalStateException("Agent not initialized");
+    }
+    if (Agent.instance != agent) {
+      throw new IllegalStateException("Unable to remove installed agent " + Agent.instance + ": caller has another agent " + agent);
+    }
+    logger.info("Uninstalling agent: " + agent);
+    Agent.instance = null;
   }
 }

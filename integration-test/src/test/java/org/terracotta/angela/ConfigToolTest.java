@@ -15,12 +15,13 @@
  */
 package org.terracotta.angela;
 
+import org.junit.Rule;
 import org.junit.Test;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
@@ -41,6 +42,10 @@ import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
 public class ConfigToolTest {
+
+  @Rule
+  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+
   @Test
   public void testFailingConfigToolCommand() throws Exception {
     TerracottaServer server = server("server-1", "localhost")
@@ -55,15 +60,13 @@ public class ConfigToolTest {
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
         .configTool(context -> context.configTool(configTool("config-tool", "localhost")).distribution(distribution));
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "ConfigToolTest::testFailingClusterToolCommand", configContext)) {
-        Tsa tsa = factory.tsa();
-        tsa.startAll();
-        ConfigTool configTool = factory.configTool();
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
+      Tsa tsa = factory.tsa();
+      tsa.startAll();
+      ConfigTool configTool = factory.configTool();
 
-        ToolExecutionResult result = configTool.executeCommand("non-existent-command");
-        assertThat(result, is(not(successful())));
-      }
+      ToolExecutionResult result = configTool.executeCommand("non-existent-command");
+      assertThat(result, is(not(successful())));
     }
   }
 
@@ -81,15 +84,13 @@ public class ConfigToolTest {
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
         .configTool(context -> context.configTool(configTool("config-tool", "localhost")).distribution(distribution));
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "ConfigToolTest::testValidConfigToolCommand", configContext)) {
-        Tsa tsa = factory.tsa();
-        tsa.startAll();
-        ConfigTool configTool = factory.configTool();
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testValidConfigToolCommand", configContext)) {
+      Tsa tsa = factory.tsa();
+      tsa.startAll();
+      ConfigTool configTool = factory.configTool();
 
-        ToolExecutionResult result = configTool.executeCommand("get", "-s", "localhost", "-c", "offheap-resources");
-        System.out.println("######Result: " + result);
-      }
+      ToolExecutionResult result = configTool.executeCommand("get", "-s", "localhost", "-c", "offheap-resources");
+      System.out.println("######Result: " + result);
     }
   }
 }

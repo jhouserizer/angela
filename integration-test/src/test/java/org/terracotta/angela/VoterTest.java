@@ -15,12 +15,13 @@
  */
 package org.terracotta.angela;
 
+import org.junit.Rule;
 import org.junit.Test;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.Topology;
 
@@ -40,6 +41,10 @@ import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
 public class VoterTest {
+
+  @Rule
+  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+
   @Test
   public void testVoterStartup() throws Exception {
     Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
@@ -67,19 +72,17 @@ public class VoterTest {
         .voter(voter -> voter.distribution(distribution).addVoter(voter("voter", "localhost", "localhost:9410", "localhost:9510")))
         .configTool(context -> context.distribution(distribution).configTool(configTool("config-tool", "localhost")));
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "VoterTest::testVoterStartup", configContext)) {
-        factory.tsa().startAll();
-        ConfigTool configTool = factory.configTool();
-        configTool.attachAll();
-        configTool.activate();
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("VoterTest::testVoterStartup", configContext)) {
+      factory.tsa().startAll();
+      ConfigTool configTool = factory.configTool();
+      configTool.attachAll();
+      configTool.activate();
 
-        Voter voter = factory.voter();
-        voter.startAll();
-        await()
-            .atMost(Duration.ofSeconds(30))
-            .until(() -> voter.getTerracottaVoterState(configContext.voter().getTerracottaVoters().get(0)) == CONNECTED_TO_ACTIVE);
-      }
+      Voter voter = factory.voter();
+      voter.startAll();
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .until(() -> voter.getTerracottaVoterState(configContext.voter().getTerracottaVoters().get(0)) == CONNECTED_TO_ACTIVE);
     }
   }
 }

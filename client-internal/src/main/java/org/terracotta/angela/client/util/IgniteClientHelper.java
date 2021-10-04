@@ -98,7 +98,7 @@ public class IgniteClientHelper {
     final String nodeName = getNodeName(hostname, ignitePort);
     ClusterGroup location = ignite.cluster().forAttribute("nodename", nodeName);
     IgniteFuture<Collection<Map<String, ?>>> future = ignite.compute(location)
-        .broadcastAsync((IgniteCallable<Map<String, ?>>) () -> Agent.controller.getNodeAttributes());
+        .broadcastAsync((IgniteCallable<Map<String, ?>>) () -> Agent.getInstance().getController().getNodeAttributes());
     try {
       Collection<Map<String, ?>> attributeMaps = future.get(60, TimeUnit.SECONDS);
       if (attributeMaps.size() != 1) {
@@ -131,7 +131,7 @@ public class IgniteClientHelper {
         () -> {
           RemoteKitManager remoteKitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
           File installDir = remoteKitManager.getKitInstallationPath().getParent().toFile();
-          Agent.controller.downloadFiles(instanceId, installDir);
+          Agent.getInstance().getController().downloadFiles(instanceId, installDir);
         }
     );
 
@@ -140,7 +140,7 @@ public class IgniteClientHelper {
 
   public static void uploadClientJars(Ignite ignite, String hostname, int ignitePort, InstanceId instanceId, List<File> filesToUpload) throws IOException, InterruptedException {
     IgniteFuture<Void> remoteDownloadFuture = executeRemotelyAsync(ignite, hostname,
-        ignitePort, () -> Agent.controller.downloadFiles(instanceId, new RemoteClientManager(instanceId).getClientClasspathRoot()));
+        ignitePort, () -> Agent.getInstance().getController().downloadFiles(instanceId, new RemoteClientManager(instanceId).getClientClasspathRoot()));
 
     uploadFiles(ignite, instanceId, filesToUpload, remoteDownloadFuture);
   }

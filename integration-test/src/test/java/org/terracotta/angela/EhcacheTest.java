@@ -24,14 +24,15 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
+import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClientArrayFuture;
 import org.terracotta.angela.client.ClientJob;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
+import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.topology.ClientArrayTopology;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
@@ -48,6 +49,10 @@ import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
 import static org.terracotta.angela.common.topology.Version.version;
 
 public class EhcacheTest {
+
+  @Rule
+  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+
   @Test
   public void testTsaWithEhcacheReleaseKit() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -60,10 +65,8 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
-        factory.tsa().startAll();
-      }
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
+      factory.tsa().startAll();
     }
   }
 
@@ -79,10 +82,8 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testTsaWithEhcacheSnapshotKit", configContext)) {
-        factory.tsa().startAll();
-      }
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testTsaWithEhcacheSnapshotKit", configContext)) {
+      factory.tsa().startAll();
     }
   }
 
@@ -105,30 +106,28 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testClusteredEhcacheOperations", configContext)) {
-        factory.tsa().startAll();
-        ClientArray clientArray = factory.clientArray();
-        String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
-        String cacheAlias = "clustered-cache";
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
+      factory.tsa().startAll();
+      ClientArray clientArray = factory.clientArray();
+      String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
+      String cacheAlias = "clustered-cache";
 
-        ClientJob clientJob = (cluster) -> {
-          try (CacheManager cacheManager = createCacheManager(uri, cacheAlias)) {
-            Cache<Long, String> cache = cacheManager.getCache(cacheAlias, Long.class, String.class);
-            final int numKeys = 10;
-            for (long key = 0; key < numKeys; key++) {
-              cache.put(key, String.valueOf(key) + key);
-            }
-
-            for (long key = 0; key < numKeys; key++) {
-              assertEquals(cache.get(key), String.valueOf(key) + key);
-            }
+      ClientJob clientJob = (cluster) -> {
+        try (CacheManager cacheManager = createCacheManager(uri, cacheAlias)) {
+          Cache<Long, String> cache = cacheManager.getCache(cacheAlias, Long.class, String.class);
+          final int numKeys = 10;
+          for (long key = 0; key < numKeys; key++) {
+            cache.put(key, String.valueOf(key) + key);
           }
-        };
 
-        ClientArrayFuture caf = clientArray.executeOnAll(clientJob);
-        caf.get();
-      }
+          for (long key = 0; key < numKeys; key++) {
+            assertEquals(cache.get(key), String.valueOf(key) + key);
+          }
+        }
+      };
+
+      ClientArrayFuture caf = clientArray.executeOnAll(clientJob);
+      caf.get();
     }
   }
 
@@ -139,12 +138,12 @@ public class EhcacheTest {
             .cluster(URI.create(uri))
             .autoCreate(s -> s.defaultServerResource("main").resourcePool("resource-pool-a", 10, MemoryUnit.MB))
         ).withCache(cacheAlias, CacheConfigurationBuilder.newCacheConfigurationBuilder(
-            Long.class,
-            String.class,
-            ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(1000, EntryUnit.ENTRIES)
-                .offheap(1, MemoryUnit.MB)
-                .with(ClusteredResourcePoolBuilder.clusteredShared("resource-pool-a"))
+                Long.class,
+                String.class,
+                ResourcePoolsBuilder.newResourcePoolsBuilder()
+                    .heap(1000, EntryUnit.ENTRIES)
+                    .offheap(1, MemoryUnit.MB)
+                    .with(ClusteredResourcePoolBuilder.clusteredShared("resource-pool-a"))
             )
         ).build(true);
   }
