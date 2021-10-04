@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static java.util.Collections.emptyList;
+
 /**
  * @author Mathieu Carbou
  */
@@ -33,7 +35,7 @@ public class DefaultPortAllocator implements PortAllocator {
 
   @Override
   public PortReservation reserve(int portCounts) {
-    List<PortManager.PortRef> portRefs = portManager.reservePorts(portCounts);
+    List<PortManager.PortRef> portRefs = portCounts < 1 ? emptyList() : portManager.reservePorts(portCounts);
     reservations.addAll(portRefs);
     return new PortReservation() {
       int i = 0;
