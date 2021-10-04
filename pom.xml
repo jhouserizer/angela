@@ -58,6 +58,7 @@
     <logback-classic.version>1.2.3</logback-classic.version>
     <netcrusher-core.version>0.10</netcrusher-core.version>
     <jaxb-runtime.version>2.3.3</jaxb-runtime.version>
+    <jna.version>5.9.0</jna.version>
   </properties>
 
   <modules>
@@ -204,6 +205,11 @@
         <groupId>org.glassfish.jaxb</groupId>
         <artifactId>jaxb-runtime</artifactId>
         <version>${jaxb-runtime.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.java.dev.jna</groupId>
+        <artifactId>jna</artifactId>
+        <version>${jna.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
