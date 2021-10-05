@@ -1,25 +1,24 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.common.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 
 /**
  * Base class to connect a logging system to the output and/or
@@ -57,7 +56,7 @@ public abstract class LogOutputStream extends OutputStream {
       // new line is started in case of
       // - CR (regardless of previous character)
       // - LF if previous character was not CR and not LF
-      if (c == '\r' || (c == '\n' && (lastReceivedByte != '\r' && lastReceivedByte != '\n'))) {
+      if (c == '\r' || lastReceivedByte != '\r' && lastReceivedByte != '\n') {
         processBuffer();
       }
     } else {
@@ -128,7 +127,11 @@ public abstract class LogOutputStream extends OutputStream {
    * Converts the buffer to a string and sends it to <code>processLine</code>.
    */
   protected void processBuffer() {
-    processLine(buffer.toString());
+    try {
+      processLine(buffer.toString("UTF-8"));
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError(e);
+    }
     buffer.reset();
   }
 

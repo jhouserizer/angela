@@ -1,11 +1,11 @@
 /*
- * Copyright 2021 mscott2.
+ * Copyright Terracotta, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,17 +15,19 @@
  */
 package org.terracotta.angela.client.util;
 
-import java.io.File;
-import java.util.Collections;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.mockito.Mockito.mock;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.InstanceId;
+
+import java.io.File;
+import java.util.Collections;
+
+import static org.mockito.Mockito.mock;
 
 /**
  *

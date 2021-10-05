@@ -1,22 +1,21 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.common;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.IpUtils;
@@ -26,6 +25,7 @@ import java.nio.file.Paths;
 /**
  * Listing of all system properties supported in angela
  */
+@SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")
 public enum AngelaProperties {
   // root dir where Angela puts installation, work directories and any file that is needed
   ROOT_DIR("angela.rootDir", Paths.get("/data/angela").toAbsolutePath().toString()),
