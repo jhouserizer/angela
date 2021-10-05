@@ -118,7 +118,8 @@ public class LocalKitManager extends KitManager {
   @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   void unlockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} unlock", Thread.currentThread().getId());
-    File file = localInstallerPath.getParent().resolve(INSTALLATION_LOCK_FILE_NAME).toFile();
+    File parent = localInstallerPath.toFile().getAbsoluteFile().getParentFile();
+    File file = new File(parent, INSTALLATION_LOCK_FILE_NAME);
     final boolean deleted = file.delete();
     if (!deleted) {
       logger.error("Installer lock file {} could not be deleted", file.getAbsolutePath());
@@ -132,8 +133,9 @@ public class LocalKitManager extends KitManager {
   void lockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} lock", Thread.currentThread().getId());
 
-    localInstallerPath.toFile().getParentFile().mkdirs();
-    File file = new File(localInstallerPath.toFile().getParentFile(), INSTALLATION_LOCK_FILE_NAME);
+    File parent = localInstallerPath.toFile().getAbsoluteFile().getParentFile();
+    parent.mkdirs();
+    File file = new File(parent, INSTALLATION_LOCK_FILE_NAME);
     logger.info("Creating Installer lock file at: {}", file);
     try {
       if (!file.createNewFile()) {
