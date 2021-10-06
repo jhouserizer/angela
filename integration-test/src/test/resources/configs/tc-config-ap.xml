@@ -21,13 +21,13 @@
   <servers>
     <server host="localhost" name="Server1">
       <logs>logs1</logs>
-      <tsa-port>9410</tsa-port>
-      <tsa-group-port>9430</tsa-group-port>
+<!--      <tsa-port>9410</tsa-port>-->
+<!--      <tsa-group-port>9430</tsa-group-port>-->
     </server>
     <server host="localhost" name="Server2">
       <logs>logs2</logs>
-      <tsa-port>9411</tsa-port>
-      <tsa-group-port>9431</tsa-group-port>
+<!--      <tsa-port>9411</tsa-port>-->
+<!--      <tsa-group-port>9431</tsa-group-port>-->
     </server>
   </servers>
 

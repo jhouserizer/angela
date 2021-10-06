@@ -47,6 +47,9 @@ public class VoterTest {
 
   @Test
   public void testVoterStartup() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(4).stream().toArray();
+
     Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
     ConfigurationContext configContext = customConfigurationContext()
         .tsa(tsa -> tsa
@@ -56,20 +59,20 @@ public class VoterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("consistency:1"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
                                 .failoverPriority("consistency:1"))))))
-        .voter(voter -> voter.distribution(distribution).addVoter(voter("voter", "localhost", "localhost:9410", "localhost:9510")))
+        .voter(voter -> voter.distribution(distribution).addVoter(voter("voter", "localhost", "localhost:" + ports[0], "localhost:" + ports[2])))
         .configTool(context -> context.distribution(distribution).configTool(configTool("config-tool", "localhost")));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("VoterTest::testVoterStartup", configContext)) {

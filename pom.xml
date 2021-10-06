@@ -64,6 +64,8 @@
     <netcrusher-core.version>0.10</netcrusher-core.version>
     <jaxb-runtime.version>2.3.3</jaxb-runtime.version>
     <jna.version>5.9.0</jna.version>
+
+<!--    <test.parallel.forks>4</test.parallel.forks>-->
   </properties>
 
   <modules>

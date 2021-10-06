@@ -17,6 +17,7 @@ package org.terracotta.angela.client.config.custom;
 
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.MonitoringConfigurationContext;
 import org.terracotta.angela.client.config.RemotingConfigurationContext;
 import org.terracotta.angela.client.config.TmsConfigurationContext;
@@ -45,6 +46,13 @@ public class CustomConfigurationContext implements ConfigurationContext {
   }
 
   protected CustomConfigurationContext() {
+  }
+
+  @Override
+  public void visit(ConfigurationContextVisitor visitor) {
+    if (customTsaConfigurationContext != null) {
+      visitor.visit(customTsaConfigurationContext);
+    }
   }
 
   @Override
@@ -173,7 +181,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
     voter.accept(customVoterConfigurationContext);
     return this;
   }
-  
+
   public CustomConfigurationContext monitoring(Consumer<CustomMonitoringConfigurationContext> consumer) {
     if (customMonitoringConfigurationContext != null) {
       throw new IllegalStateException("Monitoring config already defined");

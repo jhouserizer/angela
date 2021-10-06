@@ -16,6 +16,7 @@
 package org.terracotta.angela;
 
 import org.hamcrest.Matcher;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
@@ -48,8 +49,16 @@ public class DynamicClusterTest {
   private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
   private static final Distribution DISTRIBUTION = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
 
+  int[] ports;
+
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+
+  @Before
+  public void setUp() {
+    // no need tp close the reservation or port allocator: the rule will do it
+    ports = angelaOrchestratorRule.getPortAllocator().reserve(8).stream().toArray();
+  }
 
   @Test
   public void testNodeStartup() throws Exception {
@@ -61,15 +70,15 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -100,8 +109,8 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -120,8 +129,8 @@ public class DynamicClusterTest {
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
 
       factory.configTool().attachNode(0, server("server-2", "localhost")
-          .tsaPort(9510)
-          .tsaGroupPort(9511)
+          .tsaPort(ports[2])
+          .tsaGroupPort(ports[3])
           .configRepo("terracotta2/repository")
           .logs("terracotta2/logs")
           .metaData("terracotta2/metadata")
@@ -142,15 +151,15 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -169,8 +178,8 @@ public class DynamicClusterTest {
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(2));
 
       factory.configTool().attachNode(0, server("server-3", "localhost")
-          .tsaPort(9610)
-          .tsaGroupPort(9611)
+          .tsaPort(ports[4])
+          .tsaGroupPort(ports[5])
           .configRepo("terracotta3/repository")
           .logs("terracotta3/logs")
           .metaData("terracotta3/metadata")
@@ -191,8 +200,8 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -211,8 +220,8 @@ public class DynamicClusterTest {
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
 
       factory.configTool().attachStripe(server("server-2", "localhost")
-          .tsaPort(9510)
-          .tsaGroupPort(9511)
+          .tsaPort(ports[2])
+          .tsaGroupPort(ports[3])
           .configRepo("terracotta2/repository")
           .logs("terracotta2/logs")
           .metaData("terracotta2/metadata")
@@ -234,8 +243,8 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -243,8 +252,8 @@ public class DynamicClusterTest {
                         ),
                         stripe(
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -264,8 +273,8 @@ public class DynamicClusterTest {
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(1).size(), is(1));
 
       factory.configTool().attachStripe(server("server-3", "localhost")
-          .tsaPort(9610)
-          .tsaGroupPort(9611)
+          .tsaPort(ports[4])
+          .tsaGroupPort(ports[5])
           .configRepo("terracotta3/repository")
           .logs("terracotta3/logs")
           .metaData("terracotta3/metadata")
@@ -287,15 +296,15 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -327,15 +336,15 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -343,15 +352,15 @@ public class DynamicClusterTest {
                         ),
                         stripe(
                             server("server-3", "localhost")
-                                .tsaPort(9610)
-                                .tsaGroupPort(9611)
+                                .tsaPort(ports[4])
+                                .tsaGroupPort(ports[5])
                                 .configRepo("terracotta3/repository")
                                 .logs("terracotta3/logs")
                                 .metaData("terracotta3/metadata")
                                 .failoverPriority("availability"),
                             server("server-4", "localhost")
-                                .tsaPort(9710)
-                                .tsaGroupPort(9711)
+                                .tsaPort(ports[6])
+                                .tsaGroupPort(ports[7])
                                 .configRepo("terracotta4/repository")
                                 .logs("terracotta4/logs")
                                 .metaData("terracotta4/metadata")
@@ -383,8 +392,8 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -392,8 +401,8 @@ public class DynamicClusterTest {
                         ),
                         stripe(
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -435,15 +444,15 @@ public class DynamicClusterTest {
                     dynamicCluster(
                         stripe(
                             server("server-1", "localhost")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
                             server("server-2", "localhost")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -481,8 +490,8 @@ public class DynamicClusterTest {
                             server("node-1", "localhost")
                                 .bindAddress("::")
                                 .groupBindAddress("::")
-                                .tsaPort(9410)
-                                .tsaGroupPort(9411)
+                                .tsaPort(ports[0])
+                                .tsaGroupPort(ports[1])
                                 .logs("terracotta1/logs")
                                 .configRepo("terracotta1/repo")
                                 .metaData("terracotta1/metadata")
@@ -490,8 +499,8 @@ public class DynamicClusterTest {
                             server("node-2", "localhost")
                                 .bindAddress("::")
                                 .groupBindAddress("::")
-                                .tsaPort(9510)
-                                .tsaGroupPort(9511)
+                                .tsaPort(ports[2])
+                                .tsaGroupPort(ports[3])
                                 .logs("terracotta2/logs")
                                 .configRepo("terracotta2/repo")
                                 .metaData("terracotta2/metadata")

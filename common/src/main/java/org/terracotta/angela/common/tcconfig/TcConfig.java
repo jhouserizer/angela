@@ -37,15 +37,11 @@ import java.util.Map;
  */
 public class TcConfig {
 
-  private final TcConfigHolder tcConfigHolder;
-  private String tcConfigName;
+  protected final TcConfigHolder tcConfigHolder;
+  protected String tcConfigName;
 
   public static TcConfig tcConfig(Version version, URL tcConfigPath) {
     return new TcConfig(version, tcConfigPath);
-  }
-
-  public static TcConfig copy(TcConfig tcConfig) {
-    return new TcConfig(tcConfig);
   }
 
   TcConfig(TcConfig tcConfig) {
@@ -66,7 +62,11 @@ public class TcConfig {
     this.tcConfigHolder = initTcConfigHolder(version, tcConfigPath);
   }
 
-  private TcConfigHolder initTcConfigHolder(Version version, URL tcConfigPath) {
+  public TcConfig copy() {
+    return new TcConfig(this);
+  }
+
+  protected TcConfigHolder initTcConfigHolder(Version version, URL tcConfigPath) {
     try {
       try (InputStream is = tcConfigPath.openStream()) {
         if (version.getMajor() == 4) {
@@ -82,6 +82,10 @@ public class TcConfig {
     } catch (IOException e) {
       throw new RuntimeException("Cannot read tc-config file : " + tcConfigPath, e);
     }
+  }
+
+  public void initialize(PortAllocator portAllocator) {
+    tcConfigHolder.initialize(portAllocator, tag -> !tag.equals("jmx-port") && !tag.equals("management-port"));
   }
 
   public List<TerracottaServer> getServers() {

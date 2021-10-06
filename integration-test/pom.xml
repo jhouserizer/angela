@@ -75,6 +75,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <groupId>org.apache.maven.plugins</groupId>
         <configuration>
+<!--          <forkCount>${test.parallel.forks}</forkCount>-->
+<!--          <reuseForks>false</reuseForks>-->
           <argLine>-Xmx1024m</argLine>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>

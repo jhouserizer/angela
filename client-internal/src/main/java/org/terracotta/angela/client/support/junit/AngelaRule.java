@@ -28,14 +28,12 @@ import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.common.cluster.Cluster;
-import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 import static java.util.stream.IntStream.rangeClosed;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
@@ -88,27 +86,12 @@ public class AngelaRule extends ExtendedTestRule {
 
   @Override
   protected void before(Description description) throws Throwable {
-    final int nodePortCount = computeNodePortCount();
-
-    AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
-
-    PortAllocator.PortReservation nodePortReservation = angelaOrchestrator.getPortAllocator().reserve(nodePortCount);
-
-    // assign generated ports to nodes
-    for (TerracottaServer node : configuration.tsa().getTopology().getServers()) {
-      if (node.getTsaPort() <= 0) {
-        node.tsaPort(nodePortReservation.next());
-      }
-      if (node.getTsaGroupPort() <= 0) {
-        node.tsaGroupPort(nodePortReservation.next());
-      }
-    }
-
     String id = description.getTestClass().getSimpleName();
     if (description.getMethodName() != null) {
       id += "." + description.getMethodName();
     }
 
+    AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
     this.clusterFactory = angelaOrchestrator.newClusterFactory(id, configuration);
 
     tsa = memoize(clusterFactory::tsa);
@@ -276,16 +259,6 @@ public class AngelaRule extends ExtendedTestRule {
   // =========================================
   // utils
   // =========================================
-
-  protected int computeNodePortCount() {
-    // compute the number of port to reserve for the nodes
-    // not having any assigned port and group port
-    List<TerracottaServer> nodes = configuration.tsa().getTopology().getServers();
-    return (int) IntStream.concat(
-        nodes.stream().mapToInt(TerracottaServer::getTsaPort),
-        nodes.stream().mapToInt(TerracottaServer::getTsaGroupPort)
-    ).filter(port -> port <= 0).count();
-  }
 
   private static <T> Supplier<T> memoize(Supplier<T> supplier) {
     return new Supplier<T>() {

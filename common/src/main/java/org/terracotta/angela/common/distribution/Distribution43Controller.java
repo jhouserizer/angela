@@ -287,7 +287,7 @@ public class Distribution43Controller extends DistributionController {
     }
 
     TcConfigManager tcConfigProvider = (TcConfigManager) configurationManager;
-    TcConfig tcConfig = TcConfig.copy(tcConfigProvider.findTcConfig(serverId));
+    TcConfig tcConfig = tcConfigProvider.findTcConfig(serverId).copy();
     tcConfigProvider.setUpInstallation(tcConfig, serverSymbolicName, serverId, proxiedPorts, installLocation, null);
     // add -f if applicable
     if (tcConfig.getPath() != null) {

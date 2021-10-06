@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
@@ -24,6 +26,7 @@ import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
 
@@ -43,14 +46,28 @@ import static org.terracotta.angela.common.topology.Version.version;
 
 public class ConfigToolTest {
 
+  PortAllocator.PortReservation reservation;
+  int[] ports;
+
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+
+  @Before
+  public void setUp() {
+    reservation = angelaOrchestratorRule.getPortAllocator().reserve(4);
+    ports = reservation.stream().toArray();
+  }
+
+  @After
+  public void tearDown() {
+    reservation.close();
+  }
 
   @Test
   public void testFailingConfigToolCommand() throws Exception {
     TerracottaServer server = server("server-1", "localhost")
-        .tsaPort(9410)
-        .tsaGroupPort(9411)
+        .tsaPort(ports[0])
+        .tsaGroupPort(ports[1])
         .configRepo("terracotta1/repository")
         .logs("terracotta1/logs")
         .metaData("terracotta1/metadata")
@@ -73,8 +90,8 @@ public class ConfigToolTest {
   @Test
   public void testValidConfigToolCommand() throws Exception {
     TerracottaServer server = server("server-1", "localhost")
-        .tsaPort(9410)
-        .tsaGroupPort(9411)
+        .tsaPort(ports[0])
+        .tsaGroupPort(ports[1])
         .configRepo("terracotta1/repository")
         .logs("terracotta1/logs")
         .metaData("terracotta1/metadata")
@@ -89,7 +106,7 @@ public class ConfigToolTest {
       tsa.startAll();
       ConfigTool configTool = factory.configTool();
 
-      ToolExecutionResult result = configTool.executeCommand("get", "-s", "localhost", "-c", "offheap-resources");
+      ToolExecutionResult result = configTool.executeCommand("get", "-s", "localhost:" + ports[0], "-c", "offheap-resources");
       System.out.println("######Result: " + result);
     }
   }

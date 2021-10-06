@@ -16,6 +16,7 @@
 package org.terracotta.angela.common.tcconfig;
 
 import org.junit.Test;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.Version;
 
 import java.util.Arrays;
@@ -104,11 +105,17 @@ public class TsaConfigTest {
 
   @Test
   public void testAddServer() {
+    PortAllocator portAllocator = mock(PortAllocator.class);
+    PortAllocator.PortReservation reservation = mock(PortAllocator.PortReservation.class);
+    when(portAllocator.reserve(1)).thenReturn(reservation);
+    when(reservation.next()).thenReturn(0);
+
     Version version = mock(Version.class);
     when(version.getMajor()).thenReturn(10);
     TsaConfig tsaConfig = TsaConfig.tsaConfig(version,
         TsaStripeConfig.stripe("host1", "host2").offheap("primary", "50", "GB").data("name1", "root1")
     );
+    tsaConfig.initialize(portAllocator);
     final List<TcConfig> tcConfigs = tsaConfig.getTcConfigs();
 
     assertThat(tcConfigs.size(), equalTo(1));
@@ -121,12 +128,20 @@ public class TsaConfigTest {
 
   @Test
   public void testTsaPortsRange() {
+    PortAllocator portAllocator = mock(PortAllocator.class);
+    PortAllocator.PortReservation reservation = mock(PortAllocator.PortReservation.class);
+    when(portAllocator.reserve(1)).thenReturn(reservation);
+    when(reservation.next()).thenReturn(1025);
+
     Version version = mock(Version.class);
     when(version.getMajor()).thenReturn(10);
     TsaConfig tsaConfig = TsaConfig.tsaConfig(version,
         TsaStripeConfig.stripe("host1", "host2").offheap("primary", "50", "GB").data("name1", "root1"),
         TsaStripeConfig.stripe("host1", "host2").offheap("primary", "50", "GB").data("name1", "root1")
     );
+
+    tsaConfig.initialize(portAllocator);
+
     final List<TcConfig> tcConfigs = tsaConfig.getTcConfigs();
 
     for (int tcConfigIndex = 0; tcConfigIndex < 2; tcConfigIndex++) {
@@ -134,19 +149,19 @@ public class TsaConfigTest {
         assertThat(tcConfigs.get(tcConfigIndex)
                        .getServers()
                        .get(tcServerIndex)
-                       .getTsaPort() > 1024, is(true));
+                       .getTsaPort() == 1025, is(true));
         assertThat(tcConfigs.get(tcConfigIndex)
                        .getServers()
                        .get(tcServerIndex)
-                       .getTsaGroupPort() > 1024, is(true));
+                       .getTsaGroupPort() == 1025, is(true));
         assertThat(tcConfigs.get(tcConfigIndex)
                        .getServers()
                        .get(tcServerIndex)
-                       .getJmxPort() > 1024, is(true));
+                       .getJmxPort() == 0, is(true)); // jmx port config not available for OSS
         assertThat(tcConfigs.get(tcConfigIndex)
                        .getServers()
                        .get(tcServerIndex)
-                       .getManagementPort() > 1024, is(true));
+                       .getManagementPort() == 0, is(true));  // management port config not available for OSS
 
         assertThat(tcConfigs.get(tcConfigIndex)
                        .getServers()

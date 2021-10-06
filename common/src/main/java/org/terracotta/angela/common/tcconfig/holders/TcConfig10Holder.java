@@ -62,26 +62,6 @@ public class TcConfig10Holder extends TcConfigHolder {
   }
 
   @Override
-  protected int defaultManagementPort() {
-    return 9440;
-  }
-
-  @Override
-  protected int defaultTsaGroupPort() {
-    return 9430;
-  }
-
-  @Override
-  protected int defaultJmxPort() {
-    return 9420;
-  }
-
-  @Override
-  protected int defaultTsaPort() {
-    return 9410;
-  }
-
-  @Override
   protected NodeList getServersList(Document tcConfigXml, XPath xPath) throws XPathExpressionException {
     return (NodeList) xPath.evaluate("//*[name()='servers']//*[name()='server']", tcConfigXml.getDocumentElement(), XPathConstants.NODESET);
   }
@@ -101,8 +81,8 @@ public class TcConfig10Holder extends TcConfigHolder {
       if (securityWhiteListDeprectedNode != null) {
         securityWhiteListDeprectedNode.getAttributes()
             .getNamedItem("path").setNodeValue(securityRootDirectory + "/"
-            + SecurityRootDirectory.WHITE_LIST_DEPRECATED_DIR_NAME + "/"
-            + SecurityRootDirectory.WHITE_LIST_DEPRECATED_FILE_NAME);
+                + SecurityRootDirectory.WHITE_LIST_DEPRECATED_DIR_NAME + "/"
+                + SecurityRootDirectory.WHITE_LIST_DEPRECATED_FILE_NAME);
       }
     });
   }
@@ -156,14 +136,17 @@ public class TcConfig10Holder extends TcConfigHolder {
         String host = hostNode.getTextContent();
 
         Node tsaGroupPortNode = (Node) xPath.evaluate("*[name()='tsa-group-port']", server, XPathConstants.NODE);
-        int groupPort = Integer.parseInt(tsaGroupPortNode.getTextContent().trim());
+        int groupPort = tsaGroupPortNode == null ? portAllocator.reserve(1).next() : Integer.parseInt(tsaGroupPortNode.getTextContent().trim());
         TerracottaServer member;
         if (name.equals(serverName) || !updateProxy) {
           member = TerracottaServer.server(name, host).tsaGroupPort(groupPort);
         } else {
-          int proxyPort = portAllocator.reserve(1).next();
+          // reuse groupPort if not in XML and allocated above
+          int proxyPort = tsaGroupPortNode == null ? groupPort : portAllocator.reserve(1).next();
           member = TerracottaServer.server(name, host).tsaGroupPort(groupPort).proxyPort(proxyPort);
-          tsaGroupPortNode.setTextContent(String.valueOf(proxyPort));
+          if (tsaGroupPortNode != null) {
+            tsaGroupPortNode.setTextContent(String.valueOf(proxyPort));
+          }
         }
         if (name.equals(serverName)) {
           members.add(0, member);
@@ -187,8 +170,8 @@ public class TcConfig10Holder extends TcConfigHolder {
         String name = nameNode.getTextContent();
 
         Node tsaPortNode = (Node) xPath.evaluate("*[name()='tsa-port']", server, XPathConstants.NODE);
-        int tsaPort = Integer.parseInt(tsaPortNode.getTextContent().trim());
-        if (updateForProxy) {
+        int tsaPort = tsaPortNode == null ? portAllocator.reserve(1).next() : Integer.parseInt(tsaPortNode.getTextContent().trim());
+        if (updateForProxy && tsaPortNode != null) {
           tsaPort = portAllocator.reserve(1).next();
           tsaPortNode.setTextContent(String.valueOf(tsaPort));
         }
@@ -209,6 +192,11 @@ public class TcConfig10Holder extends TcConfigHolder {
         String name = nameNode.getTextContent();
         if (proxiedPorts.containsKey(new ServerSymbolicName(name))) {
           Node tsaGroupPortNode = (Node) xPath.evaluate("*[name()='tsa-group-port']", server, XPathConstants.NODE);
+          if (tsaGroupPortNode == null) {
+            // no group port
+            tsaGroupPortNode = tcConfigXml.createElement("tsa-group-port");
+            server.appendChild(tsaGroupPortNode);
+          }
           tsaGroupPortNode.setTextContent(String.valueOf(proxiedPorts.get(symbolicName(name))));
         }
       }
@@ -226,6 +214,11 @@ public class TcConfig10Holder extends TcConfigHolder {
         String name = nameNode.getTextContent();
         if (proxiedPorts.containsKey(new ServerSymbolicName(name))) {
           Node tsaPortNode = (Node) xPath.evaluate("*[name()='tsa-port']", server, XPathConstants.NODE);
+          if (tsaPortNode == null) {
+            // no tsa-port
+            tsaPortNode = tcConfigXml.createElement("tsa-port");
+            server.appendChild(tsaPortNode);
+          }
           tsaPortNode.setTextContent(String.valueOf(proxiedPorts.get(symbolicName(name))));
         }
       }
