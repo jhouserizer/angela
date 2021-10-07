@@ -43,9 +43,7 @@
   </licenses>
 
   <properties>
-    <java.version>1.8</java.version>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.version>3.6.3</maven.version>
     <terracotta-utilities.version>0.0.9</terracotta-utilities.version>
 
     <!-- Third-party dependencies -->
@@ -64,8 +62,6 @@
     <netcrusher-core.version>0.10</netcrusher-core.version>
     <jaxb-runtime.version>2.3.3</jaxb-runtime.version>
     <jna.version>5.9.0</jna.version>
-
-<!--    <test.parallel.forks>4</test.parallel.forks>-->
   </properties>
 
   <modules>
@@ -266,33 +262,6 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4.1</version>
-          <executions>
-            <execution>
-              <id>enforce-java</id>
-              <goals>
-                <goal>enforce</goal>
-              </goals>
-              <configuration>
-                <rules>
-                  <dependencyConvergence>
-                    <uniqueVersions>true</uniqueVersions>
-                  </dependencyConvergence>
-                  <requireJavaVersion>
-                    <version>[${java.version},)</version>
-                  </requireJavaVersion>
-                  <requireMavenVersion>
-                    <version>[${maven.version},)</version>
-                  </requireMavenVersion>
-                </rules>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.1.0</version>
         </plugin>
@@ -300,21 +269,6 @@
           <groupId>org.asciidoctor</groupId>
           <artifactId>asciidoctor-maven-plugin</artifactId>
           <version>1.5.6</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <groupId>org.apache.maven.plugins</groupId>
-          <version>2.22.0</version>
-          <configuration>
-            <argLine>-Xmx1024m</argLine>
-            <systemProperties>
-              <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
-              <angela.java.vendor/> <!-- use any vendor for the tests -->
-              <jdk.security.allowNonCaAnchor>true</jdk.security.allowNonCaAnchor>
-              <!--              <angela.igniteLogging>true</angela.igniteLogging>-->
-              <!--              <angela.java.opts>-agentlib:jdwp=transport=dt_socket,server=n,address=c02yj2f2jgh6.home:5005,suspend=n</angela.java.opts>-->
-            </systemProperties>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
@@ -339,44 +293,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>enforce-java</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <dependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions>
-                </dependencyConvergence>
-                <requireJavaVersion>
-                  <version>[${java.version},)</version>
-                </requireJavaVersion>
-                <requireMavenVersion>
-                  <version>[${maven.version},)</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>attach-javadocs</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
         <executions>
           <execution>
@@ -392,6 +308,64 @@
   </build>
 
   <profiles>
+    <!-- default profile including toolchain, javadoc, findbugs, license check, enforcer, etc -->
+    <profile>
+      <id>default</id>
+      <activation>
+        <property>
+          <name>fast</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <dependencyConvergence>
+                      <uniqueVersions>true</uniqueVersions>
+                    </dependencyConvergence>
+                    <requireJavaVersion>
+                      <version>[${java.build.version},)</version>
+                    </requireJavaVersion>
+                    <requireMavenVersion>
+                      <version>[${maven.version},)</version>
+                    </requireMavenVersion>
+                    <bannedDependencies>
+                      <excludes>
+                        <exclude>com.github.stefanbirkner:system-rules</exclude>
+                      </excludes>
+                    </bannedDependencies>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.1.1</version>
+            <configuration>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <!-- Profile to sign artifacts with a PGP key (using GPG).
            Must be activated for sonatype releases -->

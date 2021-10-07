@@ -40,7 +40,7 @@ import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class AngelaRuleTest {
+public class AngelaRuleIT {
 
   private static final Distribution DISTRIBUTION = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
 

@@ -44,7 +44,7 @@ import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class DynamicClusterTest {
+public class DynamicClusterIT {
   private static final Duration TIMEOUT = Duration.ofSeconds(60);
   private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
   private static final Distribution DISTRIBUTION = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
