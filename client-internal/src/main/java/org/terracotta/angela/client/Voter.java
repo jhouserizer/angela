@@ -73,7 +73,7 @@ public class Voter implements AutoCloseable {
   }
 
   public TerracottaVoterState getTerracottaVoterState(TerracottaVoter terracottaVoter) {
-    return IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.controller.getVoterState(instanceId, terracottaVoter));
+    return IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.getInstance().getController().getVoterState(instanceId, terracottaVoter));
   }
 
   public Voter startAll() {
@@ -88,7 +88,7 @@ public class Voter implements AutoCloseable {
   }
 
   public Voter start(TerracottaVoter terracottaVoter, Map<String, String> envOverrides) {
-    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.controller.startVoter(instanceId, terracottaVoter, envOverrides));
+    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.getInstance().getController().startVoter(instanceId, terracottaVoter, envOverrides));
     return this;
   }
 
@@ -117,7 +117,7 @@ public class Voter implements AutoCloseable {
       return this;
     }
     logger.info("Stopping Voter on {}", terracottaVoter.getHostName());
-    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.controller.stopVoter(instanceId, terracottaVoter));
+    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.getInstance().getController().stopVoter(instanceId, terracottaVoter));
     return this;
   }
 
@@ -154,7 +154,7 @@ public class Voter implements AutoCloseable {
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
-    IgniteCallable<Boolean> callable = () -> Agent.controller.installVoter(instanceId, terracottaVoter, distribution, license,
+    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installVoter(instanceId, terracottaVoter, distribution, license,
         localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
@@ -184,7 +184,7 @@ public class Voter implements AutoCloseable {
     }
 
     logger.info("Uninstalling voter from {}", terracottaVoter.getHostName());
-    IgniteRunnable uninstaller = () -> Agent.controller.uninstallVoter(instanceId, voterConfigurationContext.getDistribution(), terracottaVoter, localKitManager.getKitInstallationName());
+    IgniteRunnable uninstaller = () -> Agent.getInstance().getController().uninstallVoter(instanceId, voterConfigurationContext.getDistribution(), terracottaVoter, localKitManager.getKitInstallationName());
     IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, uninstaller);
   }
 }

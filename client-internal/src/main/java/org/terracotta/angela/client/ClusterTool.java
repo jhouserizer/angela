@@ -70,7 +70,7 @@ public class ClusterTool implements AutoCloseable {
   }
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... command) {
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.clusterTool(instanceId, env, command);
+    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().clusterTool(instanceId, env, command);
     return IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
   }
 
@@ -83,7 +83,7 @@ public class ClusterTool implements AutoCloseable {
       clusterName = instanceId.toString();
     }
     List<String> command = new ArrayList<>(Arrays.asList("configure", "-n", clusterName));
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.configure(instanceId, tsa.getTsaConfigurationContext().getTopology(), tsa.updateToProxiedPorts(), license, securityRootDirectory, tcEnv, env, command);
+    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().configure(instanceId, tsa.getTsaConfigurationContext().getTopology(), tsa.updateToProxiedPorts(), license, securityRootDirectory, tcEnv, env, command);
     ToolExecutionResult result = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
     if(result.getExitStatus() != 0) {
       throw new IllegalStateException("Failed to execute cluster-tool configure:\n" + result.toString());
@@ -104,7 +104,7 @@ public class ClusterTool implements AutoCloseable {
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
-    IgniteCallable<Boolean> callable = () -> Agent.controller.installClusterTool(instanceId,
+    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installClusterTool(instanceId,
         configContext.getHostName(), distribution, license, localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
@@ -120,7 +120,7 @@ public class ClusterTool implements AutoCloseable {
   }
 
   public ClusterTool uninstall() {
-    IgniteRunnable uninstaller = () -> Agent.controller.uninstallClusterTool(instanceId, configContext.getDistribution(), configContext
+    IgniteRunnable uninstaller = () -> Agent.getInstance().getController().uninstallClusterTool(instanceId, configContext.getDistribution(), configContext
         .getHostName(), localKitManager.getKitInstallationName());
     IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, uninstaller);
     return this;
@@ -128,7 +128,7 @@ public class ClusterTool implements AutoCloseable {
 
   public RemoteFolder browse(String root) {
     String path = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort,
-        () -> Agent.controller.getClusterToolInstallPath(instanceId));
+        () -> Agent.getInstance().getController().getClusterToolInstallPath(instanceId));
     return new RemoteFolder(ignite, configContext.getHostName(), ignitePort, path, root);
   }
 

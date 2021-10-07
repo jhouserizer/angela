@@ -47,10 +47,10 @@ public class RemoteFolder extends RemoteFile {
 
   public List<RemoteFile> list() {
     String absoluteName = getAbsoluteName();
-    IgniteCallable<List<String>> filesCallable = () -> Agent.controller.listFiles(absoluteName);
+    IgniteCallable<List<String>> filesCallable = () -> Agent.getInstance().getController().listFiles(absoluteName);
     List<String> remoteFiles = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, filesCallable);
 
-    IgniteCallable<List<String>> foldersCallable = () -> Agent.controller.listFolders(absoluteName);
+    IgniteCallable<List<String>> foldersCallable = () -> Agent.getInstance().getController().listFolders(absoluteName);
     List<String> remoteFolders = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, foldersCallable);
 
     List<RemoteFile> result = new ArrayList<>();
@@ -98,7 +98,7 @@ public class RemoteFolder extends RemoteFile {
   public void upload(String remoteFilename, InputStream localStream) throws IOException {
     byte[] data = IOUtils.toByteArray(localStream);
     String filename = getAbsoluteName() + "/" + remoteFilename;
-    IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.uploadFile(filename, data));
+    IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.getInstance().getController().uploadFile(filename, data));
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -108,7 +108,7 @@ public class RemoteFolder extends RemoteFile {
     String foldername = getAbsoluteName();
     byte[] bytes;
     try {
-      bytes = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.downloadFolder(foldername));
+      bytes = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.getInstance().getController().downloadFolder(foldername));
     } catch (IgniteException ie) {
       throw new IOException("Error downloading remote folder '" + foldername + "' into local folder '" + localPath + "'", ie);
     }

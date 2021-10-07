@@ -89,7 +89,7 @@ public class Client implements Closeable {
     try {
       IgniteClientHelper.uploadClientJars(ignite, getHostname(), ignitePort, instanceId, listClasspathFiles(localKitManager));
 
-      IgniteCallable<Integer> igniteCallable = () -> Agent.controller.spawnClient(instanceId, tcEnv);
+      IgniteCallable<Integer> igniteCallable = () -> Agent.getInstance().getController().spawnClient(instanceId, tcEnv);
       int pid = IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, igniteCallable);
       logger.info("client '{}' on {} started with PID {}", instanceId, clientId, pid);
 
@@ -186,7 +186,7 @@ public class Client implements Closeable {
     stop();
     if (!SKIP_UNINSTALL.getBooleanValue()) {
       logger.info("Wiping up client '{}' on {}", instanceId, clientId);
-      IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable)() -> Agent.controller.deleteClient(instanceId));
+      IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable)() -> Agent.getInstance().getController().deleteClient(instanceId));
     }
   }
 
@@ -197,7 +197,7 @@ public class Client implements Closeable {
     stopped = true;
 
     logger.info("Killing client '{}' on {}", instanceId, clientId);
-    IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable)() -> Agent.controller.stopClient(instanceId, subClientPid));
+    IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable)() -> Agent.getInstance().getController().stopClient(instanceId, subClientPid));
   }
 
   static class ClientJobFuture<V> implements Future<V> {

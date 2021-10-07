@@ -74,7 +74,7 @@ public class ConfigTool implements AutoCloseable {
   }
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... arguments) {
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.configTool(instanceId, env, arguments);
+    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().configTool(instanceId, env, arguments);
     return IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
   }
 
@@ -310,7 +310,7 @@ public class ConfigTool implements AutoCloseable {
       clusterName = instanceId.toString();
     }
     List<String> args = new ArrayList<>(Arrays.asList("activate", "-n", clusterName, "-s", terracottaServer.getHostPort()));
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.activate(instanceId, license, securityRootDirectory, tcEnv, env, args);
+    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().activate(instanceId, license, securityRootDirectory, tcEnv, env, args);
     ToolExecutionResult result = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
     if(result.getExitStatus() != 0) {
       throw new IllegalStateException("Failed to execute config-tool activate:\n" + result.toString());
@@ -331,7 +331,7 @@ public class ConfigTool implements AutoCloseable {
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
-    IgniteCallable<Boolean> callable = () -> Agent.controller.installConfigTool(instanceId, configContext.getHostName(),
+    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installConfigTool(instanceId, configContext.getHostName(),
         distribution, license, localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
@@ -347,7 +347,7 @@ public class ConfigTool implements AutoCloseable {
   }
 
   public ConfigTool uninstall() {
-    IgniteRunnable uninstaller = () -> Agent.controller.uninstallConfigTool(instanceId, configContext.getDistribution(), configContext
+    IgniteRunnable uninstaller = () -> Agent.getInstance().getController().uninstallConfigTool(instanceId, configContext.getDistribution(), configContext
         .getHostName(), localKitManager.getKitInstallationName());
     IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, uninstaller);
     return this;
@@ -424,7 +424,7 @@ public class ConfigTool implements AutoCloseable {
 
   public RemoteFolder browse(String root) {
     String path = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort,
-        () -> Agent.controller.getConfigToolInstallPath(instanceId));
+        () -> Agent.getInstance().getController().getConfigToolInstallPath(instanceId));
     return new RemoteFolder(ignite, configContext.getHostName(), ignitePort, path, root);
   }
 
