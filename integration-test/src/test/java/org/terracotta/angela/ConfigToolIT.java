@@ -44,7 +44,7 @@ import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class ConfigToolTest {
+public class ConfigToolIT {
 
   PortAllocator.PortReservation reservation;
   int[] ports;

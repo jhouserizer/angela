@@ -54,7 +54,7 @@ import static org.terracotta.angela.common.topology.Version.version;
 /**
  * @author Ludovic Orban
  */
-public class BrowseTest {
+public class BrowseIT {
 
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();

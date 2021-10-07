@@ -73,7 +73,7 @@ import static org.terracotta.angela.common.distribution.Distribution.distributio
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class ClientTest {
+public class ClientIT {
 
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();

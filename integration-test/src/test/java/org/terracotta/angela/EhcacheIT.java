@@ -48,7 +48,7 @@ import static org.terracotta.angela.common.distribution.Distribution.distributio
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class EhcacheTest {
+public class EhcacheIT {
 
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();

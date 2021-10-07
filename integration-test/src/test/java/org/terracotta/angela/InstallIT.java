@@ -61,7 +61,7 @@ import static org.terracotta.angela.common.topology.Version.version;
  * @author Aurelien Broszniowski
  */
 @SuppressWarnings("serial")
-public class InstallTest {
+public class InstallIT {
 
   @Rule
   public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();

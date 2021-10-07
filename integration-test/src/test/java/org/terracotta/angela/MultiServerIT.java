@@ -49,7 +49,7 @@ import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
 import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class MultiServerTest {
+public class MultiServerIT {
   private static final int STATE_TIMEOUT = 60_000;
   private static final int STATE_POLL_INTERVAL = 1_000;
 

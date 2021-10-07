@@ -72,19 +72,18 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
-<!--          <forkCount>${test.parallel.forks}</forkCount>-->
-<!--          <reuseForks>false</reuseForks>-->
           <argLine>-Xmx1024m</argLine>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
-            <angela.java.vendor/> <!-- use any vendor for the tests -->
-            <angela.igniteLogging>true</angela.igniteLogging>
-            <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
-            <angela.kitCopy>false</angela.kitCopy>
             <angela.skipUninstall>false</angela.skipUninstall>
+            <angela.kitCopy>false</angela.kitCopy>
+            <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
+            <angela.java.resolver>user</angela.java.resolver>
+            <!--<angela.java.opts>-agentlib:jdwp=transport=dt_socket,server=n,address=c02yj2f2jgh6.home:5005,suspend=n</angela.java.opts>-->
+            <jdk.security.allowNonCaAnchor>true</jdk.security.allowNonCaAnchor>
           </systemPropertyVariables>
         </configuration>
       </plugin>

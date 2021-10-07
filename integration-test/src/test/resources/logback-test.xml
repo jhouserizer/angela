@@ -24,6 +24,7 @@
   </appender>
 
   <logger name="net.schmizz.sshj" level="ERROR"/>
+  <logger name="org.terracotta.utilities.exec.Shell" level="INFO"/>
 
   <root level="WARN">
     <appender-ref ref="STDOUT" />
