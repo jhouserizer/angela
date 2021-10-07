@@ -16,6 +16,7 @@
 package org.terracotta.angela.client.config.custom;
 
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
+import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.TmsConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 
@@ -40,6 +41,13 @@ public class CustomMultiConfigurationContext extends CustomConfigurationContext 
   private int customTmsConfigurationContextsIndex = 0;
   private final List<CustomClientArrayConfigurationContext> customClientArrayConfigurationContexts = new ArrayList<>();
   private int customClientArrayConfigurationContextsIndex = 0;
+
+  @Override
+  public void visit(ConfigurationContextVisitor visitor) {
+    for (CustomTsaConfigurationContext context : customTsaConfigurationContexts) {
+      visitor.visit(context);
+    }
+  }
 
   @Override
   public TsaConfigurationContext tsa() {

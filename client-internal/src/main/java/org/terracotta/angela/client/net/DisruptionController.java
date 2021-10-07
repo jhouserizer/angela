@@ -208,7 +208,7 @@ public class DisruptionController implements AutoCloseable {
           TcConfigManager tcConfigProvider = (TcConfigManager) configurationProvider;
           List<TcConfig> configs = tcConfigProvider.getTcConfigs();
           for (TcConfig config : configs) {
-            TcConfig copy = TcConfig.copy(config);
+            TcConfig copy = config.copy();
             proxyTsaPorts.putAll(copy.retrieveTsaPorts(true, portAllocator));
             proxyMap.putAll(proxyTsaPorts);
           }

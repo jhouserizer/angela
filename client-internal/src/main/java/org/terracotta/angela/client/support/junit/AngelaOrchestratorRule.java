@@ -52,7 +52,9 @@ public class AngelaOrchestratorRule extends ExtendedTestRule {
 
   public PortAllocator getPortAllocator() {return getAngelaOrchestrator().getPortAllocator();}
 
-  public ClusterFactory newClusterFactory(String idPrefix, ConfigurationContext configurationContext) {return getAngelaOrchestrator().newClusterFactory(idPrefix, configurationContext);}
+  public ClusterFactory newClusterFactory(String idPrefix, ConfigurationContext configurationContext) {
+    return getAngelaOrchestrator().newClusterFactory(idPrefix, configurationContext);
+  }
 
   @Override
   protected void after(Description description) {

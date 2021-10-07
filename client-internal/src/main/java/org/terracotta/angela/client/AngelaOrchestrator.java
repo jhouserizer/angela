@@ -17,8 +17,11 @@ package org.terracotta.angela.client;
 
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.config.ConfigurationContextVisitor;
+import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
+import org.terracotta.angela.common.topology.Topology;
 
 import java.util.Collections;
 
@@ -51,6 +54,18 @@ public class AngelaOrchestrator implements AutoCloseable {
   }
 
   public ClusterFactory newClusterFactory(String idPrefix, ConfigurationContext configurationContext) {
+
+    // ensure we allocate some ports to the nodes in the config
+    configurationContext.visit(new ConfigurationContextVisitor() {
+      @Override
+      public void visit(TsaConfigurationContext tsaConfigurationContext) {
+        Topology topology = tsaConfigurationContext.getTopology();
+        if (topology != null) {
+          topology.init(portAllocator);
+        }
+      }
+    });
+
     return new ClusterFactory(localAgent, portAllocator, idPrefix, configurationContext);
   }
 

@@ -16,6 +16,7 @@
 package org.terracotta.angela.common.topology;
 
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.provider.ConfigurationManager;
 import org.terracotta.angela.common.provider.TcConfigManager;
 import org.terracotta.angela.common.tcconfig.TcConfig;
@@ -127,6 +128,8 @@ public class Topology {
   public Collection<String> getServersHostnames() {
     return configurationManager.getServersHostnames();
   }
+
+  public void init(PortAllocator portAllocator) {configurationManager.init(portAllocator);}
 
   @Override
   public String toString() {

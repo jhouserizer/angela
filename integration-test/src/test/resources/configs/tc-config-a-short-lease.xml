@@ -17,7 +17,7 @@
   -->
 
 <tc-config xmlns="http://www.terracotta.org/config"
-           xmlns:ohr="http://www.terracotta.org/config/offheap-resource">
+>
 
   <plugins>
     <service xmlns:lease="http://www.terracotta.org/service/lease">
@@ -31,8 +31,8 @@
   <servers>
     <server host="localhost" name="Server1">
       <logs>logs1</logs>
-      <tsa-port>9510</tsa-port>
-      <tsa-group-port>9530</tsa-group-port>
+<!--      <tsa-port>9510</tsa-port>-->
+<!--      <tsa-group-port>9530</tsa-group-port>-->
     </server>
   </servers>
 

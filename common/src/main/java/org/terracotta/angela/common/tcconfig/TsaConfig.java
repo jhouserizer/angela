@@ -15,12 +15,14 @@
  */
 package org.terracotta.angela.common.tcconfig;
 
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.Version;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * @author Aurelien Broszniowski
@@ -34,11 +36,20 @@ public class TsaConfig {
     this.tcConfigs = tcConfigs;
   }
 
+  public void initialize(PortAllocator portAllocator) {
+    tcConfigs.forEach(tcConfig -> tcConfig.initialize(portAllocator));
+  }
+
+  @SuppressWarnings("ConstantConditions")
   public static TsaConfig tsaConfig(Version version, List<TsaStripeConfig> stripeConfigs) {
+    return tsaConfig(version, stripeConfigs, () -> new TcConfig(version, TsaConfig.class.getResource("tsa-config-tc-config-template-10.xml")));
+  }
+
+  public static TsaConfig tsaConfig(Version version, List<TsaStripeConfig> stripeConfigs, Supplier<TcConfig> tcConfigSupplier) {
     if (version.getMajor() < 10) {
       throw new UnsupportedOperationException("Dynamic TcConfig generation for BigMemory is not supported");
     }
-    return new TsaConfig(buildTcConfigs(version, stripeConfigs));
+    return new TsaConfig(buildTcConfigs(version, stripeConfigs, tcConfigSupplier));
   }
 
   public static TsaConfig tsaConfig(Version version, TsaStripeConfig stripeConfig, TsaStripeConfig... stripeConfigs) {
@@ -63,12 +74,12 @@ public class TsaConfig {
     return Collections.unmodifiableList(tcConfigs);
   }
 
-  private static List<TcConfig> buildTcConfigs(Version version, List<TsaStripeConfig> stripeConfigs) {
+  private static List<TcConfig> buildTcConfigs(Version version, List<TsaStripeConfig> stripeConfigs, Supplier<TcConfig> tcConfigSupplier) {
     List<TcConfig> tcConfigs = new ArrayList<>();
 
     for (int i = 0; i < stripeConfigs.size(); i++) {
       final TsaStripeConfig stripeConfig = stripeConfigs.get(i);
-      TcConfig tcConfig = new TcConfig(version, TsaConfig.class.getResource("tsa-config-tc-config-template-10.xml"));
+      TcConfig tcConfig = tcConfigSupplier.get();
       for (String hostname : stripeConfig.getHostnames()) {
         tcConfig.addServer((i + 1), hostname);
         tcConfig.setTcConfigName("tsa-config-" + hostname + "-stripe" + i + ".xml");
@@ -95,7 +106,7 @@ public class TsaConfig {
   @Override
   public String toString() {
     return "TsaConfig{" +
-           "tcConfigs=" + tcConfigs +
-           '}';
+        "tcConfigs=" + tcConfigs +
+        '}';
   }
 }

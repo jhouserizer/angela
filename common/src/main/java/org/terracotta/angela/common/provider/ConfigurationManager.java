@@ -47,6 +47,8 @@ public interface ConfigurationManager {
 
   Collection<String> getServersHostnames();
 
+  default void init(PortAllocator portAllocator) {}
+
   void createDisruptionLinks(TerracottaServer terracottaServer, DisruptionProvider disruptionProvider,
                              Map<ServerSymbolicName, Disruptor> disruptionLinks, Map<ServerSymbolicName, Integer> proxiedPorts,
                              PortAllocator portAllocator);

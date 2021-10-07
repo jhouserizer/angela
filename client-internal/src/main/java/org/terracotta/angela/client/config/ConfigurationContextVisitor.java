@@ -15,27 +15,6 @@
  */
 package org.terracotta.angela.client.config;
 
-import java.util.Set;
-
-public interface ConfigurationContext {
-
-  void visit(ConfigurationContextVisitor visitor);
-
-  RemotingConfigurationContext remoting();
-
-  TsaConfigurationContext tsa();
-
-  TmsConfigurationContext tms();
-
-  ClientArrayConfigurationContext clientArray();
-
-  Set<String> allHostnames();
-
-  MonitoringConfigurationContext monitoring();
-
-  ToolConfigurationContext clusterTool();
-
-  ToolConfigurationContext configTool();
-
-  VoterConfigurationContext voter();
+public interface ConfigurationContextVisitor {
+  default void visit(TsaConfigurationContext tsaConfigurationContext) {}
 }

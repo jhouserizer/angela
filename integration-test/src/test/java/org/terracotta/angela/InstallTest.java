@@ -68,18 +68,21 @@ public class InstallTest {
 
   @Test
   public void testHardwareMetricsLogs() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(4).stream().toArray();
+
     final File resultPath = new File("target", UUID.randomUUID().toString());
 
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
           final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_AP);
           Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-            put(new ServerSymbolicName("Server1"), 9511);
-            put(new ServerSymbolicName("Server2"), 9512);
+            put(new ServerSymbolicName("Server1"), ports[0]);
+            put(new ServerSymbolicName("Server2"), ports[1]);
           }};
           Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-            put(new ServerSymbolicName("Server1"), 9531);
-            put(new ServerSymbolicName("Server2"), 9532);
+            put(new ServerSymbolicName("Server1"), ports[2]);
+            put(new ServerSymbolicName("Server2"), ports[3]);
           }};
           tcConfig.updateServerTsaPort(tsaPorts);
           tcConfig.updateServerGroupPort(groupPorts);
@@ -106,14 +109,17 @@ public class InstallTest {
 
   @Test
   public void testSsh() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
+
     TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
     tcConfig.updateServerHost(0, InetAddress.getLocalHost().getHostName());
 
     Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9513);
+      put(new ServerSymbolicName("Server1"), ports[0]);
     }};
     Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9533);
+      put(new ServerSymbolicName("Server1"), ports[1]);
     }};
     tcConfig.updateServerTsaPort(tsaPorts);
     tcConfig.updateServerGroupPort(groupPorts);
@@ -133,14 +139,17 @@ public class InstallTest {
 
   @Test
   public void testLocalInstallJava11() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
               final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
               Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9514);
+                put(new ServerSymbolicName("Server1"), ports[0]);
               }};
               Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9534);
+                put(new ServerSymbolicName("Server1"), ports[1]);
               }};
               tcConfig.updateServerTsaPort(tsaPorts);
               tcConfig.updateServerGroupPort(groupPorts);
@@ -163,14 +172,17 @@ public class InstallTest {
 
   @Test
   public void testLocalInstall() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
           final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
           Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-            put(new ServerSymbolicName("Server1"), 9410);
+            put(new ServerSymbolicName("Server1"), ports[0]);
           }};
           Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-            put(new ServerSymbolicName("Server1"), 9535);
+            put(new ServerSymbolicName("Server1"), ports[1]);
           }};
           tcConfig.updateServerTsaPort(tsaPorts);
           tcConfig.updateServerGroupPort(groupPorts);
@@ -187,12 +199,15 @@ public class InstallTest {
 
   @Test
   public void testTwoTsaCustomConfigsFailWithoutMultiConfig() {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(6).stream().toArray();
+
     final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
     Map<ServerSymbolicName, Integer> tsaPorts1 = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9516);
+      put(new ServerSymbolicName("Server1"), ports[0]);
     }};
     Map<ServerSymbolicName, Integer> groupPorts1 = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9536);
+      put(new ServerSymbolicName("Server1"), ports[1]);
     }};
     tcConfig.updateServerTsaPort(tsaPorts1);
     tcConfig.updateServerGroupPort(groupPorts1);
@@ -202,12 +217,12 @@ public class InstallTest {
 
     final TcConfig tcConfigAP = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_AP);
     Map<ServerSymbolicName, Integer> tsaPorts2 = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9517);
-      put(new ServerSymbolicName("Server2"), 9518);
+      put(new ServerSymbolicName("Server1"), ports[2]);
+      put(new ServerSymbolicName("Server2"), ports[3]);
     }};
     Map<ServerSymbolicName, Integer> groupPorts2 = new HashMap<ServerSymbolicName, Integer>() {{
-      put(new ServerSymbolicName("Server1"), 9537);
-      put(new ServerSymbolicName("Server2"), 9538);
+      put(new ServerSymbolicName("Server1"), ports[4]);
+      put(new ServerSymbolicName("Server2"), ports[5]);
     }};
     tcConfigAP.updateServerTsaPort(tsaPorts2);
     tcConfigAP.updateServerGroupPort(groupPorts2);
@@ -227,16 +242,19 @@ public class InstallTest {
 
   @Test
   public void testStopStalledServer() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(4).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
               final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), getClass().getResource("/configs/tc-config-ap-consistent.xml"));
               Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9519);
-                put(new ServerSymbolicName("Server2"), 9520);
+                put(new ServerSymbolicName("Server1"), ports[0]);
+                put(new ServerSymbolicName("Server2"), ports[1]);
               }};
               Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9539);
-                put(new ServerSymbolicName("Server2"), 9540);
+                put(new ServerSymbolicName("Server1"), ports[2]);
+                put(new ServerSymbolicName("Server2"), ports[3]);
               }};
               tcConfig.updateServerTsaPort(tsaPorts);
               tcConfig.updateServerGroupPort(groupPorts);
@@ -262,14 +280,17 @@ public class InstallTest {
 
   @Test
   public void testStartCreatedServer() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
               final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
               Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9521);
+                put(new ServerSymbolicName("Server1"), ports[0]);
               }};
               Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9541);
+                put(new ServerSymbolicName("Server1"), ports[1]);
               }};
               tcConfig.updateServerTsaPort(tsaPorts);
               tcConfig.updateServerGroupPort(groupPorts);
@@ -292,14 +313,17 @@ public class InstallTest {
 
   @Test(expected = RuntimeException.class)
   public void testServerStartUpWithArg() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
               final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
               Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9522);
+                put(new ServerSymbolicName("Server1"), ports[0]);
               }};
               Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9542);
+                put(new ServerSymbolicName("Server1"), ports[1]);
               }};
               tcConfig.updateServerTsaPort(tsaPorts);
               tcConfig.updateServerGroupPort(groupPorts);
@@ -322,16 +346,19 @@ public class InstallTest {
 
   @Test
   public void testStopPassive() throws Exception {
+    // no need tp close the reservation or port allocator: the rule will do it
+    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(4).stream().toArray();
+
     ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
         .tsa(tsa -> {
               final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_AP);
               Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9523);
-                put(new ServerSymbolicName("Server2"), 9524);
+                put(new ServerSymbolicName("Server1"), ports[0]);
+                put(new ServerSymbolicName("Server2"), ports[1]);
               }};
               Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), 9543);
-                put(new ServerSymbolicName("Server2"), 9544);
+                put(new ServerSymbolicName("Server1"), ports[2]);
+                put(new ServerSymbolicName("Server2"), ports[3]);
               }};
               tcConfig.updateServerTsaPort(tsaPorts);
               tcConfig.updateServerGroupPort(groupPorts);
