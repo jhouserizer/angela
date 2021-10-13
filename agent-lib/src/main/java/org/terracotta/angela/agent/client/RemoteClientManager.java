@@ -24,6 +24,7 @@ import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.ExternalLoggers;
+import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.LogOutputStream;
 import org.terracotta.angela.common.util.OS;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -32,6 +33,7 @@ import org.zeroturnaround.exec.StartedProcess;
 import org.zeroturnaround.process.PidUtil;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,13 +69,9 @@ public class RemoteClientManager {
 
   public ToolExecutionResult jcmd(int javaPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
     String javaHome = tcEnv.getJavaHome();
-
+    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
     List<String> cmdLine = new ArrayList<>();
-    if (OS.INSTANCE.isWindows()) {
-      cmdLine.add(javaHome + "\\bin\\jcmd.exe");
-    } else {
-      cmdLine.add(javaHome + "/bin/jcmd");
-    }
+    cmdLine.add(path.toAbsolutePath().toString());
     cmdLine.add(Integer.toString(javaPid));
     cmdLine.addAll(Arrays.asList(arguments));
 
