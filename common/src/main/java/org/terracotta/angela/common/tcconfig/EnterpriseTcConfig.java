@@ -26,12 +26,16 @@ public class EnterpriseTcConfig extends TcConfig {
     return new EnterpriseTcConfig(version, tcConfigPath);
   }
 
+  private final Version version;
+
   EnterpriseTcConfig(EnterpriseTcConfig tcConfig) {
     super(tcConfig);
+    this.version = tcConfig.version;
   }
 
   EnterpriseTcConfig(Version version, URL tcConfigPath) {
     super(version, tcConfigPath);
+    this.version = version;
   }
 
   @Override
@@ -40,7 +44,7 @@ public class EnterpriseTcConfig extends TcConfig {
   }
 
   public void initialize(PortAllocator portAllocator) {
-    tcConfigHolder.initialize(portAllocator, tag -> true);
+    tcConfigHolder.initialize(portAllocator, tag -> version.getMajor() == 4 || !tag.equals("jmx-port") && !tag.equals("management-port"));
   }
 
 }

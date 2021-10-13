@@ -144,11 +144,14 @@ public abstract class TcConfigHolder {
 
         String symbolicName = nameNode == null ? hostname + ":" + tsaPort : nameNode.getTextContent();
 
+        Node logNode = (Node) xPath.evaluate("*[name()='logs']", server, XPathConstants.NODE);
+
         TerracottaServer terracottaServer = TerracottaServer
             .server(symbolicName, hostname)
             .tsaPort(tsaPort)
             .tsaGroupPort(tsaGroupPort)
             .managementPort(managementPort)
+            .logs(logNode == null ? null : logNode.getTextContent())
             .jmxPort(jmxPort);
         servers.add(terracottaServer);
       }
@@ -194,16 +197,16 @@ public abstract class TcConfigHolder {
       for (int i = 0; i < serversList.getLength(); i++) {
         Node server = serversList.item(i);
         Node logsNode = (Node) xPath.evaluate("*[name()='logs']", server, XPathConstants.NODE);
-
-        String logsPath = kitDir.getAbsolutePath() + File.separatorChar + "logs-" + stripeId + "-" + cnt;
-        logsPathList.add(logsPath);
+        String logsPath;
         if (logsNode != null) {
-          logsNode.setTextContent(logsPath);
+          logsPath = kitDir.getAbsolutePath() + File.separatorChar + logsNode.getTextContent();
         } else {
+          logsPath = kitDir.getAbsolutePath() + File.separatorChar + "logs-" + stripeId + "-" + cnt;
           Element newElement = tcConfigXml.createElement("logs");
           newElement.setTextContent(logsPath);
           server.appendChild(newElement);
         }
+        logsPathList.add(logsPath);
         cnt++;
       }
     });
