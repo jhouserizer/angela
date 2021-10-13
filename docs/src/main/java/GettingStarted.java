@@ -170,7 +170,7 @@ public class GettingStarted {
             )
         );
     ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::runClient", configContext);
-    ClientArray clientArray = factory.clientArray(); // <5>
+    ClientArray clientArray = factory.clientArray(0); // <5>
     ClientArrayFuture f = clientArray.executeOnAll((context) -> System.out.println("Hello")); // <6>
     f.get(); // <7>
 

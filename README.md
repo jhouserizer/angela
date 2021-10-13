@@ -124,7 +124,7 @@ We expect the TSA to contain one Terracotta server running on localhost, and thi
             )
         );
     ClusterFactory factory = new ClusterFactory("GettingStarted::runClient", configContext);
-    ClientArray clientArray = factory.clientArray(); (5)
+    ClientArray clientArray = factory.clientArray(0); (5)
     ClientArrayFuture f = clientArray.executeOnAll((context) -> System.out.println("Hello")); (6)
     f.get(); (7)
 

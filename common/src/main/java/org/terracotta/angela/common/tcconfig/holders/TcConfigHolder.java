@@ -109,7 +109,8 @@ public abstract class TcConfigHolder {
   @SuppressFBWarnings("REC_CATCH_EXCEPTION")
   public void initialize(PortAllocator portAllocator, Function<String, Boolean> support) {
     if (!this.servers.isEmpty()) {
-      throw new IllegalStateException("Already initialized");
+      // Already initialized
+      return;
     }
 
     List<TerracottaServer> servers = new ArrayList<>();

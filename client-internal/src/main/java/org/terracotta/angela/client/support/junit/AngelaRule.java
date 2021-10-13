@@ -97,7 +97,7 @@ public class AngelaRule extends ExtendedTestRule {
     tsa = memoize(clusterFactory::tsa);
     cluster = memoize(clusterFactory::cluster);
     tms = memoize(clusterFactory::tms);
-    clientArray = memoize(clusterFactory::clientArray);
+    clientArray = memoize(clusterFactory::firstClientArray);
     clusterMonitor = memoize(clusterFactory::monitor);
     voter = memoize(clusterFactory::voter);
     configTool = memoize(clusterFactory::configTool);

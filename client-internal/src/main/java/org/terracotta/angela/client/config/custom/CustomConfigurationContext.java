@@ -27,7 +27,9 @@ import org.terracotta.angela.client.config.VoterConfigurationContext;
 import org.terracotta.angela.client.remote.agent.SshRemoteAgentLauncher;
 import org.terracotta.angela.common.distribution.Distribution;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -36,7 +38,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
   private CustomTsaConfigurationContext customTsaConfigurationContext;
   private CustomTmsConfigurationContext customTmsConfigurationContext;
   private CustomMonitoringConfigurationContext customMonitoringConfigurationContext;
-  private CustomClientArrayConfigurationContext customClientArrayConfigurationContext;
+  private final List<CustomClientArrayConfigurationContext> customClientArrayConfigurationContexts = new ArrayList<>();
   private CustomVoterConfigurationContext customVoterConfigurationContext;
   private CustomClusterToolConfigurationContext customClusterToolConfigurationContext;
   private CustomConfigToolConfigurationContext customConfigToolConfigurationContext;
@@ -103,20 +105,18 @@ public class CustomConfigurationContext implements ConfigurationContext {
   }
 
   @Override
-  public ClientArrayConfigurationContext clientArray() {
-    return customClientArrayConfigurationContext;
+  public List<? extends ClientArrayConfigurationContext> clientArray() {
+    return customClientArrayConfigurationContexts;
   }
 
   public CustomConfigurationContext clientArray(Consumer<CustomClientArrayConfigurationContext> clientArray) {
-    if (customClientArrayConfigurationContext != null) {
-      throw new IllegalStateException("client array config already defined");
-    }
-    customClientArrayConfigurationContext = new CustomClientArrayConfigurationContext();
+    CustomClientArrayConfigurationContext customClientArrayConfigurationContext = new CustomClientArrayConfigurationContext();
     clientArray.accept(customClientArrayConfigurationContext);
     Distribution distribution = customClientArrayConfigurationContext.getClientArrayTopology().getDistribution();
     if (customClientArrayConfigurationContext.getLicense() == null && distribution != null && !distribution.getLicenseType().isOpenSource()) {
       throw new IllegalArgumentException("Distribution's license type '" + distribution.getLicenseType() + "' requires a license.");
     }
+    customClientArrayConfigurationContexts.add(customClientArrayConfigurationContext);
     return this;
   }
 
@@ -129,7 +129,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
     if (customTmsConfigurationContext != null) {
       hostnames.add(customTmsConfigurationContext.getHostname());
     }
-    if (customClientArrayConfigurationContext != null) {
+    for (CustomClientArrayConfigurationContext customClientArrayConfigurationContext : customClientArrayConfigurationContexts) {
       hostnames.addAll(customClientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
     }
     return hostnames;
