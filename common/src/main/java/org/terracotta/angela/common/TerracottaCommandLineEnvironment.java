@@ -111,11 +111,17 @@ public class TerracottaCommandLineEnvironment {
   }
 
   public TerracottaCommandLineEnvironment withJavaVersion(String javaVersion) {
-    return new TerracottaCommandLineEnvironment(javaHome, javaVersion, javaVendors, javaOpts);
+    if (javaHome != null) {
+      throw new UnsupportedOperationException("Unable to change the Java version when using the 'user' resolver");
+    }
+    return new TerracottaCommandLineEnvironment(null, javaVersion, javaVendors, javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaVendors(String... javaVendors) {
-    return new TerracottaCommandLineEnvironment(javaHome, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
+    if (javaHome != null) {
+      throw new UnsupportedOperationException("Unable to change the Java vendors when using the 'user' resolver");
+    }
+    return new TerracottaCommandLineEnvironment(null, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaOpts(String... javaOpts) {
@@ -123,7 +129,7 @@ public class TerracottaCommandLineEnvironment {
   }
 
   public TerracottaCommandLineEnvironment withJavaHome(String jdkHome) {
-    return new TerracottaCommandLineEnvironment(requireNonNull(jdkHome), javaVersion, javaVendors, javaOpts);
+    return new TerracottaCommandLineEnvironment(requireNonNull(jdkHome), "", emptySet(), javaOpts);
   }
 
   public String getJavaHome() {
