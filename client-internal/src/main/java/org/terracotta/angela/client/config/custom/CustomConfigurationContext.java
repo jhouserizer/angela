@@ -25,7 +25,6 @@ import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.client.config.VoterConfigurationContext;
 import org.terracotta.angela.client.remote.agent.SshRemoteAgentLauncher;
-import org.terracotta.angela.common.distribution.Distribution;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -112,10 +111,6 @@ public class CustomConfigurationContext implements ConfigurationContext {
   public CustomConfigurationContext clientArray(Consumer<CustomClientArrayConfigurationContext> clientArray) {
     CustomClientArrayConfigurationContext customClientArrayConfigurationContext = new CustomClientArrayConfigurationContext();
     clientArray.accept(customClientArrayConfigurationContext);
-    Distribution distribution = customClientArrayConfigurationContext.getClientArrayTopology().getDistribution();
-    if (customClientArrayConfigurationContext.getLicense() == null && distribution != null && !distribution.getLicenseType().isOpenSource()) {
-      throw new IllegalArgumentException("Distribution's license type '" + distribution.getLicenseType() + "' requires a license.");
-    }
     customClientArrayConfigurationContexts.add(customClientArrayConfigurationContext);
     return this;
   }
