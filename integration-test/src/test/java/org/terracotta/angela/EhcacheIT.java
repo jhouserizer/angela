@@ -108,7 +108,7 @@ public class EhcacheIT {
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
       factory.tsa().startAll();
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
       String cacheAlias = "clustered-cache";
 

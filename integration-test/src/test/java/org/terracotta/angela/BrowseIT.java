@@ -66,7 +66,7 @@ public class BrowseIT {
             .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
         );
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testClient", configContext)) {
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       Client client = clientArray.getClients().stream().findFirst().get();
 
       File fileToUpload = new File("target/toUpload", "uploaded-data.txt");
@@ -127,7 +127,7 @@ public class BrowseIT {
         );
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testNonExistentFolder", configContext)) {
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       try {
         Client localhost = clientArray.getClients().stream().findFirst().get();
         localhost.browse("/does/not/exist").downloadTo(new File("target/destination"));
@@ -146,7 +146,7 @@ public class BrowseIT {
         );
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testUpload", configContext)) {
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       Client localhost = clientArray.getClients().stream().findFirst().get();
       RemoteFolder folder = localhost.browse("does-not-exist"); // check that we can upload to non-existent folder & the folder will be created
 

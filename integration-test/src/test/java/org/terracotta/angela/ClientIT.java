@@ -25,7 +25,6 @@ import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
-import org.terracotta.angela.client.config.custom.CustomMultiConfigurationContext;
 import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.clientconfig.ClientArrayConfig;
 import org.terracotta.angela.common.clientconfig.ClientId;
@@ -90,7 +89,7 @@ public class ClientIT {
     String localFolder = "target/myNewFolderClient";
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> {
           System.out.println("Writing to file");
           new File(remoteFolder).mkdirs();
@@ -119,7 +118,7 @@ public class ClientIT {
     String localFolder = "target/myNewFolderMultipleClients";
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         Set<String> filecontents = new HashSet<>();
 
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> {
@@ -156,8 +155,8 @@ public class ClientIT {
     String fileContent = "Test data";
     String localFolder = "target/myNewFolderMultipleJobs";
 
-    try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory( "ClientTest::testRemoteClient", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+    try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         Set<String> filecontents = new HashSet<>();
 
         ClientJob clientJob = (cluster) -> {
@@ -196,14 +195,14 @@ public class ClientIT {
   @Test
   public void testMultipleClientsOnSameHost() throws Exception {
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
-    ConfigurationContext configContext = CustomMultiConfigurationContext.customMultiConfigurationContext()
+    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig()
                 .hostSerie(3, "localhost")
             )));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testMultipleClientsOnSameHost", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> System.out.println("hello world"));
         f.get();
       }
@@ -215,7 +214,7 @@ public class ClientIT {
     int serieLength = 3;
     int clientsPerMachine = 2;
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
-    ConfigurationContext configContext = CustomMultiConfigurationContext.customMultiConfigurationContext()
+    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(
                 new ClientArrayTopology(
@@ -225,7 +224,7 @@ public class ClientIT {
             )
         );
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testMultipleClientsOnSameHost", configContext)) {
-      try (ClientArray clientArray = factory.clientArray()) {
+      try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (cluster) -> {
           AtomicCounter counter = cluster.atomicCounter("countJobs", 0);
           long n = counter.incrementAndGet();
@@ -246,18 +245,18 @@ public class ClientIT {
   @Test
   public void testRemoteClient() throws Exception {
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
-    ConfigurationContext configContext = CustomMultiConfigurationContext.customMultiConfigurationContext()
+    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))))
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> System.out.println("hello world 1"));
         f.get();
       }
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> System.out.println("hello world 2"));
         f.get();
       }
@@ -270,7 +269,7 @@ public class ClientIT {
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("localhost"))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> System.out.println("hello world 1"));
         f.get();
       }
@@ -283,7 +282,7 @@ public class ClientIT {
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, "localhost"))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayExceptionReported", configContext)) {
-      try (ClientArray clientArray = instance.clientArray()) {
+      try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> {
           String message = "Just Say No (tm) " + cluster.atomicCounter("testClientArrayExceptionReportedCounter", 0L)
               .getAndIncrement();
@@ -328,7 +327,7 @@ public class ClientIT {
         System.out.println("again");
       };
 
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       monitor.startOnAll();
 
       ClientArrayFuture future = clientArray.executeOnAll(clientJob);
@@ -367,7 +366,7 @@ public class ClientIT {
         System.out.println("again");
       };
 
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       monitor.startOnAll();
 
       ClientArrayFuture future = clientArray.executeOnAll(clientJob);
@@ -405,7 +404,7 @@ public class ClientIT {
         System.out.println("again");
       };
 
-      ClientArray clientArray = factory.clientArray();
+      ClientArray clientArray = factory.clientArray(0);
       monitor.startOnAll();
 
       ClientArrayFuture future = clientArray.executeOnAll(clientJob);
@@ -447,7 +446,7 @@ public class ClientIT {
       factory.tsa();
 
       try {
-        factory.clientArray();
+        factory.clientArray(0);
         fail("expected exception");
       } catch (Exception e) {
         // expected
@@ -460,7 +459,7 @@ public class ClientIT {
     final int clientCount = 2;
     final int loopCount = 20;
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
-    ConfigurationContext configContext = CustomMultiConfigurationContext.customMultiConfigurationContext()
+    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))))
         .clientArray(clientArray -> clientArray
@@ -479,7 +478,7 @@ public class ClientIT {
 
       List<Future<Void>> futures = new ArrayList<>();
       for (int i = 0; i < clientCount; i++) {
-        ClientArray clients = factory.clientArray();
+        ClientArray clients = factory.clientArray(i);
         ClientArrayFuture caf = clients.executeOnAll(clientJob);
         futures.addAll(caf.getFutures());
       }
@@ -514,7 +513,7 @@ public class ClientIT {
       };
 
       { // executeAll
-        ClientArray clientArray = factory.clientArray();
+        ClientArray clientArray = factory.clientArray(0);
 
         ClientArrayFuture f = clientArray.executeOnAll(clientJob);
         f.get();
@@ -531,7 +530,7 @@ public class ClientIT {
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, "localhost"))));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
-      try (ClientArray clientArray = factory.clientArray()) {
+      try (ClientArray clientArray = factory.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> {
           AtomicReference<String> strRef = cluster.atomicReference("string", null);
           strRef.set("A");
@@ -558,7 +557,7 @@ public class ClientIT {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(hostSerie)));
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
-      try (ClientArray clientArray = factory.clientArray()) {
+      try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (Cluster cluster) -> {
           ClientId clientId = cluster.getClientId();
           assertThat(clientId.getHostname(), is("localhost"));

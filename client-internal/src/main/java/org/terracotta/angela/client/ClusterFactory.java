@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.terracotta.angela.common.util.IpUtils.isLocal;
 
@@ -187,11 +188,12 @@ public class ClusterFactory implements AutoCloseable {
     return voter;
   }
 
-  public ClientArray clientArray() {
-    ClientArrayConfigurationContext clientArrayConfigurationContext = configurationContext.clientArray();
-    if (clientArrayConfigurationContext == null) {
-      throw new IllegalArgumentException("clientArray() configuration missing in the ConfigurationContext");
-    }
+  public ClientArray firstClientArray() {
+    return clientArray(0);
+  }
+
+  public ClientArray clientArray(int idx) {
+    ClientArrayConfigurationContext clientArrayConfigurationContext = configurationContext.clientArray(idx);
     init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
 
     ClientArray clientArray = new ClientArray(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(),
@@ -199,6 +201,20 @@ public class ClusterFactory implements AutoCloseable {
             .getClientHostnames()), clientArrayConfigurationContext);
     controllers.add(clientArray);
     return clientArray;
+  }
+
+  public List<ClientArray> clientArray() {
+    return configurationContext.clientArray().stream()
+        .map(clientArrayConfigurationContext -> {
+          init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
+
+          ClientArray clientArray = new ClientArray(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(),
+              () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology()
+                  .getClientHostnames()), clientArrayConfigurationContext);
+          controllers.add(clientArray);
+          return clientArray;
+        })
+        .collect(Collectors.toList());
   }
 
   public ClusterMonitor monitor() {
