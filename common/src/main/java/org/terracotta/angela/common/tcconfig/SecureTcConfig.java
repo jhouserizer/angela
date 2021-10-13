@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.tcconfig;
 
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.Version;
 
 import java.net.URL;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class SecureTcConfig extends EnterpriseTcConfig {
 
   private final Map<ServerSymbolicName, SecurityRootDirectory> securityRootDirectoryMap = new HashMap<>();
+  private final boolean validateConfig;
 
   public static SecureTcConfig secureTcConfig(Version version,
                                               URL tcConfigPath,
@@ -40,19 +42,25 @@ public class SecureTcConfig extends EnterpriseTcConfig {
 
   SecureTcConfig(Version version, URL tcConfigPath, boolean validateConfig, NamedSecurityRootDirectory... namedSecurityRootDirectories) {
     super(version, tcConfigPath);
+    this.validateConfig = validateConfig;
     for (NamedSecurityRootDirectory namedSecurityRootDirectory : namedSecurityRootDirectories) {
       securityRootDirectoryMap.put(namedSecurityRootDirectory.getServerSymbolicName(),
           namedSecurityRootDirectory.getSecurityRootDirectory());
     }
-    if (validateConfig) {
-      validateConfig();
-    }
-
   }
 
   SecureTcConfig(SecureTcConfig tcConfig, Map<ServerSymbolicName, SecurityRootDirectory> securityRootDirectoryMap) {
     super(tcConfig);
     this.securityRootDirectoryMap.putAll(securityRootDirectoryMap);
+    this.validateConfig = tcConfig.validateConfig;
+  }
+
+  @Override
+  public void initialize(PortAllocator portAllocator) {
+    super.initialize(portAllocator);
+    if (validateConfig) {
+      validateConfig();
+    }
   }
 
   @Override
