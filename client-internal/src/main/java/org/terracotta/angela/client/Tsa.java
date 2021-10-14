@@ -344,6 +344,14 @@ public class Tsa implements AutoCloseable {
     return result;
   }
 
+  public Collection<TerracottaServer> waitForPassives(int count) throws InterruptedException {
+    Collection<TerracottaServer> terracottaServers;
+    while ((terracottaServers = getPassives()).size() < count) {
+      Thread.sleep(500);
+    }
+    return terracottaServers;
+  }
+
   public TerracottaServer getPassive() {
     Collection<TerracottaServer> servers = getPassives();
     switch (servers.size()) {
@@ -354,6 +362,14 @@ public class Tsa implements AutoCloseable {
       default:
         throw new IllegalStateException("There is more than one Passive Terracotta server, found " + servers.size());
     }
+  }
+
+  public TerracottaServer waitForPassive() throws InterruptedException {
+    TerracottaServer terracottaServer;
+    while ((terracottaServer = getPassive()) == null) {
+      Thread.sleep(500);
+    }
+    return terracottaServer;
   }
 
   public Collection<TerracottaServer> getActives() {
@@ -386,6 +402,14 @@ public class Tsa implements AutoCloseable {
       }
     }
     return stripeIndices;
+  }
+
+  public TerracottaServer waitForActive() throws InterruptedException {
+    TerracottaServer terracottaServer;
+    while ((terracottaServer = getActive()) == null) {
+      Thread.sleep(500);
+    }
+    return terracottaServer;
   }
 
   public TerracottaServer getActive() {
@@ -440,7 +464,7 @@ public class Tsa implements AutoCloseable {
 
   public RemoteFolder browseFromKitLocation(TerracottaServer terracottaServer, String relativePath) {
     String kitLocation = IgniteClientHelper.executeRemotely(ignite, terracottaServer.getHostname(), ignitePort,
-                                                     () -> Agent.getInstance().getController().getTsaKitLocation(instanceId, terracottaServer));
+        () -> Agent.getInstance().getController().getTsaKitLocation(instanceId, terracottaServer));
     return new RemoteFolder(ignite, terracottaServer.getHostname(), ignitePort, kitLocation, relativePath);
   }
 
@@ -472,7 +496,7 @@ public class Tsa implements AutoCloseable {
     Topology topology = tsaConfigurationContext.getTopology();
     ConfigurationManager configurationManager = topology.getConfigurationManager();
     if (configurationManager instanceof TcConfigManager) {
-      TcConfigManager tcConfigProvider = (TcConfigManager)configurationManager;
+      TcConfigManager tcConfigProvider = (TcConfigManager) configurationManager;
       List<TcConfig> tcConfigs = tcConfigProvider.getTcConfigs();
       for (TcConfig tcConfig : tcConfigs) {
         Collection<String> dataDirectories = tcConfig.getDataDirectories().values();
@@ -481,7 +505,7 @@ public class Tsa implements AutoCloseable {
           for (TerracottaServer server : servers) {
             try {
               File localFile = new File(localRootPath, server.getServerSymbolicName()
-                                                           .getSymbolicName() + "/" + directory);
+                  .getSymbolicName() + "/" + directory);
               browse(server, directory).upload(localFile);
             } catch (IOException ioe) {
               exceptions.add(ioe);
@@ -504,7 +528,7 @@ public class Tsa implements AutoCloseable {
     Topology topology = tsaConfigurationContext.getTopology();
     ConfigurationManager configurationManager = topology.getConfigurationManager();
     if (configurationManager instanceof TcConfigManager) {
-      TcConfigManager tcConfigProvider = (TcConfigManager)configurationManager;
+      TcConfigManager tcConfigProvider = (TcConfigManager) configurationManager;
       List<TcConfig> tcConfigs = tcConfigProvider.getTcConfigs();
       for (TcConfig tcConfig : tcConfigs) {
         Map<String, String> dataDirectories = tcConfig.getDataDirectories();
