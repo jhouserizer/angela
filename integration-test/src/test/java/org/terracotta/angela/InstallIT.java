@@ -23,7 +23,6 @@ import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
-import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
@@ -134,39 +133,6 @@ public class InstallIT {
       tsa.startAll();
     } finally {
       SSH_STRICT_HOST_CHECKING.clearProperty();
-    }
-  }
-
-  @Test
-  public void testLocalInstallJava11() throws Exception {
-    // no need tp close the reservation or port allocator: the rule will do it
-    final int[] ports = angelaOrchestratorRule.getPortAllocator().reserve(2).stream().toArray();
-
-    ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
-        .tsa(tsa -> {
-              final TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION), TC_CONFIG_A);
-              Map<ServerSymbolicName, Integer> tsaPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), ports[0]);
-              }};
-              Map<ServerSymbolicName, Integer> groupPorts = new HashMap<ServerSymbolicName, Integer>() {{
-                put(new ServerSymbolicName("Server1"), ports[1]);
-              }};
-              tcConfig.updateServerTsaPort(tsaPorts);
-              tcConfig.updateServerGroupPort(groupPorts);
-
-              tsa
-                  .topology(
-                      new Topology(
-                          distribution(version(EHCACHE_VERSION), KIT, TERRACOTTA_OS),
-                          tcConfig
-                      ))
-                  .terracottaCommandLineEnvironment(TerracottaCommandLineEnvironment.DEFAULT.withJavaVersion("1.11"));
-            }
-        );
-
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("InstallTest::testLocalInstallJava11", config)) {
-      Tsa tsa = factory.tsa();
-      tsa.startAll();
     }
   }
 

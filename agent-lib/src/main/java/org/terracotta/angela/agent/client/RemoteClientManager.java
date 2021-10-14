@@ -24,6 +24,7 @@ import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.ExternalLoggers;
+import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.LogOutputStream;
 import org.terracotta.angela.common.util.OS;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -32,6 +33,7 @@ import org.zeroturnaround.exec.StartedProcess;
 import org.zeroturnaround.process.PidUtil;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,14 +68,10 @@ public class RemoteClientManager {
   }
 
   public ToolExecutionResult jcmd(int javaPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    String javaHome = tcEnv.getJavaHome();
-
+    Path javaHome = tcEnv.getJavaHome();
+    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
     List<String> cmdLine = new ArrayList<>();
-    if (OS.INSTANCE.isWindows()) {
-      cmdLine.add(javaHome + "\\bin\\jcmd.exe");
-    } else {
-      cmdLine.add(javaHome + "/bin/jcmd");
-    }
+    cmdLine.add(path.toAbsolutePath().toString());
     cmdLine.add(Integer.toString(javaPid));
     cmdLine.addAll(Arrays.asList(arguments));
 
@@ -92,7 +90,7 @@ public class RemoteClientManager {
   @SuppressFBWarnings("REC_CATCH_EXCEPTION")
   public int spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv, Collection<String> joinedNodes, int ignitePort, PortAllocator portAllocator) {
     try {
-      String javaHome = tcEnv.getJavaHome();
+      Path javaHome = tcEnv.getJavaHome();
 
       final AtomicBoolean started = new AtomicBoolean(false);
       List<String> cmdLine = new ArrayList<>();
@@ -115,7 +113,7 @@ public class RemoteClientManager {
       cmdLine.add("-D" + ROOT_DIR.getPropertyName() + "=" + Agent.ROOT_DIR);
       cmdLine.add(Agent.class.getName());
 
-      logger.info("Spawning client with: {}", cmdLine);
+      logger.info("Spawning client with: {}", String.join(" ", cmdLine));
       ProcessExecutor processExecutor = new ProcessExecutor()
           .command(cmdLine)
           .redirectOutput(new LogOutputStream() {
@@ -157,11 +155,6 @@ public class RemoteClientManager {
     for (String cpentry : cpEntries) {
       sb.append(CLASSPATH_SUBDIR_NAME).append(File.separator).append(cpentry).append(File.pathSeparator);
     }
-
-    // if
-    //   file:/Users/lorban/.m2/repository/org/slf4j/slf4j-api/1.7.22/slf4j-api-1.7.22.jar!/org/slf4j/Logger.class
-    // else
-    //   /work/terracotta/irepo/lorban/angela/agent/target/classes/org/terracotta/angela/agent/Agent.class
 
     String agentClassName = Agent.class.getName().replace('.', '/');
     String agentClassPath = Agent.class.getResource("/" + agentClassName + ".class").getPath();

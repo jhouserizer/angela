@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.JDK;
 import org.terracotta.angela.common.util.JavaLocationResolver;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,7 +62,7 @@ public class TerracottaCommandLineEnvironment {
       }
       case "user": {
         Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_OPTS.getValue());
-        DEFAULT = new TerracottaCommandLineEnvironment(JAVA_HOME.getValue(), "", emptySet(), opts);
+        DEFAULT = new TerracottaCommandLineEnvironment(Paths.get(JAVA_HOME.getValue()), "", emptySet(), opts);
         break;
       }
       default:
@@ -68,7 +70,7 @@ public class TerracottaCommandLineEnvironment {
     }
   }
 
-  private final String javaHome;
+  private final Path javaHome;
   private final String javaVersion;
   private final Set<String> javaVendors;
   private final Set<String> javaOpts;
@@ -82,7 +84,7 @@ public class TerracottaCommandLineEnvironment {
    * @param javaOpts    some command line arguments to give to the JVM, like -Xmx2G, -XX:Whatever or -Dsomething=abc.
    *                    Can be empty if no JVM argument is needed.
    */
-  private TerracottaCommandLineEnvironment(String javaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
+  private TerracottaCommandLineEnvironment(Path javaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
     validate(javaVersion, javaVendors, javaOpts);
     this.javaHome = javaHome;
     this.javaVersion = javaVersion;
@@ -111,22 +113,28 @@ public class TerracottaCommandLineEnvironment {
   }
 
   public TerracottaCommandLineEnvironment withJavaVersion(String javaVersion) {
-    return new TerracottaCommandLineEnvironment(javaHome, javaVersion, javaVendors, javaOpts);
+    if (javaHome != null) {
+      throw new UnsupportedOperationException("Unable to change the Java version when using the 'user' resolver");
+    }
+    return new TerracottaCommandLineEnvironment(null, javaVersion, javaVendors, javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaVendors(String... javaVendors) {
-    return new TerracottaCommandLineEnvironment(javaHome, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
+    if (javaHome != null) {
+      throw new UnsupportedOperationException("Unable to change the Java vendors when using the 'user' resolver");
+    }
+    return new TerracottaCommandLineEnvironment(null, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaOpts(String... javaOpts) {
     return new TerracottaCommandLineEnvironment(javaHome, javaVersion, javaVendors, new LinkedHashSet<>(asList(javaOpts)));
   }
 
-  public TerracottaCommandLineEnvironment withJavaHome(String jdkHome) {
-    return new TerracottaCommandLineEnvironment(requireNonNull(jdkHome), javaVersion, javaVendors, javaOpts);
+  public TerracottaCommandLineEnvironment withJavaHome(Path jdkHome) {
+    return new TerracottaCommandLineEnvironment(requireNonNull(jdkHome), "", emptySet(), javaOpts);
   }
 
-  public String getJavaHome() {
+  public Path getJavaHome() {
     return Optional.ofNullable(javaHome).orElseGet(() -> {
       List<JDK> jdks = javaLocationResolver.resolveJavaLocations(getJavaVersion(), getJavaVendors(), true);
       if (jdks.size() > 1) {
@@ -152,8 +160,8 @@ public class TerracottaCommandLineEnvironment {
     LOGGER.info("overrides={}", overrides);
 
     Map<String, String> env = new HashMap<>();
-    String javaHome = getJavaHome();
-    env.put("JAVA_HOME", javaHome);
+    Path javaHome = getJavaHome();
+    env.put("JAVA_HOME", javaHome.toString());
 
     Set<String> javaOpts = getJavaOpts();
     if (!javaOpts.isEmpty()) {

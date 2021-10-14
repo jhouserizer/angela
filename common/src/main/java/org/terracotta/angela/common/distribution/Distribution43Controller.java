@@ -36,6 +36,7 @@ import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.angela.common.topology.Version;
 import org.terracotta.angela.common.util.ExternalLoggers;
 import org.terracotta.angela.common.util.HostPort;
+import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.common.util.ProcessUtil;
 import org.terracotta.angela.common.util.RetryUtils;
@@ -47,6 +48,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -86,8 +88,8 @@ public class Distribution43Controller extends DistributionController {
 
   @Override
   public TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir,
-                                                   Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
-                                                   TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
+                                          Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
+                                          TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(STOPPED);
     AtomicReference<TerracottaServerState> tempStateRef = new AtomicReference<>(STOPPED);
 
@@ -177,14 +179,12 @@ public class Distribution43Controller extends DistributionController {
   }
 
   private Number findWithJcmdJavaPidOf(String serverUuid, TerracottaCommandLineEnvironment tcEnv) {
-    String javaHome = tcEnv.getJavaHome();
+    Path javaHome = tcEnv.getJavaHome();
+
+    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
 
     List<String> cmdLine = new ArrayList<>();
-    if (OS.INSTANCE.isWindows()) {
-      cmdLine.add(javaHome + "\\bin\\jcmd.exe");
-    } else {
-      cmdLine.add(javaHome + "/bin/jcmd");
-    }
+    cmdLine.add(path.toAbsolutePath().toString());
     cmdLine.add("com.tc.server.TCServerMain");
     cmdLine.add("VM.system_properties");
 

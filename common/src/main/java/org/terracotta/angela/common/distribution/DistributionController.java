@@ -15,8 +15,6 @@
  */
 package org.terracotta.angela.common.distribution;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance;
 import org.terracotta.angela.common.TerracottaServerHandle;
@@ -28,16 +26,16 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.OS;
+import org.terracotta.angela.common.util.JavaBinaries;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -46,8 +44,6 @@ import java.util.Map;
  */
 public abstract class DistributionController {
 
-  private final static Logger LOGGER = LoggerFactory.getLogger(DistributionController.class);
-
   protected final Distribution distribution;
 
   DistributionController(Distribution distribution) {
@@ -55,20 +51,12 @@ public abstract class DistributionController {
   }
 
   public static ToolExecutionResult invokeJcmd(TerracottaServerHandle terracottaServerInstanceProcess, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    Number javaPid = terracottaServerInstanceProcess.getJavaPid();
-    if (javaPid == null) {
-      return new ToolExecutionResult(-1, Collections.singletonList("PID of java process could not be figured out"));
-    }
-
-    String javaHome = tcEnv.getJavaHome();
-
+    int javaPid = terracottaServerInstanceProcess.getJavaPid();
+    Path javaHome = tcEnv.getJavaHome();
+    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
     List<String> cmdLine = new ArrayList<>();
-    if (OS.INSTANCE.isWindows()) {
-      cmdLine.add(javaHome + "\\bin\\jcmd.exe");
-    } else {
-      cmdLine.add(javaHome + "/bin/jcmd");
-    }
-    cmdLine.add(javaPid.toString());
+    cmdLine.add(path.toAbsolutePath().toString());
+    cmdLine.add(String.valueOf(javaPid));
     cmdLine.addAll(Arrays.asList(arguments));
 
     try {
