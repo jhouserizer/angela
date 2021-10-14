@@ -15,8 +15,6 @@
  */
 package org.terracotta.angela.common.distribution;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance;
 import org.terracotta.angela.common.TerracottaServerHandle;
@@ -45,8 +43,6 @@ import java.util.Map;
  * @author Aurelien Broszniowski
  */
 public abstract class DistributionController {
-
-  private final static Logger LOGGER = LoggerFactory.getLogger(DistributionController.class);
 
   protected final Distribution distribution;
 
