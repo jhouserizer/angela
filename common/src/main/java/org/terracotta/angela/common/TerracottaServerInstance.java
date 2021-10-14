@@ -50,7 +50,7 @@ public class TerracottaServerInstance implements Closeable {
   private final File workingDir;
   private final Distribution distribution;
   private final PortAllocator portAllocator;
-  private final File licenseFileLocation;
+  private final String licenseFilename;
   private volatile TerracottaServerHandle serverInstance;
   private final boolean netDisruptionEnabled;
   private final Topology topology;
@@ -64,7 +64,7 @@ public class TerracottaServerInstance implements Closeable {
     this.workingDir = workingDir;
     this.distribution = distribution;
     this.portAllocator = portAllocator;
-    this.licenseFileLocation = license == null ? null : new File(workingDir, license.getFilename());
+    this.licenseFilename = license == null ? null : license.getFilename();
     this.netDisruptionEnabled = topology.isNetDisruptionEnabled();
     this.topology = topology;
     constructLinks();
@@ -173,7 +173,17 @@ public class TerracottaServerInstance implements Closeable {
   }
 
   public File getLicenseFileLocation() {
-    return licenseFileLocation;
+    // now workingDir == server folder
+    File f = new File(workingDir, licenseFilename);
+    if (f.exists()) {
+      return f;
+    }
+    // check in temporary angela work dir (this one will work now)
+    f = new File(workingDir.getParentFile(), licenseFilename);
+    if (f.exists()) {
+      return f;
+    }
+    return null;
   }
 
   private void removeDisruptionLinks() {
