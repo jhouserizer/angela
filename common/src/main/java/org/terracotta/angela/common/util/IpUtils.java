@@ -20,7 +20,22 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 
 public class IpUtils {
+
+  private static final String LOCAL_HOSTNAME;
+
+  static {
+    try {
+      LOCAL_HOSTNAME = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException ex) {
+      throw new IllegalStateException(ex);
+    }
+  }
+
   public static boolean isLocal(String targetServerName) {
+    if (targetServerName.equals(LOCAL_HOSTNAME)) {
+      return true;
+    }
+
     InetAddress address;
     try {
       address = InetAddress.getByName(targetServerName);
@@ -49,11 +64,7 @@ public class IpUtils {
   }
 
   public static String getHostName() {
-    try {
-      return InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
+    return LOCAL_HOSTNAME;
   }
 
   public static String getHostAddress(String host) {
