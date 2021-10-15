@@ -117,7 +117,11 @@ public class SshRemoteAgentLauncher implements RemoteAgentLauncher {
       if (!SSH_STRICT_HOST_CHECKING.getBooleanValue()) {
         ssh.addHostKeyVerifier(new PromiscuousVerifier());
       }
-      ssh.loadKnownHosts();
+      try {
+        ssh.loadKnownHosts();
+      } catch (IOException e) {
+        LOGGER.warn("Unable to load SSH known hosts. Error: " + e.getMessage(), e);
+      }
       ssh.connect(hostname);
 
       // load provided private key file, if available.
