@@ -18,6 +18,7 @@ package org.terracotta.angela.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.JDK;
+import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.JavaLocationResolver;
 
 import java.nio.file.Path;
@@ -128,6 +129,10 @@ public class TerracottaCommandLineEnvironment {
 
   public TerracottaCommandLineEnvironment withJavaOpts(String... javaOpts) {
     return new TerracottaCommandLineEnvironment(javaHome, javaVersion, javaVendors, new LinkedHashSet<>(asList(javaOpts)));
+  }
+
+  public TerracottaCommandLineEnvironment withCurrentJavaHome() {
+    return withJavaHome(JavaBinaries.javaHome());
   }
 
   public TerracottaCommandLineEnvironment withJavaHome(Path jdkHome) {
