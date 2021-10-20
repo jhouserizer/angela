@@ -54,6 +54,9 @@ public class CustomConfigurationContext implements ConfigurationContext {
     if (customTsaConfigurationContext != null) {
       visitor.visit(customTsaConfigurationContext);
     }
+    if (customVoterConfigurationContext != null) {
+      visitor.visit(customVoterConfigurationContext);
+    }
   }
 
   @Override

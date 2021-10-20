@@ -137,6 +137,10 @@ public class Tsa implements AutoCloseable {
   }
 
   private void installWithKitManager(TerracottaServer terracottaServer, Topology topology, LocalKitManager localKitManager) {
+    // this is possible that a server gets dynamically added (DC use case)
+    // so we need to ensure a port is allocated
+    topology.init(portAllocator);
+
     TerracottaServerState terracottaServerState = getState(terracottaServer);
     if (terracottaServerState != TerracottaServerState.NOT_INSTALLED) {
       throw new IllegalStateException("Cannot install: server " + terracottaServer.getServerSymbolicName() + " in state " + terracottaServerState);

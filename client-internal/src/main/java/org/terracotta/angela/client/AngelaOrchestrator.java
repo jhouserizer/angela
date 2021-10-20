@@ -15,20 +15,28 @@
  */
 package org.terracotta.angela.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
+import org.terracotta.angela.client.config.VoterConfigurationContext;
+import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
+import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
 
 import java.util.Collections;
+import java.util.List;
 
 /**
  *
  */
 public class AngelaOrchestrator implements AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(AngelaOrchestrator.class);
+
   private final Agent localAgent;
   private final PortAllocator portAllocator;
 
@@ -61,7 +69,31 @@ public class AngelaOrchestrator implements AutoCloseable {
       public void visit(TsaConfigurationContext tsaConfigurationContext) {
         Topology topology = tsaConfigurationContext.getTopology();
         if (topology != null) {
+          logger.trace("Allocating ports for servers...");
           topology.init(portAllocator);
+        }
+      }
+
+      @Override
+      public void visit(VoterConfigurationContext voterConfigurationContext) {
+        for (TerracottaVoter terracottaVoter : voterConfigurationContext.getTerracottaVoters()) {
+          final List<String> hostPorts = terracottaVoter.getHostPorts();
+          final List<String> serverNames = terracottaVoter.getServerNames();
+          if (hostPorts.isEmpty() && serverNames.isEmpty()) {
+            throw new IllegalArgumentException("Voter incorrectly configured: missing hosts/ports or server names");
+          }
+          if (hostPorts.isEmpty()) {
+            // pickups allocated ports
+            for (String serverName : serverNames) {
+              hostPorts.add(configurationContext.tsa().getTopology().getServers()
+                  .stream()
+                  .filter(server -> server.getServerSymbolicName().getSymbolicName().equals(serverName))
+                  .findFirst()
+                  .map(TerracottaServer::getHostPort)
+                  .orElseThrow(() -> new IllegalArgumentException("Incorrect voter configuration: server name '" + serverName + "' not found")));
+            }
+            logger.trace("Voter configured to connect to: " + hostPorts);
+          }
         }
       }
     });

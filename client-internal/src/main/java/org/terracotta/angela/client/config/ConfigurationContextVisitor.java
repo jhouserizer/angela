@@ -17,4 +17,5 @@ package org.terracotta.angela.client.config;
 
 public interface ConfigurationContextVisitor {
   default void visit(TsaConfigurationContext tsaConfigurationContext) {}
+  default void visit(VoterConfigurationContext voterConfigurationContext) {}
 }
