@@ -19,19 +19,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 public class TerracottaVoter {
   private final String id;
   private final String hostName;
   private final List<String> hostPorts = new ArrayList<>();
+  private final List<String> serverNames = new ArrayList<>();
 
-  private TerracottaVoter(String id, String hostName, List<String> hostPorts) {
+  private TerracottaVoter(String id, String hostName, List<String> hostPorts, List<String> serverNames) {
     this.id = id;
     this.hostName = hostName;
     this.hostPorts.addAll(hostPorts);
+    this.serverNames.addAll(serverNames);
   }
 
   public static TerracottaVoter voter(String id, String hostName, String... hostPorts) {
-    return new TerracottaVoter(id, hostName, Arrays.asList(hostPorts));
+    return new TerracottaVoter(id, hostName, Arrays.asList(hostPorts), emptyList());
+  }
+
+  public static TerracottaVoter dcVoter(String id, String hostName, String... serverNames) {
+    return new TerracottaVoter(id, hostName, emptyList(), Arrays.asList(serverNames));
   }
 
   public String getId() {
@@ -46,4 +54,7 @@ public class TerracottaVoter {
     return hostPorts;
   }
 
+  public List<String> getServerNames() {
+    return serverNames;
+  }
 }

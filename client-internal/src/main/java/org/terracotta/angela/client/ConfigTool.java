@@ -84,11 +84,11 @@ public class ConfigTool implements AutoCloseable {
     }
 
     Topology topology = tsa.getTsaConfigurationContext().getTopology();
+    topology.addStripe(newServers);
     for (TerracottaServer server : newServers) {
       tsa.install(server, topology);
       tsa.start(server);
     }
-    topology.addStripe(newServers);
 
     if (newServers.length > 1) {
       List<String> command = new ArrayList<>();
@@ -168,14 +168,13 @@ public class ConfigTool implements AutoCloseable {
     if (stripeIndex < -1 || stripeIndex >= stripes.size()) {
       throw new IllegalArgumentException("stripeIndex should be a non-negative integer less than stripe count");
     }
-
     if (newServer == null) {
       throw new IllegalArgumentException("Server should be non-null");
     }
 
+    topology.addServer(stripeIndex, newServer);
     tsa.install(newServer, topology);
     tsa.start(newServer);
-    topology.addServer(stripeIndex, newServer);
 
     List<String> command = new ArrayList<>();
     command.add("attach");
