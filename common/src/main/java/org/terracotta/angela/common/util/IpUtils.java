@@ -54,15 +54,6 @@ public class IpUtils {
     return true;
   }
 
-  public static boolean isAnyLocal(Collection<String> targetServerNames) {
-    for (String targetServerName : targetServerNames) {
-      if (isLocal(targetServerName)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   public static String getHostName() {
     return LOCAL_HOSTNAME;
   }
