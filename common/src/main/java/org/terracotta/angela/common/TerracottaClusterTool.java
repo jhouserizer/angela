@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela.common;
 
+import org.terracotta.angela.common.util.IpUtils;
+
 public class TerracottaClusterTool {
   private final String id;
   private final String hostName;
@@ -26,6 +28,10 @@ public class TerracottaClusterTool {
 
   public static TerracottaClusterTool clusterTool(String id, String hostName) {
     return new TerracottaClusterTool(id, hostName);
+  }
+
+  public static TerracottaClusterTool clusterTool(String id) {
+    return new TerracottaClusterTool(id, IpUtils.getHostName());
   }
 
   public String getId() {

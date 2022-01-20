@@ -32,6 +32,7 @@ import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.AngelaVersion;
 import org.terracotta.angela.common.util.FileMetadata;
 import org.terracotta.angela.common.util.IgniteCommonHelper;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -113,13 +114,12 @@ public class IgniteClientHelper {
             " but the expected version is [" + AngelaVersion.getAngelaVersion() + "]");
       }
     } catch (IgniteException e) {
-      e.printStackTrace();
       throw new IllegalStateException("Node with name '" + nodeName + "' not found in the cluster", e);
     }
   }
 
   private static String getNodeName(String nodeName, int ignitePort) {
-    return nodeName + ":" + ignitePort;
+    return (IpUtils.isLocal(nodeName) ? IpUtils.getHostName() : nodeName) + ":" + ignitePort;
   }
 
   public static void uploadKit(Ignite ignite, String hostname, int ignitePort, InstanceId instanceId, Distribution distribution,

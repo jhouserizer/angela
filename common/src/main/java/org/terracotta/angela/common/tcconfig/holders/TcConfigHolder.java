@@ -22,6 +22,7 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.tcconfig.TsaStripeConfig;
+import org.terracotta.angela.common.util.IpUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -128,7 +129,7 @@ public abstract class TcConfigHolder {
         Node hostNode = (Node) xPath.evaluate("@host", server, XPathConstants.NODE);
         String hostname =
             hostNode == null || hostNode.getTextContent().equals("%i") || hostNode.getTextContent()
-                .equals("%h") ? "localhost" : hostNode.getTextContent();
+                .equals("%h") ? IpUtils.getHostName() : hostNode.getTextContent();
 
         Node nameNode = (Node) xPath.evaluate("@name", server, XPathConstants.NODE);
 

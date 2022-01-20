@@ -121,28 +121,28 @@ public class GettingStarted {
                     distribution(version(EHCACHE_VERSION), KIT, TERRACOTTA_OS),
                     dynamicCluster( // <1>
                         stripe(
-                            server("server-1", "localhost")
+                            server("server-1")
                                 .tsaPort(9410)
                                 .tsaGroupPort(9411)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2", "localhost")
+                            server("server-2")
                                 .tsaPort(9510)
                                 .tsaGroupPort(9511)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
                                 .failoverPriority("availability"))))))
-        .configTool(context -> context.configTool(configTool("configTool", "localhost")));
+        .configTool(context -> context.configTool(configTool("configTool")));
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll(); // <2>
       ConfigTool configTool = factory.configTool();
       configTool.attachAll(); // <3>
 
-      configTool.attachStripe(server("server-3", "localhost") // <4>
+      configTool.attachStripe(server("server-3") // <4>
           .tsaPort(9610)
           .tsaGroupPort(9611)
           .configRepo("terracotta3/repository")
@@ -166,7 +166,7 @@ public class GettingStarted {
         .clientArray(clientArray -> clientArray // <1>
             .clientArrayTopology(new ClientArrayTopology( // <2>
                 distribution(version(EHCACHE_OS_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS), // <3>
-                newClientArrayConfig().host("localhost-1", "localhost").host("localhost-2", "localhost")) // <4>
+                newClientArrayConfig().named("localhost-1").named("localhost-2")) // <4>
             )
         );
     ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::runClient", configContext);

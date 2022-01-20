@@ -65,7 +65,7 @@ public class ConfigToolIT {
 
   @Test
   public void testFailingConfigToolCommand() throws Exception {
-    TerracottaServer server = server("server-1", "localhost")
+    TerracottaServer server = server("server-1")
         .tsaPort(ports[0])
         .tsaGroupPort(ports[1])
         .configRepo("terracotta1/repository")
@@ -75,7 +75,7 @@ public class ConfigToolIT {
     Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
     ConfigurationContext configContext = customConfigurationContext()
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
-        .configTool(context -> context.configTool(configTool("config-tool", "localhost")).distribution(distribution));
+        .configTool(context -> context.configTool(configTool("config-tool")).distribution(distribution));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
       Tsa tsa = factory.tsa();
@@ -89,7 +89,7 @@ public class ConfigToolIT {
 
   @Test
   public void testValidConfigToolCommand() throws Exception {
-    TerracottaServer server = server("server-1", "localhost")
+    TerracottaServer server = server("server-1")
         .tsaPort(ports[0])
         .tsaGroupPort(ports[1])
         .configRepo("terracotta1/repository")
@@ -99,7 +99,7 @@ public class ConfigToolIT {
     Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
     ConfigurationContext configContext = customConfigurationContext()
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
-        .configTool(context -> context.configTool(configTool("config-tool", "localhost")).distribution(distribution));
+        .configTool(context -> context.configTool(configTool("config-tool")).distribution(distribution));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testValidConfigToolCommand", configContext)) {
       Tsa tsa = factory.tsa();

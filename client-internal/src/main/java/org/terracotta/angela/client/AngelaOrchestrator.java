@@ -27,6 +27,7 @@ import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,7 +49,7 @@ public class AngelaOrchestrator implements AutoCloseable {
       PortAllocator.PortReservation reservation = portAllocator.reserve(2);
       int igniteDiscoveryPort = reservation.next();
       int igniteComPort = reservation.next();
-      this.localAgent = Agent.startCluster(Collections.singleton("localhost:" + igniteDiscoveryPort), "localhost:" + igniteDiscoveryPort, igniteDiscoveryPort, igniteComPort);
+      this.localAgent = Agent.startCluster(Collections.singleton(IpUtils.getHostName() + ":" + igniteDiscoveryPort), IpUtils.getHostName() + ":" + igniteDiscoveryPort, igniteDiscoveryPort, igniteComPort);
     }
 
     // Since Ignite deported closures require to access a static instance of an agent (Agent.getInstance())
