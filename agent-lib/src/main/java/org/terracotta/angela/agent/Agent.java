@@ -139,7 +139,6 @@ public class Agent {
     cfg.setDiscoverySpi(new TcpDiscoverySpi()
         .setLocalPort(igniteDiscoveryPort)
         .setLocalPortRange(0) // we must not use the range otherwise Ignite might bind to a port not reserved
-        .setJoinTimeout(10000)
         .setIpFinder(new TcpDiscoveryVmIpFinder(true).setAddresses(peers)));
 
     cfg.setCommunicationSpi(new TcpCommunicationSpi()

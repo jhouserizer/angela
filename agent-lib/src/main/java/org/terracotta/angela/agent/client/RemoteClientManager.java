@@ -129,9 +129,9 @@ public class RemoteClientManager {
           .directory(getClientInstallationPath());
       StartedProcess startedProcess = processExecutor.start();
 
+      logger.debug("Waiting for spawned agent to be ready having PID: {}", PidUtil.getPid(startedProcess.getProcess()));
       while (startedProcess.getProcess().isAlive() && !started.get()) {
-        logger.debug("Waiting for spawned agent to be ready having PID: {}", PidUtil.getPid(startedProcess.getProcess()));
-        Thread.sleep(100);
+        Thread.sleep(500); // no need to do a short wait because ignite startup is really slow
       }
       if (!startedProcess.getProcess().isAlive()) {
         throw new RuntimeException("Client process died in infancy");

@@ -27,6 +27,7 @@
   <logger name="org.terracotta.utilities.exec.Shell" level="INFO"/>
   <logger name="org.terracotta.utilities.test.net.NetStat" level="INFO"/>
   <logger name="org.terracotta.utilities.io.Files" level="INFO"/>
+  <logger name="org.zeroturnaround.process.PidUtil" level="INFO"/>
 
   <root level="WARN">
     <appender-ref ref="STDOUT" />
