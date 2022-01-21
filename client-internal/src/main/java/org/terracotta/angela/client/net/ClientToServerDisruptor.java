@@ -25,7 +25,6 @@ import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.angela.common.util.HostPort;
-import org.terracotta.angela.common.util.IpUtils;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -58,8 +57,8 @@ public class ClientToServerDisruptor implements Disruptor {
   ClientToServerDisruptor(Topology topology, Consumer<Disruptor> closeHook, Map<ServerSymbolicName, Integer> proxiedTsaPorts) {
     this.closeHook = closeHook;
     for (TerracottaServer server : topology.getServers()) {
-      final InetSocketAddress clientEndPoint = DISRUPTION_PROVIDER.isProxyBased() ? null : new InetSocketAddress(IpUtils.getHostName(), -1);
-      final InetSocketAddress proxyEndPoint = DISRUPTION_PROVIDER.isProxyBased() ? new InetSocketAddress(IpUtils.getHostName(), proxiedTsaPorts
+      final InetSocketAddress clientEndPoint = DISRUPTION_PROVIDER.isProxyBased() ? null : new InetSocketAddress("localhost", -1);
+      final InetSocketAddress proxyEndPoint = DISRUPTION_PROVIDER.isProxyBased() ? new InetSocketAddress("localhost", proxiedTsaPorts
           .get(server.getServerSymbolicName())) : null;
       final InetSocketAddress serverEndPoint = new InetSocketAddress(server.getHostname(), server.getTsaPort());
 
@@ -85,7 +84,7 @@ public class ClientToServerDisruptor implements Disruptor {
   }
 
   @Override
-  public void disrupt(){
+  public void disrupt() {
     disrupt(links.keySet());
   }
 
@@ -106,7 +105,7 @@ public class ClientToServerDisruptor implements Disruptor {
     }
     state = DisruptorState.UNDISRUPTED;
   }
-  
+
   @Override
   public void close() {
     if (state == DisruptorState.DISRUPTED) {
