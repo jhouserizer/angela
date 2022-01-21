@@ -31,6 +31,7 @@ import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.util.AngelaVersion;
 import org.terracotta.angela.common.util.IgniteCommonHelper;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -87,7 +88,7 @@ public class Agent {
 
   @Override
   public String toString() {
-    return ignite == null ? "local" : ("localhost:" + igniteDiscoveryPort);
+    return ignite == null ? "local" : (IpUtils.getHostName() + ":" + igniteDiscoveryPort);
   }
 
   public static void main(String[] args) {

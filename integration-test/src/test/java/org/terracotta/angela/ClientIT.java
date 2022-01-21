@@ -39,6 +39,7 @@ import org.terracotta.angela.common.topology.ClientArrayTopology;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,9 +80,9 @@ public class ClientIT {
 
   @Test
   public void testClientArrayDownloadFiles() throws Exception {
-    final String clientHostname = "localhost";
+    final String cliSymbName = "foo";
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host(clientHostname))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().named(cliSymbName))));
 
     String remoteFolder = "testFolder";
     String downloadedFile = "myNewFile.txt";
@@ -98,7 +99,7 @@ public class ClientIT {
         });
         f.get();
         clientArray.download(remoteFolder, new File(localFolder));
-        Path downloadPath = Paths.get(localFolder, clientHostname, downloadedFile);
+        Path downloadPath = Paths.get(localFolder, cliSymbName, downloadedFile);
         String downloadedFileContent = new String(Files.readAllBytes(downloadPath));
         assertThat(downloadedFileContent, is(equalTo(fileContent)));
       }
@@ -107,10 +108,9 @@ public class ClientIT {
 
   @Test
   public void testMultipleClientsSameHostArrayDownloadFiles() throws Exception {
-    String clientHostname = "localhost";
     int clientsCount = 3;
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount, clientHostname))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount))));
 
     String remoteFolder = "testFolder";
     String downloadedFile = "myNewFile.txt";
@@ -144,11 +144,10 @@ public class ClientIT {
 
   @Test
   public void testMultipleClientJobsSameHostDownloadFiles() throws Exception {
-    String clientHostname = "localhost";
     int clientsCount = 3;
     int clientsPerMachine = 2;
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount, clientHostname))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount))));
 
     String remoteFolder = "testFolder";
     String downloadedFile = "myNewFile.txt";
@@ -198,7 +197,7 @@ public class ClientIT {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig()
-                .hostSerie(3, "localhost")
+                .hostSerie(3)
             )));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testMultipleClientsOnSameHost", configContext)) {
@@ -219,7 +218,7 @@ public class ClientIT {
             .clientArrayTopology(
                 new ClientArrayTopology(
                     distribution,
-                    newClientArrayConfig().hostSerie(serieLength, "localhost")
+                    newClientArrayConfig().hostSerie(serieLength)
                 )
             )
         );
@@ -247,9 +246,9 @@ public class ClientIT {
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
-            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))))
+            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().named("localhost"))))
         .clientArray(clientArray -> clientArray
-            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))));
+            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().named("localhost"))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
@@ -266,7 +265,7 @@ public class ClientIT {
   @Test
   public void testClientArrayNoDistribution() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("localhost"))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().named("localhost"))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
@@ -279,7 +278,7 @@ public class ClientIT {
   @Test
   public void testClientArrayExceptionReported() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, "localhost"))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2))));
 
     try (ClusterFactory instance = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayExceptionReported", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
@@ -311,9 +310,9 @@ public class ClientIT {
   public void testClientCpuMetricsLogs() throws Exception {
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
-    final String clientHostname = "localhost";
+    final String cliSymbName = "foo";
     ClientArrayTopology ct = new ClientArrayTopology(distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-        newClientArrayConfig().host(clientHostname));
+        newClientArrayConfig().named(cliSymbName));
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct))
@@ -337,7 +336,7 @@ public class ClientIT {
       monitor.stopOnAll();
 
       monitor.processMetrics((hostname, transportableFile) -> {
-        assertThat(hostname, is(clientHostname));
+        assertThat(hostname, is(IpUtils.getHostName()));
         assertThat(transportableFile.getName(), is("cpu-stats.log"));
         byte[] content = transportableFile.getContent();
         assertNotNull(content);
@@ -350,9 +349,9 @@ public class ClientIT {
   public void testClientAllHardwareMetricsLogs() throws Exception {
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
-    final String clientHostname = "localhost";
+    final String cliSymbName = "foo";
     ClientArrayTopology ct = new ClientArrayTopology(distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-        newClientArrayConfig().host(clientHostname));
+        newClientArrayConfig().named(cliSymbName));
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct))
@@ -376,7 +375,7 @@ public class ClientIT {
       monitor.stopOnAll();
     }
 
-    final Path statFile = resultPath.resolve(clientHostname);
+    final Path statFile = resultPath.resolve(IpUtils.getHostName());
     assertMetricsFile(statFile.resolve("cpu-stats.log"));
     assertMetricsFile(statFile.resolve("disk-stats.log"));
     assertMetricsFile(statFile.resolve("memory-stats.log"));
@@ -387,9 +386,9 @@ public class ClientIT {
   public void testClientDummyMemoryMetrics() throws Exception {
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
-    final String clientHostname = "localhost";
+    final String cliSymbName = "foo";
     ClientArrayTopology ct = new ClientArrayTopology(distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-        newClientArrayConfig().host(clientHostname));
+        newClientArrayConfig().named(cliSymbName));
 
     HardwareMetric metric = HardwareMetric.MEMORY;
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -420,7 +419,7 @@ public class ClientIT {
   @Test(expected = IllegalArgumentException.class)
   public void testClusterMonitorWhenNoMonitoringSpecified() throws Exception {
     ClientArrayTopology ct = new ClientArrayTopology(distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-        newClientArrayConfig().host("localhost"));
+        newClientArrayConfig().named("localhost"));
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct));
@@ -439,7 +438,7 @@ public class ClientIT {
         )
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense())
             .clientArrayTopology(new ClientArrayTopology(distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS), newClientArrayConfig()
-                .host("remote-server")))
+                .host("foo", "remote-server")))
         );
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testMixingLocalhostWithRemote", configContext)) {
@@ -461,9 +460,9 @@ public class ClientIT {
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray
-            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))))
+            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().named("localhost"))))
         .clientArray(clientArray -> clientArray
-            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("localhost"))));
+            .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().named("localhost"))));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testBarrier", configContext)) {
 
@@ -498,7 +497,7 @@ public class ClientIT {
     Distribution distribution = distribution(version(Versions.EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS);
     ClientArrayConfig clientArrayConfig1 = newClientArrayConfig()
         .host("client2", "localhost")
-        .host("client2-2", "localhost");
+        .named("client2-2");
 
     ClientArrayTopology ct = new ClientArrayTopology(distribution, clientArrayConfig1);
 
@@ -527,7 +526,7 @@ public class ClientIT {
   @Test
   public void testClientArrayReferenceShared() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, "localhost"))));
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2))));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
       try (ClientArray clientArray = factory.clientArray(0)) {
@@ -553,16 +552,16 @@ public class ClientIT {
   @Test
   public void testClientArrayHostNames() throws Exception {
     ClientArrayConfig hostSerie = newClientArrayConfig()
-        .hostSerie(2, "localhost");
+        .hostSerie(2);
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(hostSerie)));
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
       try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (Cluster cluster) -> {
           ClientId clientId = cluster.getClientId();
-          assertThat(clientId.getHostname(), is("localhost"));
+          assertThat(clientId.getHostname(), is(IpUtils.getHostName()));
           assertThat(clientId.getSymbolicName().getSymbolicName(),
-              anyOf(is("localhost-0"), is("localhost-1")));
+              anyOf(is(IpUtils.getHostName() + "-0"), is(IpUtils.getHostName() + "-1")));
         };
         ClientArrayFuture f = clientArray.executeOnAll(clientJob);
         f.get();

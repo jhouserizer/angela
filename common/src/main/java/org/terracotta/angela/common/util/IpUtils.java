@@ -23,6 +23,7 @@ public class IpUtils {
 
   private static final String LOCAL_HOSTNAME;
 
+  // caches costly resolutions
   static {
     try {
       LOCAL_HOSTNAME = InetAddress.getLocalHost().getHostName();
@@ -31,18 +32,22 @@ public class IpUtils {
     }
   }
 
-  public static boolean isLocal(String targetServerName) {
-    if (targetServerName.equals(LOCAL_HOSTNAME)) {
-      return true;
+  /**
+   * Try to determine (but not accurately) if a given name matches a local address.
+   * A local address is a local IP or local hostname.
+   * <p>
+   * This "name" can be any Angela generated names (i.e. in case of client arrays instanceId or symbolic names),
+   * we do not use "getByName()" to avoid any dns resolution
+   */
+  public static boolean isLocal(String name) {
+    switch (name) {
+      case "localhost":
+      case "127.0.0.1":
+      case " ::1":
+        return true;
+      default:
+        return LOCAL_HOSTNAME.equals(name) || name.startsWith("169.254.") || name.startsWith("fe80:");
     }
-
-    InetAddress address;
-    try {
-      address = InetAddress.getByName(targetServerName);
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
-    return address.isLoopbackAddress() || address.isLinkLocalAddress();
   }
 
   public static boolean areAllLocal(Collection<String> targetServerNames) {
@@ -54,24 +59,7 @@ public class IpUtils {
     return true;
   }
 
-  public static boolean isAnyLocal(Collection<String> targetServerNames) {
-    for (String targetServerName : targetServerNames) {
-      if (isLocal(targetServerName)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   public static String getHostName() {
     return LOCAL_HOSTNAME;
-  }
-
-  public static String getHostAddress(String host) {
-    try {
-      return InetAddress.getByName(host).getHostAddress();
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

@@ -101,7 +101,7 @@ public class EhcacheIT {
             clientArray -> clientArray.clientArrayTopology(
                 new ClientArrayTopology(
                     distribution(version(EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-                    newClientArrayConfig().host("localhost")
+                    newClientArrayConfig().named("localhost")
                 )
             )
         );

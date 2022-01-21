@@ -31,6 +31,7 @@ import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -79,7 +80,7 @@ public class ClusterFactory implements AutoCloseable {
     this.remoteAgentLauncher = configurationContext.remoting().buildRemoteAgentLauncher();
     this.localAgent = agent;
     this.portAllocator = portAllocator;
-    agentsInstance.put("localhost", "localhost:" + localAgent.getIgniteDiscoveryPort());
+    agentsInstance.put(IpUtils.getHostName(), IpUtils.getHostName() + ":" + localAgent.getIgniteDiscoveryPort());
   }
 
   private InstanceId init(String type, Collection<String> hostnames) {

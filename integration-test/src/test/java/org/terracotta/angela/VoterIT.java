@@ -30,7 +30,7 @@ import java.time.Duration;
 import static org.awaitility.Awaitility.await;
 import static org.terracotta.angela.client.config.custom.CustomConfigurationContext.customConfigurationContext;
 import static org.terracotta.angela.common.TerracottaConfigTool.configTool;
-import static org.terracotta.angela.common.TerracottaVoter.voter;
+import static org.terracotta.angela.common.TerracottaVoter.localVoter;
 import static org.terracotta.angela.common.TerracottaVoterState.CONNECTED_TO_ACTIVE;
 import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.dynamic_cluster.Stripe.stripe;
@@ -58,22 +58,22 @@ public class VoterIT {
                     distribution,
                     dynamicCluster(
                         stripe(
-                            server("server-1", "localhost")
+                            server("server-1")
                                 .tsaPort(ports[0])
                                 .tsaGroupPort(ports[1])
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("consistency:1"),
-                            server("server-2", "localhost")
+                            server("server-2")
                                 .tsaPort(ports[2])
                                 .tsaGroupPort(ports[3])
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
                                 .failoverPriority("consistency:1"))))))
-        .voter(voter -> voter.distribution(distribution).addVoter(voter("voter", "localhost", "localhost:" + ports[0], "localhost:" + ports[2])))
-        .configTool(context -> context.distribution(distribution).configTool(configTool("config-tool", "localhost")));
+        .voter(voter -> voter.distribution(distribution).addVoter(localVoter("voter", "localhost:" + ports[0], "localhost:" + ports[2])))
+        .configTool(context -> context.distribution(distribution).configTool(configTool("config-tool")));
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("VoterTest::testVoterStartup", configContext)) {
       factory.tsa().startAll();

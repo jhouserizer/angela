@@ -78,10 +78,6 @@ public class RemoteKitManager extends KitManager {
     }
   }
 
-  public Path getKitDir() {
-    return kitPath;
-  }
-
   public boolean isKitAvailable() {
     logger.debug("verifying if the extracted kit is already available locally to setup an install");
     if (!Files.isDirectory(kitInstallationPath)) {

@@ -15,8 +15,6 @@
  */
 package org.terracotta.angela.common.topology;
 
-import org.terracotta.angela.common.util.IpUtils;
-
 public class TmsConfig {
 
   private final String hostname;
@@ -29,10 +27,6 @@ public class TmsConfig {
 
   public String getHostname() {
     return hostname;
-  }
-
-  public String getIp() {
-    return IpUtils.getHostAddress(hostname);
   }
 
   public int getTmsPort() {

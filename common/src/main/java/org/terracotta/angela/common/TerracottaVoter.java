@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela.common;
 
+import org.terracotta.angela.common.util.IpUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +42,14 @@ public class TerracottaVoter {
 
   public static TerracottaVoter dcVoter(String id, String hostName, String... serverNames) {
     return new TerracottaVoter(id, hostName, emptyList(), Arrays.asList(serverNames));
+  }
+
+  public static TerracottaVoter localVoter(String id, String... hostPorts) {
+    return new TerracottaVoter(id, IpUtils.getHostName(), Arrays.asList(hostPorts), emptyList());
+  }
+
+  public static TerracottaVoter localDCVoter(String id, String... serverNames) {
+    return new TerracottaVoter(id, IpUtils.getHostName(), emptyList(), Arrays.asList(serverNames));
   }
 
   public String getId() {

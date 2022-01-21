@@ -63,7 +63,7 @@ public class BrowseIT {
   public void testClient() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
+            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
         );
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testClient", configContext)) {
       ClientArray clientArray = factory.clientArray(0);
@@ -123,7 +123,7 @@ public class BrowseIT {
   public void testNonExistentFolder() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
+            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
         );
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testNonExistentFolder", configContext)) {
@@ -142,7 +142,7 @@ public class BrowseIT {
   public void testUpload() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
+            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
         );
 
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testUpload", configContext)) {

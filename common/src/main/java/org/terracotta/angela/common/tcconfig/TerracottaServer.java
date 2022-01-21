@@ -16,6 +16,7 @@
 package org.terracotta.angela.common.tcconfig;
 
 import org.terracotta.angela.common.util.HostPort;
+import org.terracotta.angela.common.util.IpUtils;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -69,6 +70,10 @@ public class TerracottaServer {
 
   public static TerracottaServer server(String symbolicName, String hostName) {
     return new TerracottaServer(symbolicName, hostName);
+  }
+
+  public static TerracottaServer server(String symbolicName) {
+    return new TerracottaServer(symbolicName, IpUtils.getHostName());
   }
 
   public TerracottaServer tsaPort(int tsaPort) {

@@ -48,19 +48,19 @@ public class AngelaRuleIT {
   AngelaRule angelaRule = new AngelaRule(
       () -> angelaOrchestratorRule.getAngelaOrchestrator(),
       customConfigurationContext()
-          .configTool(context -> context.configTool(configTool("config-tool", "localhost")).distribution(DISTRIBUTION))
+          .configTool(context -> context.configTool(configTool("config-tool")).distribution(DISTRIBUTION))
           .tsa(tsa -> tsa
               .topology(
                   new Topology(
                       DISTRIBUTION,
                       dynamicCluster(
                           stripe(
-                              server("server-1", "localhost")
+                              server("server-1")
                                   .configRepo("terracotta1/repository")
                                   .logs("terracotta1/logs")
                                   .metaData("terracotta1/metadata")
                                   .failoverPriority("availability"),
-                              server("server-2", "localhost")
+                              server("server-2")
                                   .configRepo("terracotta2/repository")
                                   .logs("terracotta2/logs")
                                   .metaData("terracotta2/metadata")

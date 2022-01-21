@@ -20,11 +20,12 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
+import org.terracotta.angela.common.util.IpUtils;
 
 public class CustomTmsConfigurationContext implements TmsConfigurationContext {
   private Distribution distribution;
   private License license;
-  private String hostname;
+  private String hostname = IpUtils.getHostName();
   private TmsServerSecurityConfig securityConfig;
   private TerracottaCommandLineEnvironment terracottaCommandLineEnvironment = TerracottaCommandLineEnvironment.DEFAULT;
 

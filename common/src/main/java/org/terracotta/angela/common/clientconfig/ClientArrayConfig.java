@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela.common.clientconfig;
 
+import org.terracotta.angela.common.util.IpUtils;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +35,14 @@ public class ClientArrayConfig {
     return new ClientArrayConfig();
   }
 
+  public ClientArrayConfig named(String symbolicName) {
+    return host(symbolicName, IpUtils.getHostName());
+  }
+
+  /**
+   * @deprecated Use {@link #named(String)} or {{@link #host(String, String)}} instead
+   */
+  @Deprecated
   public ClientArrayConfig host(String hostname) {
     return host(hostname, hostname);
   }
@@ -53,8 +63,16 @@ public class ClientArrayConfig {
 
   public ClientArrayConfig hostSerie(int serieLength, String hostname) {
     for (int i = 0; i < serieLength; i++) {
-      String clientSymbolicName =  hostname + "-" + i;
+      String clientSymbolicName = hostname + "-" + i;
       host(clientSymbolicName, hostname);
+    }
+    return this;
+  }
+
+  public ClientArrayConfig hostSerie(int serieLength) {
+    for (int i = 0; i < serieLength; i++) {
+      String clientSymbolicName = IpUtils.getHostName() + "-" + i;
+      host(clientSymbolicName, IpUtils.getHostName());
     }
     return this;
   }
