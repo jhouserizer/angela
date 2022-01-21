@@ -15,18 +15,27 @@
  */
 package org.terracotta.angela.common.util;
 
+import org.terracotta.angela.common.AngelaProperties;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 
 public class IpUtils {
 
+  private static final Collection<String> LOCAL_HOSTNAMES = new HashSet<>();
   private static final String LOCAL_HOSTNAME;
 
   // caches costly resolutions
   static {
     try {
       LOCAL_HOSTNAME = InetAddress.getLocalHost().getHostName();
+      LOCAL_HOSTNAMES.add(LOCAL_HOSTNAME);
+      LOCAL_HOSTNAMES.add("localhost");
+      LOCAL_HOSTNAMES.add("127.0.0.1");
+      LOCAL_HOSTNAMES.add("::1");
     } catch (UnknownHostException ex) {
       throw new IllegalStateException(ex);
     }
@@ -40,14 +49,10 @@ public class IpUtils {
    * we do not use "getByName()" to avoid any dns resolution
    */
   public static boolean isLocal(String name) {
-    switch (name) {
-      case "localhost":
-      case "127.0.0.1":
-      case " ::1":
-        return true;
-      default:
-        return LOCAL_HOSTNAME.equals(name) || name.startsWith("169.254.") || name.startsWith("fe80:");
-    }
+    return LOCAL_HOSTNAMES.contains(name)
+        || name.startsWith("169.254.")
+        || name.startsWith("fe80:")
+        || Arrays.asList(AngelaProperties.ADDED_LOCAL_HOSTNAMES.getValue().split(",")).contains(name);
   }
 
   public static boolean areAllLocal(Collection<String> targetServerNames) {
@@ -61,5 +66,9 @@ public class IpUtils {
 
   public static String getHostName() {
     return LOCAL_HOSTNAME;
+  }
+
+  public static Collection<String> getLocalHostnames() {
+    return null;
   }
 }
