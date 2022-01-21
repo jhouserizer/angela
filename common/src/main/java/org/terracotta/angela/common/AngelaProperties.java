@@ -46,6 +46,10 @@ public enum AngelaProperties {
   // display Ignite logging (used to help debugging the behaviour of Angela)
   IGNITE_LOGGING("angela.igniteLogging", "false"),
 
+  // Define additional hostnames or ip addresses to be considered as local, separated by comma.
+  // For some testing, it is possible ot fake some local hostnames.
+  ADDED_LOCAL_HOSTNAMES("angela.additionalLocalHostnames", ""),
+
   // do not clean work directory (used to have access to logs after end of test for debugging test issues)
   SKIP_UNINSTALL("angela.skipUninstall", "false"),
 
