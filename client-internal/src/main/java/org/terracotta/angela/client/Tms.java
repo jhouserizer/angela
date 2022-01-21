@@ -35,6 +35,7 @@ import org.terracotta.angela.common.util.HostPort;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
@@ -79,8 +80,8 @@ public class Tms implements AutoCloseable {
     TmsServerSecurityConfig tmsServerSecurityConfig = tmsConfigurationContext.getSecurityConfig();
     if (tmsServerSecurityConfig != null) {
       isHttps = ("true".equals(tmsServerSecurityConfig.getTmsSecurityHttpsEnabled())
-                 || FULL.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
-                 || BROWSER_SECURITY.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
+          || FULL.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
+          || BROWSER_SECURITY.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
       );
     }
     return (isHttps ? "https://" : "http://") + new HostPort(tmsConfigurationContext.getHostname(), 9480).getHostPort();
@@ -197,6 +198,21 @@ public class Tms implements AutoCloseable {
 
     logger.info("Stopping TMS on {}", tmsHostname);
     IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().stopTms(instanceId));
+    ensureStopped(this::getTmsState);
   }
 
+  // Ignite has a little cache or delay and when reading with getState() just after the process is stopped and
+  // state put in the AtomicRed, Ignite could still see STARTED. It was taking a little while for Ignite to see
+  // the STOPPED state through a remote call.
+  @SuppressWarnings("BusyWait")
+  private void ensureStopped(Supplier<TerracottaManagementServerState> s) {
+    try {
+      while (s.get() != TerracottaManagementServerState.STOPPED) {
+        Thread.sleep(200);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+  }
 }

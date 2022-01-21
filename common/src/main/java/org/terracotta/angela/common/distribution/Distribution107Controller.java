@@ -243,6 +243,8 @@ public class Distribution107Controller extends DistributionController {
     for (Number pid : terracottaServerInstanceProcess.getPids()) {
       try {
         ProcessUtil.destroyGracefullyOrForcefullyAndWait(pid.intValue());
+        // TMS does not close correctly in 30 sec, so process is killed. The state is not correctly set to STOPEPD after.
+        terracottaServerInstanceProcess.setState(TerracottaManagementServerState.STOPPED);
       } catch (Exception e) {
         LOGGER.error("Could not destroy TMS process {}", pid, e);
       }

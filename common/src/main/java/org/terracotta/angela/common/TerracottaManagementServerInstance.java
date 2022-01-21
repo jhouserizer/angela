@@ -72,6 +72,10 @@ public class TerracottaManagementServerInstance {
       return state.get();
     }
 
+    public void setState(TerracottaManagementServerState state) {
+      this.state.set(state);
+    }
+
     public Set<Number> getPids() {
       return Collections.unmodifiableSet(pids);
     }
