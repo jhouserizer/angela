@@ -39,10 +39,6 @@ public class ClientArrayConfig {
     return host(symbolicName, IpUtils.getHostName());
   }
 
-  /**
-   * @deprecated Use {@link #named(String)} or {{@link #host(String, String)}} instead
-   */
-  @Deprecated
   public ClientArrayConfig host(String hostname) {
     return host(hostname, hostname);
   }
