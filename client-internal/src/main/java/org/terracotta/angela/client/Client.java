@@ -16,16 +16,13 @@
 package org.terracotta.angela.client;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteFutureTimeoutException;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.kit.LocalKitManager;
+import org.terracotta.angela.client.com.IgniteFutureAdapter;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.client.util.IgniteClientHelper;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
@@ -40,11 +37,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.terracotta.angela.common.AngelaProperties.SKIP_UNINSTALL;
 import static org.terracotta.angela.common.util.JavaBinaries.javaHome;
@@ -146,16 +139,10 @@ public class Client implements Closeable {
         clientJob.run(new Cluster(ignite, clientId));
         return null;
       } catch (Throwable t) {
-        throw new RemoteExecutionException("Remote ClientJob failed", exceptionToString(t));
+        throw new IgniteFutureAdapter.RemoteExecutionException("Remote ClientJob failed", exceptionToString(t));
       }
     };
-    if (ignite == null) {
-      IgniteClientHelper.executeRemotely(null, instanceId.toString(), ignitePort, call);
-      return CompletableFuture.completedFuture(null);
-    } else {
-      IgniteFuture<Void> igniteFuture = IgniteClientHelper.executeRemotelyAsync(ignite, instanceId.toString(), ignitePort, call);
-      return new ClientJobFuture<>(igniteFuture);
-    }
+    return IgniteClientHelper.executeRemotelyAsync(ignite, instanceId.toString(), ignitePort, call);
   }
 
   private static String exceptionToString(Throwable t) {
@@ -205,100 +192,4 @@ public class Client implements Closeable {
     logger.info("Killing client '{}' on {}", instanceId, clientId);
     IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable) () -> Agent.getInstance().getController().stopClient(instanceId, subClientPid));
   }
-
-  static class ClientJobFuture<V> implements Future<V> {
-    private final IgniteFuture<V> igniteFuture;
-
-    ClientJobFuture(IgniteFuture<V> igniteFuture) {
-      this.igniteFuture = igniteFuture;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-      return igniteFuture.cancel();
-    }
-
-    @Override
-    public boolean isCancelled() {
-      return igniteFuture.isCancelled();
-    }
-
-    @Override
-    public boolean isDone() {
-      return igniteFuture.isDone();
-    }
-
-    @Override
-    public V get() throws InterruptedException, ExecutionException {
-      try {
-        return igniteFuture.get();
-      } catch (IgniteInterruptedException iie) {
-        throw (InterruptedException) new InterruptedException().initCause(iie);
-      } catch (IgniteException ie) {
-        RemoteExecutionException ree = lookForRemoteExecutionException(ie);
-        if (ree != null) {
-          throw new ExecutionException("Client job execution failed", ree);
-        } else {
-          throw new ExecutionException("Client job execution failed", ie);
-        }
-      }
-    }
-
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-      try {
-        return igniteFuture.get(timeout, unit);
-      } catch (IgniteInterruptedException iie) {
-        throw (InterruptedException) new InterruptedException().initCause(iie);
-      } catch (IgniteFutureTimeoutException ifte) {
-        throw (TimeoutException) new TimeoutException().initCause(ifte);
-      } catch (IgniteException ie) {
-        RemoteExecutionException ree = lookForRemoteExecutionException(ie);
-        if (ree != null) {
-          throw new ExecutionException("Client job execution failed", ree);
-        } else {
-          throw new ExecutionException("Client job execution failed", ie);
-        }
-      }
-    }
-
-    private static RemoteExecutionException lookForRemoteExecutionException(Throwable t) {
-      if (t instanceof RemoteExecutionException) {
-        return (RemoteExecutionException) t;
-      } else if (t == null) {
-        return null;
-      } else {
-        return lookForRemoteExecutionException(t.getCause());
-      }
-    }
-  }
-
-  public static class RemoteExecutionException extends Exception {
-    private static final long serialVersionUID = 1L;
-    private final String remoteStackTrace;
-    private String tabulation = "\t";
-
-    RemoteExecutionException(String message, String remoteStackTrace) {
-      super(message);
-      this.remoteStackTrace = remoteStackTrace;
-    }
-
-    @Override
-    public String getMessage() {
-      return super.getMessage() + "; Remote stack trace is:" + System.lineSeparator() + tabulation + "{{{" + System.lineSeparator() + tabulation + remoteStackTrace() + "}}}";
-    }
-
-    private String remoteStackTrace() {
-      return remoteStackTrace.replaceAll(System.lineSeparator(), System.lineSeparator() + tabulation);
-    }
-
-    public void setRemoteStackTraceIndentation(int indentation) {
-      StringBuilder sb = new StringBuilder(indentation);
-      for (int i = 0; i < indentation; i++) {
-        sb.append('\t');
-      }
-      tabulation = sb.toString();
-    }
-  }
-
 }

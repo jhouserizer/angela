@@ -15,6 +15,8 @@
  */
 package org.terracotta.angela.client;
 
+import org.terracotta.angela.client.com.IgniteFutureAdapter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,10 +26,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class ClientArrayFuture {
+public class ClientArrayFuture implements Future<Void> {
   private final Collection<Future<Void>> futures;
 
-  ClientArrayFuture(Collection<Future<Void>> futures) {
+  public ClientArrayFuture(Collection<Future<Void>> futures) {
     this.futures = futures;
   }
 
@@ -35,7 +37,8 @@ public class ClientArrayFuture {
     return futures;
   }
 
-  public void get(long timeout, TimeUnit unit) throws CancellationException, ExecutionException, InterruptedException, TimeoutException {
+  @Override
+  public Void get(long timeout, TimeUnit unit) throws CancellationException, ExecutionException, InterruptedException, TimeoutException {
     List<Exception> exceptions = new ArrayList<>();
     for (Future<Void> future : futures) {
       try {
@@ -55,8 +58,8 @@ public class ClientArrayFuture {
         if (t instanceof ExecutionException) {
           t = t.getCause();
         }
-        if (t instanceof Client.RemoteExecutionException) {
-          ((Client.RemoteExecutionException) t).setRemoteStackTraceIndentation(2);
+        if (t instanceof IgniteFutureAdapter.RemoteExecutionException) {
+          ((IgniteFutureAdapter.RemoteExecutionException) t).setRemoteStackTraceIndentation(2);
         }
         exception.addSuppressed(t);
       }
@@ -70,19 +73,49 @@ public class ClientArrayFuture {
         throw (TimeoutException) exception;
       }
     }
+
+    return null;
   }
 
-  public void get() throws CancellationException, ExecutionException, InterruptedException {
+  @Override
+  public Void get() throws CancellationException, ExecutionException, InterruptedException {
     try {
       get(Long.MIN_VALUE, null);
     } catch (TimeoutException te) {
       // This should never happen
       throw new RuntimeException(te);
     }
+
+    return null;
   }
 
-  public void cancel(boolean mayInterruptIfRunning) {
-    futures.forEach(f -> f.cancel(mayInterruptIfRunning));
+  @Override
+  public boolean cancel(boolean mayInterruptIfRunning) {
+    boolean b = false;
+    for (Future<Void> f : futures) {
+      b |= f.cancel(mayInterruptIfRunning);
+    }
+    return b;
+  }
+
+  @Override
+  public boolean isCancelled() {
+    for (Future<Void> f : futures) {
+      if (!f.isCancelled()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean isDone() {
+    for (Future<Void> f : futures) {
+      if (!f.isDone()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public boolean isAnyDone() {

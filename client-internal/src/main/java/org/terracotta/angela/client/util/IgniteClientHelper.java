@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.client.RemoteClientManager;
 import org.terracotta.angela.agent.kit.RemoteKitManager;
+import org.terracotta.angela.client.com.IgniteFutureAdapter;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.AngelaVersion;
@@ -42,6 +43,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class IgniteClientHelper {
@@ -73,7 +77,20 @@ public class IgniteClientHelper {
     if (ignite == null) {
       return executeLocally(job);
     } else {
-      return executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+      try {
+        return executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      } catch (ExecutionException e) {
+        if (e.getCause() instanceof Error) {
+          throw (Error) e.getCause();
+        } else if (e.getCause() instanceof RuntimeException) {
+          throw (RuntimeException) e.getCause();
+        } else {
+          throw new RuntimeException(e.getCause());
+        }
+      }
     }
   }
 
@@ -85,11 +102,14 @@ public class IgniteClientHelper {
     }
   }
 
-  public static <R> IgniteFuture<R> executeRemotelyAsync(Ignite ignite, String hostname, int ignitePort, IgniteCallable<R> job) {
+  public static <R> Future<R> executeRemotelyAsync(Ignite ignite, String hostname, int ignitePort, IgniteCallable<R> job) {
+    if (ignite == null) {
+      return CompletableFuture.completedFuture(executeLocally(job));
+    }
     IgniteClientHelper.checkAgentHealth(ignite, hostname, ignitePort);
     logger.debug("Executing job on {}", getNodeName(hostname, ignitePort));
     ClusterGroup location = ignite.cluster().forAttribute("nodename", getNodeName(hostname, ignitePort));
-    return ignite.compute(location).callAsync(job);
+    return new IgniteFutureAdapter<>(ignite.compute(location).callAsync(job));
   }
 
   private static void checkAgentHealth(Ignite ignite, String hostname, int ignitePort) {
