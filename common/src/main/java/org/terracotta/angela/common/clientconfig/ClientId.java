@@ -45,7 +45,7 @@ public class ClientId {
     if (o == null || getClass() != o.getClass()) return false;
     ClientId clientId = (ClientId) o;
     return Objects.equals(symbolicName, clientId.symbolicName) &&
-           Objects.equals(hostname, clientId.hostname);
+        Objects.equals(hostname, clientId.hostname);
   }
 
   @Override
@@ -55,9 +55,6 @@ public class ClientId {
 
   @Override
   public String toString() {
-    return "ClientData{" +
-           "symbolicName=" + symbolicName +
-           ", hostname='" + hostname + '\'' +
-           '}';
+    return symbolicName + "@" + hostname;
   }
 }
