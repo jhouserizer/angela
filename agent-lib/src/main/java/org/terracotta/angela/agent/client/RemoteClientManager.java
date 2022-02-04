@@ -20,22 +20,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
-import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.ExternalLoggers;
-import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.LogOutputStream;
 import org.terracotta.angela.common.util.OS;
 import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 import org.zeroturnaround.exec.StartedProcess;
 import org.zeroturnaround.process.PidUtil;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,25 +61,6 @@ public class RemoteClientManager {
 
   public File getClientClasspathRoot() {
     return new File(kitInstallationPath, CLASSPATH_SUBDIR_NAME);
-  }
-
-  public ToolExecutionResult jcmd(int javaPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    Path javaHome = tcEnv.getJavaHome();
-    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
-    List<String> cmdLine = new ArrayList<>();
-    cmdLine.add(path.toAbsolutePath().toString());
-    cmdLine.add(Integer.toString(javaPid));
-    cmdLine.addAll(Arrays.asList(arguments));
-
-    try {
-      ProcessResult processResult = new ProcessExecutor(cmdLine)
-          .readOutput(true)
-          .redirectErrorStream(true)
-          .execute();
-      return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @SuppressWarnings("BusyWait")

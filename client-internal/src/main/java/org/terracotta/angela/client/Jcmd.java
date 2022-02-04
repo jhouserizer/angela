@@ -65,7 +65,7 @@ public class Jcmd {
       callable = () -> Agent.getInstance().getController().serverJcmd(instanceId, terracottaServer, tcEnv, arguments);
     } else if (client != null) {
       hostname = client.getHostname();
-      callable = () -> Agent.getInstance().getController().clientJcmd(instanceId, client.getPid(), tcEnv, arguments);
+      callable = () -> Agent.getInstance().getController().clientJcmd(client.getPid(), tcEnv, arguments);
     } else {
       throw new AssertionError();
     }

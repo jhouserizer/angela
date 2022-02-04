@@ -52,6 +52,7 @@ import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.angela.common.util.FileMetadata;
 import org.terracotta.angela.common.util.FileUtils;
 import org.terracotta.angela.common.util.IgniteCommonHelper;
+import org.terracotta.angela.common.util.Jcmd;
 import org.terracotta.angela.common.util.ProcessUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -592,9 +593,8 @@ public class AgentController {
     return terracottaInstall.getTerracottaServerInstance(terracottaServer).jcmd(tcEnv, arguments);
   }
 
-  public ToolExecutionResult clientJcmd(InstanceId instanceId, int clientPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    RemoteClientManager remoteClientManager = new RemoteClientManager(instanceId);
-    return remoteClientManager.jcmd(clientPid, tcEnv, arguments);
+  public ToolExecutionResult clientJcmd(int clientPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
+    return Jcmd.jcmd(clientPid, tcEnv, arguments);
   }
 
   public void startHardwareMonitoring(String workingPath, Map<HardwareMetric, MonitoringCommand> commands) {
