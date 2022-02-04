@@ -21,6 +21,7 @@ import org.terracotta.angela.common.util.JDK;
 import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.JavaLocationResolver;
 
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -44,8 +45,16 @@ import static org.terracotta.angela.common.AngelaProperties.JAVA_VERSION;
 
 /**
  * Instances of this class are immutable.
+ * <p>
+ * WARNING
+ * <p>
+ * This object goes sadly through a lot of ignite calls...
+ * This is really error-prone because it represents a specific env for one host.
+ * Only the Java args are relevant to be transferred remotely to spawn a new Ignite agent.
  */
-public class TerracottaCommandLineEnvironment {
+public class TerracottaCommandLineEnvironment implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final static Logger LOGGER = LoggerFactory.getLogger(TerracottaCommandLineEnvironment.class);
 
   public static final TerracottaCommandLineEnvironment DEFAULT;
@@ -71,11 +80,10 @@ public class TerracottaCommandLineEnvironment {
     }
   }
 
-  private final Path javaHome;
+  private final transient Path javaHome; // transient since the javaHome location specified by the build depends on each machine
   private final String javaVersion;
   private final Set<String> javaVendors;
   private final Set<String> javaOpts;
-  private final JavaLocationResolver javaLocationResolver;
 
   /**
    * Create a new instance that contains whatever is necessary to build a JVM command line, minus classpath and main class.
@@ -91,8 +99,6 @@ public class TerracottaCommandLineEnvironment {
     this.javaVersion = javaVersion;
     this.javaVendors = unmodifiableSet(new LinkedHashSet<>(javaVendors));
     this.javaOpts = unmodifiableSet(new LinkedHashSet<>(javaOpts));
-    // javaHome ? "user" resolver. Otherwise: "toolchain" resolver
-    this.javaLocationResolver = javaHome != null ? null : new JavaLocationResolver();
   }
 
   private TerracottaCommandLineEnvironment(String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
@@ -140,8 +146,9 @@ public class TerracottaCommandLineEnvironment {
   }
 
   public Path getJavaHome() {
+    // javaHome ? "user" resolver. Otherwise: "toolchain" resolver
     return Optional.ofNullable(javaHome).orElseGet(() -> {
-      List<JDK> jdks = javaLocationResolver.resolveJavaLocations(getJavaVersion(), getJavaVendors(), true);
+      List<JDK> jdks = new JavaLocationResolver().resolveJavaLocations(getJavaVersion(), getJavaVendors(), true);
       if (jdks.size() > 1) {
         LOGGER.warn("Multiple matching java versions found: {} - using the 1st one", jdks);
       }

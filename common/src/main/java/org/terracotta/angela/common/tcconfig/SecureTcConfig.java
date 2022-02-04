@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SecureTcConfig extends EnterpriseTcConfig {
+  private static final long serialVersionUID = 1L;
 
   private final Map<ServerSymbolicName, SecurityRootDirectory> securityRootDirectoryMap = new HashMap<>();
   private final boolean validateConfig;

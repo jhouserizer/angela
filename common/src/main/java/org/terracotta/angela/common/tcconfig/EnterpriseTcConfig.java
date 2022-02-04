@@ -21,6 +21,7 @@ import org.terracotta.angela.common.topology.Version;
 import java.net.URL;
 
 public class EnterpriseTcConfig extends TcConfig {
+  private static final long serialVersionUID = 1L;
 
   public static EnterpriseTcConfig eeTcConfig(Version version, URL tcConfigPath) {
     return new EnterpriseTcConfig(version, tcConfigPath);

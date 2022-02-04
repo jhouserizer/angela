@@ -15,10 +15,16 @@
  */
 package org.terracotta.angela.common.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.terracotta.angela.common.clientconfig.ClientId;
 
-public class Cluster {
+import java.io.Serializable;
+
+public class Cluster implements Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private final Ignite ignite;
   private final ClientId clientId;
 

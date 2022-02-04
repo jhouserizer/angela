@@ -17,13 +17,16 @@ package org.terracotta.angela.common;
 
 import org.terracotta.angela.common.util.IpUtils;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
 
-public class TerracottaVoter {
+public class TerracottaVoter implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final String id;
   private final String hostName;
   private final List<String> hostPorts = new ArrayList<>();

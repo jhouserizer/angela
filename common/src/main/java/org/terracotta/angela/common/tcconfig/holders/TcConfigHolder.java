@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -62,7 +63,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  *
  * @author Aurelien Broszniowski
  */
-public abstract class TcConfigHolder {
+public abstract class TcConfigHolder implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final static Logger logger = LoggerFactory.getLogger(TcConfigHolder.class);
 
