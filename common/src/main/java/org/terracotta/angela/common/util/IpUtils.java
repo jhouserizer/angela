@@ -28,11 +28,12 @@ public class IpUtils {
   private static final Collection<String> LOCAL_HOSTNAMES = new HashSet<>();
   private static final String LOCAL_HOSTNAME;
 
-  // caches costly resolutions
+  // caches costly resolutions and also what angela has to consider being "local" in order to not trigger an SSH remote installation
   static {
     try {
       LOCAL_HOSTNAME = InetAddress.getLocalHost().getHostName();
       LOCAL_HOSTNAMES.add(LOCAL_HOSTNAME);
+      LOCAL_HOSTNAMES.add(InetAddress.getLocalHost().getHostAddress());
       LOCAL_HOSTNAMES.add("localhost");
       LOCAL_HOSTNAMES.add("127.0.0.1");
       LOCAL_HOSTNAMES.add("::1");
@@ -66,9 +67,5 @@ public class IpUtils {
 
   public static String getHostName() {
     return LOCAL_HOSTNAME;
-  }
-
-  public static Collection<String> getLocalHostnames() {
-    return null;
   }
 }
