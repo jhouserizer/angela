@@ -175,7 +175,7 @@ public class Client implements Closeable {
   }
 
   public String getHostname() {
-    return clientId.getHostname();
+    return clientId.getHostName();
   }
 
   public String getSymbolicName() {

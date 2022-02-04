@@ -35,7 +35,7 @@ public class ClientId {
     return symbolicName;
   }
 
-  public String getHostname() {
+  public String getHostName() {
     return hostname;
   }
 

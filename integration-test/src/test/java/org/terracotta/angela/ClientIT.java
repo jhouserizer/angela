@@ -559,7 +559,7 @@ public class ClientIT {
       try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (Cluster cluster) -> {
           ClientId clientId = cluster.getClientId();
-          assertThat(clientId.getHostname(), is(IpUtils.getHostName()));
+          assertThat(clientId.getHostName(), is(IpUtils.getHostName()));
           assertThat(clientId.getSymbolicName().getSymbolicName(),
               anyOf(is(IpUtils.getHostName() + "-0"), is(IpUtils.getHostName() + "-1")));
         };
