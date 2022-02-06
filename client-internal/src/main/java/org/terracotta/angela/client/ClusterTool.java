@@ -15,22 +15,24 @@
  */
 package org.terracotta.angela.client;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.kit.LocalKitManager;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
-import org.terracotta.angela.client.util.IgniteClientHelper;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
+import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.topology.InstanceId;
+import org.terracotta.angela.common.topology.Topology;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,16 +51,14 @@ public class ClusterTool implements AutoCloseable {
   private final static Logger logger = LoggerFactory.getLogger(ClusterTool.class);
 
   private final InstanceId instanceId;
-  private final int ignitePort;
-  private final Ignite ignite;
-  private final ToolConfigurationContext configContext;
-  private final LocalKitManager localKitManager;
-  private final Tsa tsa;
+  private final transient AgentExecutor executor;
+  private final transient ToolConfigurationContext configContext;
+  private final transient LocalKitManager localKitManager;
+  private final transient Tsa tsa;
 
-  ClusterTool(Ignite ignite, InstanceId instanceId, int ignitePort, ToolConfigurationContext configContext, Tsa tsa) {
+  ClusterTool(Executor executor, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
     this.instanceId = instanceId;
-    this.ignitePort = ignitePort;
-    this.ignite = ignite;
+    this.executor = executor.forAgent(executor.getAgentID(configContext.getHostName()));
     this.configContext = configContext;
     this.localKitManager = new LocalKitManager(configContext.getDistribution());
     this.tsa = tsa;
@@ -70,8 +70,8 @@ public class ClusterTool implements AutoCloseable {
   }
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... command) {
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().clusterTool(instanceId, env, command);
-    return IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+    logger.debug("Executing config-tool: {} on: {}", instanceId, executor.getTarget());
+    return executor.execute(() -> AgentController.getInstance().clusterTool(instanceId, env, command));
   }
 
   public ClusterTool configure(Map<String, String> env) {
@@ -83,10 +83,14 @@ public class ClusterTool implements AutoCloseable {
       clusterName = instanceId.toString();
     }
     List<String> command = new ArrayList<>(Arrays.asList("configure", "-n", clusterName));
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.getInstance().getController().configure(instanceId, tsa.getTsaConfigurationContext().getTopology(), tsa.updateToProxiedPorts(), license, securityRootDirectory, tcEnv, env, command);
-    ToolExecutionResult result = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
-    if(result.getExitStatus() != 0) {
-      throw new IllegalStateException("Failed to execute cluster-tool configure:\n" + result.toString());
+    final Topology topology = tsa.getTsaConfigurationContext().getTopology();
+    final Map<ServerSymbolicName, Integer> proxyTsaPorts = tsa.updateToProxiedPorts();
+
+    logger.debug("Executing config-tool configure: {} on: {}", instanceId, executor.getTarget());
+
+    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().configure(instanceId, topology, proxyTsaPorts, license, securityRootDirectory, tcEnv, env, command));
+    if (result.getExitStatus() != 0) {
+      throw new IllegalStateException("Failed to execute cluster-tool configure:\n" + result);
     }
     return this;
   }
@@ -103,33 +107,38 @@ public class ClusterTool implements AutoCloseable {
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    final String hostName = configContext.getHostName();
+    final String kitInstallationName = localKitManager.getKitInstallationName();
 
-    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installClusterTool(instanceId,
-        configContext.getHostName(), distribution, license, localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+    logger.info("Installing config-tool: {} on: {}", instanceId, executor.getTarget());
+
+    IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installClusterTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
-        IgniteClientHelper.uploadKit(ignite, configContext.getHostName(), ignitePort, instanceId, distribution,
-            localKitManager.getKitInstallationName(), localKitManager.getKitInstallationPath().toFile());
-        IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+        executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+        executor.execute(callable);
       } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + configContext.getHostName(), e);
+        throw new RuntimeException("Cannot upload kit to " + hostName, e);
       }
     }
     return this;
   }
 
   public ClusterTool uninstall() {
-    IgniteRunnable uninstaller = () -> Agent.getInstance().getController().uninstallClusterTool(instanceId, configContext.getDistribution(), configContext
-        .getHostName(), localKitManager.getKitInstallationName());
-    IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, uninstaller);
+    logger.info("Uninstalling config-tool: {} on: {}", instanceId, executor.getTarget());
+    final Distribution distribution = configContext.getDistribution();
+    final String hostName = configContext.getHostName();
+    final String kitInstallationName = localKitManager.getKitInstallationName();
+    IgniteRunnable uninstaller = () -> AgentController.getInstance().uninstallClusterTool(instanceId, distribution, hostName, kitInstallationName);
+    executor.execute(uninstaller);
     return this;
   }
 
   public RemoteFolder browse(String root) {
-    String path = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort,
-        () -> Agent.getInstance().getController().getClusterToolInstallPath(instanceId));
-    return new RemoteFolder(ignite, configContext.getHostName(), ignitePort, path, root);
+    logger.debug("Browsing config-tool: {} on: {}", instanceId, executor.getTarget());
+    String path = executor.execute(() -> AgentController.getInstance().getClusterToolInstallPath(instanceId));
+    return new RemoteFolder(executor, path, root);
   }
 
   @Override

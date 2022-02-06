@@ -24,34 +24,34 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClientArrayFuture;
 import org.terracotta.angela.client.ClientJob;
 import org.terracotta.angela.client.ClusterFactory;
+import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
+import org.terracotta.angela.common.tcconfig.TcConfig;
 import org.terracotta.angela.common.topology.ClientArrayTopology;
-import org.terracotta.angela.common.topology.LicenseType;
-import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.util.TestUtils;
 
 import java.net.URI;
 
 import static junit.framework.TestCase.assertEquals;
-import static org.terracotta.angela.Versions.EHCACHE_SNAPSHOT_VERSION;
-import static org.terracotta.angela.Versions.EHCACHE_VERSION;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 import static org.terracotta.angela.common.clientconfig.ClientArrayConfig.newClientArrayConfig;
-import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
 import static org.terracotta.angela.common.topology.Version.version;
+import static org.terracotta.angela.util.Versions.EHCACHE_VERSION_XML;
 
-public class EhcacheIT {
+public class EhcacheIT extends BaseIT {
 
-  @Rule
-  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+  public EhcacheIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
+  }
 
   @Test
   public void testTsaWithEhcacheReleaseKit() throws Exception {
@@ -59,57 +59,48 @@ public class EhcacheIT {
         .tsa(
             tsa -> tsa.topology(
                 new Topology(
-                    distribution(version(EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-                    tcConfig(version(EHCACHE_VERSION), TestUtils.TC_CONFIG_A)
+                    getOldDistribution(),
+                    tcConfig(version(EHCACHE_VERSION_XML), TestUtils.TC_CONFIG_A)
                 )
             )
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
-      factory.tsa().startAll();
-    }
-  }
-
-  @Test
-  public void testTsaWithEhcacheSnapshotKit() throws Exception {
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .tsa(
-            tsa -> tsa.topology(
-                new Topology(
-                    distribution(version(EHCACHE_SNAPSHOT_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-                    tcConfig(version(EHCACHE_SNAPSHOT_VERSION), TestUtils.TC_CONFIG_A)
-                )
-            )
-        );
-
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testTsaWithEhcacheSnapshotKit", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
       factory.tsa().startAll();
     }
   }
 
   @Test
   public void testClusteredEhcacheOperations() throws Exception {
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeTrue("Cannot run through local SSH using a fake host file", sshServer == null);
+
+    TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION_XML), TestUtils.TC_CONFIG_A);
+    tcConfig.updateServerHost(0, hostname);
+
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .tsa(
             tsa -> tsa.topology(
                 new Topology(
-                    distribution(version(EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-                    tcConfig(version(EHCACHE_VERSION), TestUtils.TC_CONFIG_A)
+                    getOldDistribution(),
+                    tcConfig
                 )
             )
         ).clientArray(
             clientArray -> clientArray.clientArrayTopology(
                 new ClientArrayTopology(
-                    distribution(version(EHCACHE_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS),
-                    newClientArrayConfig().named("localhost")
+                    getOldDistribution(),
+                    newClientArrayConfig().host("foo", hostname)
                 )
             )
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
-      factory.tsa().startAll();
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
+      Tsa tsa = factory.tsa();
+      tsa.startAll();
+      tsa.waitForActive();
+      String uri = tsa.uri().toString() + "/clustered-cache-manager";
       ClientArray clientArray = factory.clientArray(0);
-      String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
       String cacheAlias = "clustered-cache";
 
       ClientJob clientJob = (cluster) -> {

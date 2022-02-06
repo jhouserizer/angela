@@ -101,7 +101,7 @@ public abstract class TcConfigHolder implements Serializable {
         fos.write(this.tcConfigContent.getBytes(Charset.defaultCharset()));
       }
       this.installedTcConfigPath = tempConfigFile.getAbsolutePath();
-      logger.info("Installed Tc Config path: {}", installedTcConfigPath);
+      logger.debug("Installed Tc Config path: {}", installedTcConfigPath);
     } catch (IOException e) {
       throw new RuntimeException("Cannot write tc-config xml to kitDir location: " + kitDir.getAbsolutePath(), e);
     }

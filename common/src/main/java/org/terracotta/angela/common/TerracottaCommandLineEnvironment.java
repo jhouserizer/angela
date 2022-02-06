@@ -18,7 +18,6 @@ package org.terracotta.angela.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.JDK;
-import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.JavaLocationResolver;
 
 import java.io.Serializable;
@@ -28,7 +27,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -67,12 +65,12 @@ public class TerracottaCommandLineEnvironment implements Serializable {
         Set<String> vendors = JAVA_VENDOR.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_VENDOR.getValue());
         // Important - Use a LinkedHashSet to preserve the order of opts, as some opts are position-sensitive
         Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_OPTS.getValue());
-        DEFAULT = new TerracottaCommandLineEnvironment(version, vendors, opts);
+        DEFAULT = new TerracottaCommandLineEnvironment(false, version, vendors, opts);
         break;
       }
       case "user": {
         Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_OPTS.getValue());
-        DEFAULT = new TerracottaCommandLineEnvironment(Paths.get(JAVA_HOME.getValue()), "", emptySet(), opts);
+        DEFAULT = new TerracottaCommandLineEnvironment(true, "", emptySet(), opts);
         break;
       }
       default:
@@ -80,7 +78,7 @@ public class TerracottaCommandLineEnvironment implements Serializable {
     }
   }
 
-  private final transient Path javaHome; // transient since the javaHome location specified by the build depends on each machine
+  private final boolean useJavaHome;
   private final String javaVersion;
   private final Set<String> javaVendors;
   private final Set<String> javaOpts;
@@ -93,16 +91,12 @@ public class TerracottaCommandLineEnvironment implements Serializable {
    * @param javaOpts    some command line arguments to give to the JVM, like -Xmx2G, -XX:Whatever or -Dsomething=abc.
    *                    Can be empty if no JVM argument is needed.
    */
-  private TerracottaCommandLineEnvironment(Path javaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
+  private TerracottaCommandLineEnvironment(boolean useJavaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
     validate(javaVersion, javaVendors, javaOpts);
-    this.javaHome = javaHome;
+    this.useJavaHome = useJavaHome;
     this.javaVersion = javaVersion;
     this.javaVendors = unmodifiableSet(new LinkedHashSet<>(javaVendors));
     this.javaOpts = unmodifiableSet(new LinkedHashSet<>(javaOpts));
-  }
-
-  private TerracottaCommandLineEnvironment(String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
-    this(null, javaVersion, javaVendors, javaOpts);
   }
 
   private static void validate(String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
@@ -119,41 +113,36 @@ public class TerracottaCommandLineEnvironment implements Serializable {
     }
   }
 
+  public boolean isToolchainBased() {
+    return !useJavaHome;
+  }
+
   public TerracottaCommandLineEnvironment withJavaVersion(String javaVersion) {
-    if (javaHome != null) {
-      throw new UnsupportedOperationException("Unable to change the Java version when using the 'user' resolver");
-    }
-    return new TerracottaCommandLineEnvironment(null, javaVersion, javaVendors, javaOpts);
+    return new TerracottaCommandLineEnvironment(false, javaVersion, javaVendors, javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaVendors(String... javaVendors) {
-    if (javaHome != null) {
-      throw new UnsupportedOperationException("Unable to change the Java vendors when using the 'user' resolver");
-    }
-    return new TerracottaCommandLineEnvironment(null, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
+    return new TerracottaCommandLineEnvironment(false, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
   }
 
   public TerracottaCommandLineEnvironment withJavaOpts(String... javaOpts) {
-    return new TerracottaCommandLineEnvironment(javaHome, javaVersion, javaVendors, new LinkedHashSet<>(asList(javaOpts)));
+    return new TerracottaCommandLineEnvironment(useJavaHome, javaVersion, javaVendors, new LinkedHashSet<>(asList(javaOpts)));
   }
 
   public TerracottaCommandLineEnvironment withCurrentJavaHome() {
-    return withJavaHome(JavaBinaries.javaHome());
-  }
-
-  public TerracottaCommandLineEnvironment withJavaHome(Path jdkHome) {
-    return new TerracottaCommandLineEnvironment(requireNonNull(jdkHome), "", emptySet(), javaOpts);
+    return new TerracottaCommandLineEnvironment(true, "", emptySet(), javaOpts);
   }
 
   public Path getJavaHome() {
-    // javaHome ? "user" resolver. Otherwise: "toolchain" resolver
-    return Optional.ofNullable(javaHome).orElseGet(() -> {
+    if (useJavaHome) {
+      return Paths.get(JAVA_HOME.getValue());
+    } else {
       List<JDK> jdks = new JavaLocationResolver().resolveJavaLocations(getJavaVersion(), getJavaVendors(), true);
       if (jdks.size() > 1) {
         LOGGER.warn("Multiple matching java versions found: {} - using the 1st one", jdks);
       }
-      return jdks.get(0).getHome();
-    });
+      return jdks.get(0).getHome().toLocalPath();
+    }
   }
 
   public String getJavaVersion() {
@@ -169,7 +158,7 @@ public class TerracottaCommandLineEnvironment implements Serializable {
   }
 
   public Map<String, String> buildEnv(Map<String, String> overrides) {
-    LOGGER.info("overrides={}", overrides);
+    LOGGER.debug("overrides={}", overrides);
 
     Map<String, String> env = new HashMap<>();
     Path javaHome = getJavaHome();
@@ -189,7 +178,7 @@ public class TerracottaCommandLineEnvironment implements Serializable {
       }
     }
 
-    Stream.of("JAVA_HOME", "JAVA_OPTS").forEach(key -> LOGGER.info(" {} = {}", key, env.get(key)));
+    Stream.of("JAVA_HOME", "JAVA_OPTS").forEach(key -> LOGGER.debug(" {} = {}", key, env.get(key)));
 
     return env;
   }

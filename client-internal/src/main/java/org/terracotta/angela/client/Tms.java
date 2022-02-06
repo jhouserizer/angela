@@ -15,15 +15,16 @@
  */
 package org.terracotta.angela.client;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.lang.IgniteCallable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.kit.LocalKitManager;
 import org.terracotta.angela.client.config.TmsConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
-import org.terracotta.angela.client.util.IgniteClientHelper;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerState;
 import org.terracotta.angela.common.distribution.Distribution;
@@ -46,12 +47,12 @@ import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 public class Tms implements AutoCloseable {
 
   private final static Logger logger = LoggerFactory.getLogger(Tsa.class);
-  private final int ignitePort;
-  private final TmsConfigurationContext tmsConfigurationContext;
+
+  private final transient TmsConfigurationContext tmsConfigurationContext;
   private boolean closed = false;
-  private final Ignite ignite;
+  private final transient Executor executor;
   private final InstanceId instanceId;
-  private final LocalKitManager localKitManager;
+  private final transient LocalKitManager localKitManager;
 
   @Deprecated
   private static final String NONE = "none";
@@ -62,11 +63,10 @@ public class Tms implements AutoCloseable {
   @Deprecated
   public static final String FULL = "full";
 
-  Tms(Ignite ignite, int ignitePort, InstanceId instanceId, TmsConfigurationContext tmsConfigurationContext) {
-    this.ignitePort = ignitePort;
+  Tms(Executor executor, InstanceId instanceId, TmsConfigurationContext tmsConfigurationContext) {
     this.tmsConfigurationContext = tmsConfigurationContext;
     this.instanceId = instanceId;
-    this.ignite = ignite;
+    this.executor = executor;
     this.localKitManager = new LocalKitManager(tmsConfigurationContext.getDistribution());
     install();
   }
@@ -96,14 +96,17 @@ public class Tms implements AutoCloseable {
   }
 
   public RemoteFolder browse(String root) {
-    String tmsHostname = tmsConfigurationContext.getHostname();
-    String path = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().getTmsInstallationPath(instanceId));
-    return new RemoteFolder(ignite, tmsHostname, ignitePort, path, root);
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentExecutor agentExecutor = executor.forAgent(agentID);
+    logger.debug("Browse TMS: {} on: {}", instanceId, agentID);
+    String path = agentExecutor.execute(() -> AgentController.getInstance().getTmsInstallationPath(instanceId));
+    return new RemoteFolder(agentExecutor, path, root);
   }
 
   public TerracottaManagementServerState getTmsState() {
-    return IgniteClientHelper.executeRemotely(ignite, tmsConfigurationContext.getHostname(), ignitePort,
-        () -> Agent.getInstance().getController().getTmsState(instanceId));
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    logger.debug("Get state of TMS: {} on: {}", instanceId, agentID);
+    return executor.execute(agentID, () -> AgentController.getInstance().getTmsState(instanceId));
   }
 
   public Tms start() {
@@ -111,14 +114,14 @@ public class Tms implements AutoCloseable {
   }
 
   public Tms start(Map<String, String> envOverrides) {
-    String tmsHostname = tmsConfigurationContext.getHostname();
-    logger.info("Starting TMS on {}", tmsHostname);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().startTms(instanceId, envOverrides));
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    logger.info("Starting TMS: {} on: {}", instanceId, agentID);
+    executor.execute(agentID, () -> AgentController.getInstance().startTms(instanceId, envOverrides));
     return this;
   }
 
   public void stop() {
-    stopTms(tmsConfigurationContext.getHostname());
+    stopTms();
   }
 
   @Override
@@ -148,38 +151,36 @@ public class Tms implements AutoCloseable {
     if (terracottaServerState != TerracottaManagementServerState.STOPPED) {
       throw new IllegalStateException("Cannot uninstall: server " + tmsHostname + " already in state " + terracottaServerState);
     }
-
-    logger.info("Uninstalling TMS from {}", tmsHostname);
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    logger.info("Uninstalling TMS: {} from: {}", instanceId, agentID);
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort,
-        () -> Agent.getInstance().getController().uninstallTms(instanceId, tmsConfigurationContext.getDistribution(),
-            tmsConfigurationContext.getSecurityConfig(),
-            localKitManager.getKitInstallationName(), tmsHostname, kitInstallationPath));
+    final Distribution distribution = tmsConfigurationContext.getDistribution();
+    final TmsServerSecurityConfig securityConfig = tmsConfigurationContext.getSecurityConfig();
+    final String kitInstallationName = localKitManager.getKitInstallationName();
+    executor.execute(agentID, () -> AgentController.getInstance().uninstallTms(instanceId, distribution, securityConfig, kitInstallationName, tmsHostname, kitInstallationPath));
   }
 
   private void install() {
-    String tmsHostname = tmsConfigurationContext.getHostname();
+    final String tmsHostname = tmsConfigurationContext.getHostname();
     License license = tmsConfigurationContext.getLicense();
     Distribution distribution = tmsConfigurationContext.getDistribution();
     TmsServerSecurityConfig tmsServerSecurityConfig = tmsConfigurationContext.getSecurityConfig();
     TerracottaCommandLineEnvironment tcEnv = tmsConfigurationContext.getTerracottaCommandLineEnvironment();
+    final AgentID agentID = executor.getAgentID(tmsHostname);
 
-    logger.info("starting TMS on {}", tmsHostname);
+    logger.info("Installing TMS: {} on: {}", instanceId, agentID);
 
-    logger.debug("Setting up locally the extracted install to be deployed remotely");
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    final String kitInstallationName = localKitManager.getKitInstallationName();
 
-    logger.info("Attempting to remotely install if distribution already exists on {}", tmsHostname);
-    IgniteCallable<Boolean> callable = () -> Agent.getInstance().getController().installTms(instanceId, tmsHostname, distribution, license,
-        tmsServerSecurityConfig, localKitManager.getKitInstallationName(), tcEnv, tmsConfigurationContext.getHostname(), kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, callable);
+    IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(instanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath);
+    boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
 
     if (!isRemoteInstallationSuccessful) {
       try {
-        IgniteClientHelper.uploadKit(ignite, tmsHostname, ignitePort, instanceId, distribution,
-            localKitManager.getKitInstallationName(), localKitManager.getKitInstallationPath().toFile());
-        IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, callable);
+        executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+        executor.execute(agentID, callable);
       } catch (Exception e) {
         throw new RuntimeException("Cannot upload kit to " + tmsHostname, e);
       }
@@ -187,7 +188,7 @@ public class Tms implements AutoCloseable {
 
   }
 
-  private void stopTms(String tmsHostname) {
+  private void stopTms() {
     TerracottaManagementServerState terracottaManagementServerState = getTmsState();
     if (terracottaManagementServerState == TerracottaManagementServerState.STOPPED) {
       return;
@@ -196,8 +197,9 @@ public class Tms implements AutoCloseable {
       throw new IllegalStateException("Cannot stop: TMS server , already in state " + terracottaManagementServerState);
     }
 
-    logger.info("Stopping TMS on {}", tmsHostname);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.getInstance().getController().stopTms(instanceId));
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    logger.info("Stopping TMS: {} on: {}", instanceId, agentID);
+    executor.execute(agentID, () -> AgentController.getInstance().stopTms(instanceId));
     ensureStopped(this::getTmsState);
   }
 

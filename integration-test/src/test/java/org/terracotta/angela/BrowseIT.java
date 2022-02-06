@@ -15,7 +15,6 @@
  */
 package org.terracotta.angela;
 
-import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.Client;
 import org.terracotta.angela.client.ClientArray;
@@ -25,94 +24,86 @@ import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFile;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.ClientArrayTopology;
-import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
-import static org.terracotta.angela.TestUtils.TC_CONFIG_AP;
-import static org.terracotta.angela.Versions.EHCACHE_VERSION;
+import static org.junit.Assume.assumeFalse;
 import static org.terracotta.angela.common.clientconfig.ClientArrayConfig.newClientArrayConfig;
-import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.Version.version;
+import static org.terracotta.angela.util.TestUtils.TC_CONFIG_AP;
+import static org.terracotta.angela.util.Versions.EHCACHE_VERSION_XML;
 
 /**
  * @author Ludovic Orban
  */
-public class BrowseIT {
+public class BrowseIT extends BaseIT {
 
-  @Rule
-  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+  public BrowseIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
+  }
 
   @Test
   public void testClient() throws Exception {
+    assumeFalse("Cannot run without Ignite", agentID.isIgniteFree());
+
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
+        .clientArray(clientArray -> clientArray
+            .clientArrayTopology(new ClientArrayTopology(getOldDistribution(), newClientArrayConfig().host("foo", hostname)))
         );
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testClient", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("BrowseTest::testClient", configContext)) {
       ClientArray clientArray = factory.clientArray(0);
       Client client = clientArray.getClients().stream().findFirst().get();
 
-      File fileToUpload = new File("target/toUpload", "uploaded-data.txt");
-      fileToUpload.getParentFile().mkdir();
-      try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(fileToUpload))) {
-        dos.writeUTF("uploaded : hello, world!");
-      }
+      String msg = "hello, world!";
+      Path fileToUpload = Paths.get("target/toUpload/uploaded-data.txt");
+      Files.createDirectories(fileToUpload.getParent());
+      Files.write(fileToUpload, msg.getBytes(StandardCharsets.UTF_8));
 
-      client.browse("uploaded").upload(new File("target/toUpload"));
+      client.browse("uploaded").upload(Paths.get("target/toUpload"));
 
       clientArray.executeOnAll(cluster -> {
-        try (DataInputStream dis = new DataInputStream(new FileInputStream("uploaded/uploaded-data.txt"))) {
-          String line = dis.readUTF();
-          assertThat(line, is("uploaded : hello, world!"));
-        }
-
-        File file = new File("toDownload", "downloaded-data.txt");
-        file.getParentFile().mkdir();
-        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(file))) {
-          dos.writeUTF("downloaded: hello, world!");
-        }
+        assertThat(new String(Files.readAllBytes(Paths.get("uploaded/uploaded-data.txt")), StandardCharsets.UTF_8), is(equalTo(msg)));
+        Path fileToDownload = Paths.get("toDownload/downloaded-data.txt");
+        Files.createDirectories(fileToDownload.getParent());
+        Files.write(fileToDownload, msg.getBytes(StandardCharsets.UTF_8));
       }).get();
 
-      client.browse("toDownload").list().stream().filter(remoteFile -> remoteFile.getName().equals("downloaded-data.txt")).findAny().get().downloadTo(new File("target/downloaded-data.txt"));
+      client.browse("toDownload").list()
+          .stream()
+          .filter(remoteFile -> remoteFile.getName().equals("downloaded-data.txt"))
+          .findAny()
+          .get()
+          .downloadTo(Paths.get("target/downloaded-data.txt"));
 
-      try (DataInputStream dis = new DataInputStream(new FileInputStream("target/downloaded-data.txt"))) {
-        assertThat(dis.readUTF(), is("downloaded: hello, world!"));
-      }
+      assertThat(new String(Files.readAllBytes(Paths.get("target/downloaded-data.txt")), StandardCharsets.UTF_8), is(equalTo(msg)));
     }
   }
 
   @Test
   public void testUploadPlugin() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .tsa(tsa -> tsa.topology(new Topology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS),
-                tcConfig(version(EHCACHE_VERSION), TC_CONFIG_AP)))
-            .license(TERRACOTTA_OS.defaultLicense())
-        );
+        .tsa(tsa -> tsa.topology(new Topology(getOldDistribution(), tcConfig(version(EHCACHE_VERSION_XML), TC_CONFIG_AP))));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testUploadPlugin", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("BrowseTest::testUploadPlugin", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.uploadPlugin(new File(getClass().getResource("/keep-this-file-empty.txt").getFile()));
+      tsa.uploadPlugin(new File(getClass().getResource("/keep-this-file-empty.txt").toURI()).toPath());
 
       for (TerracottaServer server : tsa.getTsaConfigurationContext().getTopology().getServers()) {
         RemoteFolder remoteFolder = tsa.browseFromKitLocation(server, "server/plugins/lib");
-        remoteFolder.list().forEach(System.out::println);
         Optional<RemoteFile> remoteFile = remoteFolder.list().stream().filter(f -> f.getName().equals("keep-this-file-empty.txt")).findFirst();
         assertThat(remoteFile.isPresent(), is(true));
       }
@@ -122,17 +113,17 @@ public class BrowseIT {
   @Test
   public void testNonExistentFolder() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
+        .clientArray(clientArray -> clientArray
+            .clientArrayTopology(new ClientArrayTopology(getOldDistribution(), newClientArrayConfig().host("foo", hostname)))
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testNonExistentFolder", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("BrowseTest::testNonExistentFolder", configContext)) {
       ClientArray clientArray = factory.clientArray(0);
       try {
         Client localhost = clientArray.getClients().stream().findFirst().get();
-        localhost.browse("/does/not/exist").downloadTo(new File("target/destination"));
+        localhost.browse("target/does/not/exist").downloadTo(Paths.get("target/destination"));
         fail("expected IOException");
-      } catch (IOException e) {
+      } catch (Exception e) {
         // expected
       }
     }
@@ -141,18 +132,18 @@ public class BrowseIT {
   @Test
   public void testUpload() throws Exception {
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
-            .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().named("localhost")))
+        .clientArray(clientArray -> clientArray
+            .clientArrayTopology(new ClientArrayTopology(getOldDistribution(), newClientArrayConfig().host("foo", hostname)))
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("BrowseTest::testUpload", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("BrowseTest::testUpload", configContext)) {
       ClientArray clientArray = factory.clientArray(0);
       Client localhost = clientArray.getClients().stream().findFirst().get();
-      RemoteFolder folder = localhost.browse("does-not-exist"); // check that we can upload to non-existent folder & the folder will be created
+      RemoteFolder folder = localhost.browse("target/does-not-exist"); // check that we can upload to non-existent folder & the folder will be created
 
       folder.upload("keep-this-file-empty.txt", getClass().getResource("/keep-this-file-empty.txt"));
 
-      Optional<RemoteFile> createdFolder = localhost.browse(".").list().stream().filter(remoteFile -> remoteFile.getName().equals("does-not-exist") && remoteFile.isFolder()).findAny();
+      Optional<RemoteFile> createdFolder = localhost.browse("target").list().stream().filter(remoteFile -> remoteFile.getName().equals("does-not-exist") && remoteFile.isFolder()).findAny();
       assertThat(createdFolder.isPresent(), is(true));
 
       List<RemoteFile> remoteFiles = ((RemoteFolder) createdFolder.get()).list();

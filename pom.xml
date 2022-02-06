@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>angela-root</artifactId>
-  <version>3.2.9-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>angela</name>
 
@@ -47,12 +47,12 @@
     <terracotta-utilities.version>0.0.9</terracotta-utilities.version>
 
     <!-- Third-party dependencies -->
-    <ignite.version>2.11.1</ignite.version>
+    <ignite.version>2.12.0</ignite.version>
     <json-path.version>4.3.1</json-path.version>
     <hamcrest.version>1.3</hamcrest.version>
     <junit.version>4.12</junit.version>
     <slf4j-api.version>1.7.25</slf4j-api.version>
-    <sshj.version>0.30.0</sshj.version>
+    <sshj.version>0.32.0</sshj.version>
     <awaitility.version>4.0.3</awaitility.version>
     <commons-io.version>2.7</commons-io.version>
     <commons-compress.version>1.20</commons-compress.version>
@@ -104,6 +104,11 @@
       <dependency>
         <groupId>org.terracotta</groupId>
         <artifactId>terracotta-utilities-port-chooser</artifactId>
+        <version>${terracotta-utilities.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.terracotta</groupId>
+        <artifactId>terracotta-utilities-test-tools</artifactId>
         <version>${terracotta-utilities.version}</version>
       </dependency>
       <dependency>

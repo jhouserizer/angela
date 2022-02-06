@@ -30,7 +30,7 @@ import java.nio.file.Path;
 
 public class DummyKitResolver extends KitResolver {
   @Override
-  public String resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType) {
+  public Path resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType) {
     return null;
   }
 

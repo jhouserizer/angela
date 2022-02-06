@@ -15,7 +15,8 @@
  */
 package org.terracotta.angela.client;
 
-import org.terracotta.angela.client.com.IgniteFutureAdapter;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.terracotta.angela.agent.com.IgniteFutureAdapter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,6 +38,7 @@ public class ClientArrayFuture implements Future<Void> {
     return futures;
   }
 
+  @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @Override
   public Void get(long timeout, TimeUnit unit) throws CancellationException, ExecutionException, InterruptedException, TimeoutException {
     List<Exception> exceptions = new ArrayList<>();
@@ -77,6 +79,7 @@ public class ClientArrayFuture implements Future<Void> {
     return null;
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public Void get() throws CancellationException, ExecutionException, InterruptedException {
     try {

@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.terracotta</groupId>
     <artifactId>angela-root</artifactId>
-    <version>3.2.9-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>angela-agent</artifactId>
@@ -59,6 +59,17 @@
               <mainClass>org.terracotta.angela.agent.Agent</mainClass>
             </transformer>
           </transformers>
+          <filters>
+            <filter>
+              <!-- filter out signature files from signed dependencies, else repackaging fails with security ex -->
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
         </configuration>
         <executions>
           <execution>

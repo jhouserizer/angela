@@ -63,7 +63,7 @@ public class JavaLocationResolver {
 
   public List<JDK> resolveJavaLocations(String version, Set<String> vendors, boolean checkValidity) {
     List<JDK> list = jdks.stream()
-        .filter(jdk -> !checkValidity || jdk.isValid())
+        .filter(jdk -> !checkValidity || Files.isDirectory(jdk.getHome().toLocalPath()))
         .filter(jdk -> version.isEmpty() || version.equals(jdk.getVersion()))
         .filter(jdk -> vendors.isEmpty() || vendors.stream().anyMatch(v -> v.equalsIgnoreCase(jdk.getVendor())))
         .collect(Collectors.toList());
@@ -111,12 +111,11 @@ public class JavaLocationResolver {
       Element configurationElement = (Element) toolchainElement.getElementsByTagName("configuration").item(0);
 
       Path home = Paths.get(configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent());
-      boolean valid = Files.isDirectory(home);
 
       String version = textContentOf(providesElement, "version");
       String vendor = textContentOf(providesElement, "vendor");
 
-      jdks.add(new JDK(home, version, vendor, valid));
+      jdks.add(new JDK(UniversalPath.fromLocalPath(home), version, vendor));
     }
 
     return jdks;

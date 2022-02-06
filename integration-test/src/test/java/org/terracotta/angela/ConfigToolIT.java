@@ -15,20 +15,16 @@
  */
 package org.terracotta.angela;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.distribution.Distribution;
-import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.util.Versions;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -44,40 +40,25 @@ import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.topology.Version.version;
 
-public class ConfigToolIT {
+public class ConfigToolIT extends BaseIT {
 
-  PortAllocator.PortReservation reservation;
-  int[] ports;
-
-  @Rule
-  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
-
-  @Before
-  public void setUp() {
-    reservation = angelaOrchestratorRule.getPortAllocator().reserve(4);
-    ports = reservation.stream().toArray();
-  }
-
-  @After
-  public void tearDown() {
-    reservation.close();
+  public ConfigToolIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
   }
 
   @Test
   public void testFailingConfigToolCommand() throws Exception {
-    TerracottaServer server = server("server-1")
-        .tsaPort(ports[0])
-        .tsaGroupPort(ports[1])
+    TerracottaServer server = server("server-1", hostname)
         .configRepo("terracotta1/repository")
         .logs("terracotta1/logs")
         .metaData("terracotta1/metadata")
         .failoverPriority("availability");
-    Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
+    Distribution distribution = distribution(version(Versions.EHCACHE_VERSION_DC), KIT, TERRACOTTA_OS);
     ConfigurationContext configContext = customConfigurationContext()
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
-        .configTool(context -> context.configTool(configTool("config-tool")).distribution(distribution));
+        .configTool(context -> context.configTool(configTool("config-tool", hostname)).distribution(distribution));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       ConfigTool configTool = factory.configTool();
@@ -89,25 +70,23 @@ public class ConfigToolIT {
 
   @Test
   public void testValidConfigToolCommand() throws Exception {
-    TerracottaServer server = server("server-1")
-        .tsaPort(ports[0])
-        .tsaGroupPort(ports[1])
+    TerracottaServer server = server("server-1", hostname)
         .configRepo("terracotta1/repository")
         .logs("terracotta1/logs")
         .metaData("terracotta1/metadata")
         .failoverPriority("availability");
-    Distribution distribution = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
+    Distribution distribution = distribution(version(Versions.EHCACHE_VERSION_DC), KIT, TERRACOTTA_OS);
     ConfigurationContext configContext = customConfigurationContext()
         .tsa(context -> context.topology(new Topology(distribution, dynamicCluster(stripe(server)))))
-        .configTool(context -> context.configTool(configTool("config-tool")).distribution(distribution));
+        .configTool(context -> context.configTool(configTool("config-tool", hostname)).distribution(distribution));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testValidConfigToolCommand", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ConfigToolTest::testValidConfigToolCommand", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       ConfigTool configTool = factory.configTool();
 
-      ToolExecutionResult result = configTool.executeCommand("get", "-s", "localhost:" + ports[0], "-c", "offheap-resources");
-      System.out.println("######Result: " + result);
+      ToolExecutionResult result = configTool.executeCommand("get", "-s", hostname + ":" + tsa.getStarted().iterator().next().getTsaPort(), "-c", "offheap-resources");
+      System.out.println(result);
     }
   }
 }

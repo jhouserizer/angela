@@ -18,7 +18,6 @@ package org.terracotta.angela;
 import com.terracotta.connection.api.DiagnosticConnectionService;
 import com.terracotta.diagnostic.Diagnostics;
 import org.apache.commons.lang3.ArrayUtils;
-import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.Tsa;
@@ -26,9 +25,8 @@ import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.client.net.ServerToServerDisruptor;
 import org.terracotta.angela.client.net.SplitCluster;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
+import org.terracotta.angela.common.tcconfig.TcConfig;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
-import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.connection.Connection;
 import org.terracotta.connection.ConnectionService;
@@ -41,20 +39,19 @@ import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertTrue;
-import static org.terracotta.angela.Versions.EHCACHE_VERSION;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
-import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 import static org.terracotta.angela.common.topology.Version.version;
+import static org.terracotta.angela.util.Versions.EHCACHE_VERSION_XML;
 
-public class MultiServerIT {
+public class MultiServerIT extends BaseIT {
   private static final int STATE_TIMEOUT = 60_000;
   private static final int STATE_POLL_INTERVAL = 1_000;
 
-  @Rule
-  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+  public MultiServerIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
+  }
 
   /**
    * Create partition between [active] & [passive1,passive2] in consistent mode and verify
@@ -62,13 +59,18 @@ public class MultiServerIT {
    */
   @Test
   public void testPartitionBetweenActivePassives() throws Exception {
+    TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION_XML), getClass().getResource("/configs/tc-config-app-consistent.xml"));
+    tcConfig.updateServerHost(0, hostname);
+    tcConfig.updateServerHost(1, hostname);
+    tcConfig.updateServerHost(2, hostname);
+
     //set netDisruptionEnabled to true to enable disruption
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
-        .tsa(tsa -> tsa.topology(new Topology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), true,
-            tcConfig(version(EHCACHE_VERSION), getClass().getResource("/configs/tc-config-app-consistent.xml"))))
+        .tsa(tsa -> tsa.topology(new Topology(getOldDistribution(), true,
+            tcConfig))
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
       try (Tsa tsa = factory.tsa().startAll()) {
         TerracottaServer active = tsa.getActive();
         Collection<TerracottaServer> passives = tsa.getPassives();
@@ -135,12 +137,10 @@ public class MultiServerIT {
     int activeIndex = -1;
     while (endTime > System.currentTimeMillis()) {
       //first make sure one of server becoming active and then check remaining servers for passive state
-      if (activeIndex == -1) {
-        for (int i = 0; i < servers.length; ++i) {
-          if (tsa.getState(servers[i]) == STARTED_AS_ACTIVE) {
-            activeIndex = i;
-            break;
-          }
+      for (int i = 0; i < servers.length; ++i) {
+        if (tsa.getState(servers[i]) == STARTED_AS_ACTIVE) {
+          activeIndex = i;
+          break;
         }
       }
       if (activeIndex == -1) {

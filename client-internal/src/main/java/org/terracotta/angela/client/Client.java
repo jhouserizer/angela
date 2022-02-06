@@ -15,31 +15,38 @@
  */
 package org.terracotta.angela.client;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.cluster.Cluster;
+import org.terracotta.angela.agent.com.AgentGroup;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Executor;
+import org.terracotta.angela.agent.com.IgniteFutureAdapter;
 import org.terracotta.angela.agent.kit.LocalKitManager;
-import org.terracotta.angela.client.com.IgniteFutureAdapter;
+import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
-import org.terracotta.angela.client.util.IgniteClientHelper;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.clientconfig.ClientId;
-import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.topology.InstanceId;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Future;
 
+import static java.util.stream.Collectors.toList;
+import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
+import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
+import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
 import static org.terracotta.angela.common.AngelaProperties.SKIP_UNINSTALL;
+import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 import static org.terracotta.angela.common.util.JavaBinaries.javaHome;
 import static org.terracotta.angela.common.util.JavaBinaries.jdkHome;
 
@@ -50,24 +57,24 @@ public class Client implements Closeable {
 
   private final static Logger logger = LoggerFactory.getLogger(Client.class);
 
-  private final int ignitePort;
+  private final AgentID clientAgentID;
+  private final AgentID parentAgentID;
   private final InstanceId instanceId;
   private final ClientId clientId;
-  private final Ignite ignite;
-  private final int subClientPid;
+  private final transient Executor executor;
   private boolean stopped = false;
   private boolean closed = false;
 
-
-  Client(Ignite ignite, int ignitePort, InstanceId instanceId, ClientId clientId, TerracottaCommandLineEnvironment tcEnv, LocalKitManager localKitManager) {
-    this.ignitePort = ignitePort;
+  private Client(Executor executor, InstanceId instanceId, ClientId clientId, AgentID clientAgentID, AgentID parentAgentID) {
     this.instanceId = instanceId;
     this.clientId = clientId;
-    this.ignite = ignite;
-    this.subClientPid = spawnSubClient(
-        Objects.requireNonNull(tcEnv),
-        Objects.requireNonNull(localKitManager)
-    );
+    this.executor = executor;
+    this.clientAgentID = clientAgentID;
+    this.parentAgentID = parentAgentID;
+  }
+
+  public AgentID getClientAgentID() {
+    return clientAgentID;
   }
 
   public ClientId getClientId() {
@@ -75,28 +82,34 @@ public class Client implements Closeable {
   }
 
   int getPid() {
-    return subClientPid;
+    return getClientAgentID().getPid();
   }
 
-  private int spawnSubClient(TerracottaCommandLineEnvironment tcEnv, LocalKitManager localKitManager) {
-    logger.info("Spawning client '{}' on {}", instanceId, clientId);
+  public static Client spawn(Executor executor, InstanceId instanceId, ClientId clientId, ClientArrayConfigurationContext clientArrayConfigurationContext, LocalKitManager localKitManager, TerracottaCommandLineEnvironment tcEnv) {
+    final AgentID parentAgentID = executor.getAgentID(clientId.getHostName());
+    logger.info("Spawning client: {} instance: {} through agent: {}", clientId, instanceId, parentAgentID);
+
+    String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
+    localKitManager.setupLocalInstall(clientArrayConfigurationContext.getLicense(), kitInstallationPath, OFFLINE.getBooleanValue());
 
     try {
-      IgniteClientHelper.uploadClientJars(ignite, getHostname(), ignitePort, instanceId, listClasspathFiles(localKitManager));
+      final List<Path> jars = listClasspathFiles(localKitManager);
+      for (Path jar : jars) {
+        logger.debug("Uploading classpath file : {}", jar.getFileName());
+      }
+      executor.uploadClientJars(parentAgentID, instanceId, jars);
+      AgentGroup group = executor.getGroup();
+      AgentID clientAgentID = executor.execute(parentAgentID, () -> AgentController.getInstance().spawnClient(instanceId, tcEnv, group));
+      logger.info("Started client: {} instance: {} through agent: {} on agent: {}", clientId, instanceId, parentAgentID, clientAgentID);
 
-      IgniteCallable<Integer> igniteCallable = () -> Agent.getInstance().getController().spawnClient(instanceId, tcEnv);
-      int pid = IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, igniteCallable);
-      logger.info("client '{}' on {} started with PID {}", instanceId, clientId, pid);
-
-      return pid;
+      return new Client(executor, instanceId, clientId, clientAgentID, parentAgentID);
     } catch (Exception e) {
-      logger.error("Cannot create client on {}: {}", clientId, e.getMessage(), e);
+      logger.error("Cannot create client: {} through: {}: {}", instanceId, parentAgentID, e.getMessage(), e);
       throw new RuntimeException(e);
     }
   }
 
-  @SuppressWarnings("StatementWithEmptyBody")
-  private List<File> listClasspathFiles(LocalKitManager localKitManager) {
+  private static List<Path> listClasspathFiles(LocalKitManager localKitManager) {
     List<File> files = new ArrayList<>();
 
     String javaHome = jdkHome().orElse(javaHome()).toString();
@@ -120,29 +133,29 @@ public class Client implements Closeable {
         continue;
       }
 
-      logger.debug("Uploading classpath file : {}", classpathFile.getName());
       files.add(classpathFile);
     }
 
     if (substituteClientJars) {
-      logger.info("Enhancing client classpath with client jars of {}", localKitManager.getDistribution());
+      logger.debug("Enhancing client classpath with client jars of {}", localKitManager.getDistribution());
       files.addAll(libs);
       logger.debug("Adding clients jars : {}", libs);
     }
 
-    return files;
+    return files.stream().map(File::toPath).collect(toList());
   }
 
   Future<Void> submit(ClientId clientId, ClientJob clientJob) {
+    Cluster cluster = executor.getCluster(clientId);
     IgniteCallable<Void> call = () -> {
       try {
-        clientJob.run(new Cluster(ignite, clientId));
+        clientJob.run(cluster);
         return null;
       } catch (Throwable t) {
         throw new IgniteFutureAdapter.RemoteExecutionException("Remote ClientJob failed", exceptionToString(t));
       }
     };
-    return IgniteClientHelper.executeRemotelyAsync(ignite, instanceId.toString(), ignitePort, call);
+    return executor.executeAsync(clientAgentID, call);
   }
 
   private static String exceptionToString(Throwable t) {
@@ -154,19 +167,19 @@ public class Client implements Closeable {
   }
 
   public RemoteFolder browse(String root) {
-    return new RemoteFolder(ignite, instanceId.toString(), ignitePort, null, root);
+    return new RemoteFolder(executor.forAgent(clientAgentID), null, root);
   }
 
   public InstanceId getInstanceId() {
     return instanceId;
   }
 
-  public String getHostname() {
-    return clientId.getHostName();
+  public String getHostName() {
+    return getClientId().getHostName();
   }
 
   public String getSymbolicName() {
-    return clientId.getSymbolicName().getSymbolicName();
+    return getClientId().getSymbolicName().getSymbolicName();
   }
 
   @Override
@@ -178,8 +191,8 @@ public class Client implements Closeable {
 
     stop();
     if (!SKIP_UNINSTALL.getBooleanValue()) {
-      logger.info("Wiping up client '{}' on {}", instanceId, clientId);
-      IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable) () -> Agent.getInstance().getController().deleteClient(instanceId));
+      logger.debug("Wiping up data for client: {} instance: {} started from: {}", clientId, instanceId, parentAgentID);
+      executor.execute(parentAgentID, (IgniteRunnable) () -> AgentController.getInstance().deleteClient(instanceId));
     }
   }
 
@@ -189,7 +202,8 @@ public class Client implements Closeable {
     }
     stopped = true;
 
-    logger.info("Killing client '{}' on {}", instanceId, clientId);
-    IgniteClientHelper.executeRemotely(ignite, getHostname(), ignitePort, (IgniteRunnable) () -> Agent.getInstance().getController().stopClient(instanceId, subClientPid));
+    logger.info("Killing agent: {} for client:{} instance: {} started from: {}", clientAgentID, clientId, instanceId, parentAgentID);
+    final int pid = clientAgentID.getPid();
+    executor.execute(parentAgentID, (IgniteRunnable) () -> AgentController.getInstance().stopClient(instanceId, pid));
   }
 }

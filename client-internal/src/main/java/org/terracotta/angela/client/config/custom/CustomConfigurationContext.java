@@ -19,12 +19,10 @@ import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.MonitoringConfigurationContext;
-import org.terracotta.angela.client.config.RemotingConfigurationContext;
 import org.terracotta.angela.client.config.TmsConfigurationContext;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.client.config.VoterConfigurationContext;
-import org.terracotta.angela.client.remote.agent.SshRemoteAgentLauncher;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,7 +31,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class CustomConfigurationContext implements ConfigurationContext {
-  private CustomRemotingConfigurationContext customRemotingConfigurationContext = new CustomRemotingConfigurationContext().remoteAgentLauncherSupplier(SshRemoteAgentLauncher::new);
   private CustomTsaConfigurationContext customTsaConfigurationContext;
   private CustomTmsConfigurationContext customTmsConfigurationContext;
   private CustomMonitoringConfigurationContext customMonitoringConfigurationContext;
@@ -57,16 +54,6 @@ public class CustomConfigurationContext implements ConfigurationContext {
     if (customVoterConfigurationContext != null) {
       visitor.visit(customVoterConfigurationContext);
     }
-  }
-
-  @Override
-  public RemotingConfigurationContext remoting() {
-    return customRemotingConfigurationContext;
-  }
-
-  public CustomConfigurationContext remoting(CustomRemotingConfigurationContext customRemotingConfigurationContext) {
-    this.customRemotingConfigurationContext = customRemotingConfigurationContext;
-    return this;
   }
 
   @Override

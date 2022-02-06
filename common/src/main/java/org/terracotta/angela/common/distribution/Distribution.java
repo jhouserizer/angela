@@ -76,7 +76,7 @@ public class Distribution implements Serializable {
   }
 
   public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType, RuntimeOption... runtime) {
-    return new Distribution(version, packageType, licenseType, EnumSet.copyOf(Arrays.asList(runtime)));
+    return new Distribution(version, packageType, licenseType, runtime.length == 0 ? EnumSet.noneOf(RuntimeOption.class) : EnumSet.copyOf(Arrays.asList(runtime)));
   }
 
   public Version getVersion() {

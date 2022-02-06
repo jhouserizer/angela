@@ -49,7 +49,7 @@ public class TsaTest {
     TsaConfigurationContext tsaConfigurationContext = mock(TsaConfigurationContext.class);
     when(tsaConfigurationContext.getTopology()).then(invocationOnMock -> new Topology(distribution(version("3.8.1"), PackageType.KIT, LicenseType.TERRACOTTA_OS), tcConfig));
     when(tsaConfigurationContext.getLicense()).thenReturn(license);
-    Tsa tsa = new Tsa(null, 1, new DefaultPortAllocator(), null, tsaConfigurationContext);
+    Tsa tsa = new Tsa(null, new DefaultPortAllocator(), null, tsaConfigurationContext);
     List<TerracottaServer> terracottaServerList = new ArrayList<>();
     terracottaServerList.add(TerracottaServer.server("1", "hostname1")
         .tsaPort(9510)
@@ -75,7 +75,7 @@ public class TsaTest {
     TsaConfigurationContext tsaConfigurationContext = mock(TsaConfigurationContext.class);
     when(tsaConfigurationContext.getTopology()).then(invocationOnMock -> new Topology(distribution(version("4.3.6.0.0"), PackageType.KIT, LicenseType.GO), tcConfig));
     when(tsaConfigurationContext.getLicense()).thenReturn(license);
-    Tsa tsa = new Tsa(null, 1, new DefaultPortAllocator(), null, tsaConfigurationContext);
+    Tsa tsa = new Tsa(null, new DefaultPortAllocator(), null, tsaConfigurationContext);
     List<TerracottaServer> terracottaServerList = new ArrayList<>();
     terracottaServerList.add(TerracottaServer.server("1", "hostname1")
         .tsaPort(9510)

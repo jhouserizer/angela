@@ -58,7 +58,7 @@ public abstract class KitResolver {
    * @param packageType {@link PackageType}
    * @return path of the installer on the local machine
    */
-  public abstract String resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType);
+  public abstract Path resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType);
 
   /**
    * Uses the local installer and create a Terracotta install on the local machine.
@@ -125,7 +125,7 @@ public abstract class KitResolver {
       urlConnection.connect();
 
       int contentLength = urlConnection.getContentLength();
-      logger.info("Downloading {} from {}", humanReadableByteCount(contentLength), url);
+      logger.debug("Downloading {} from {}", humanReadableByteCount(contentLength), url);
 
       createParentDirs(dest);
 
@@ -140,7 +140,7 @@ public abstract class KitResolver {
 
           long progress = 100 * len / contentLength;
           if (progress % 10 == 0 && progress > lastProgress) {
-            logger.info("Download progress = {}%", progress);
+            logger.debug("Download progress = {}%", progress);
             lastProgress = progress;
           }
           fos.write(buffer, 0, count);
