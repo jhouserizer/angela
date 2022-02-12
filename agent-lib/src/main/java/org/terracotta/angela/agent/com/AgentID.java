@@ -58,7 +58,7 @@ public class AgentID implements Serializable {
     return name;
   }
 
-  public String getHostname() {
+  public String getHostName() {
     return hostname;
   }
 
@@ -88,12 +88,12 @@ public class AgentID implements Serializable {
     if (this == o) return true;
     if (!(o instanceof AgentID)) return false;
     AgentID agentID = (AgentID) o;
-    return getPort() == agentID.getPort() && getPid() == agentID.getPid() && getName().equals(agentID.getName()) && getHostname().equals(agentID.getHostname());
+    return getPort() == agentID.getPort() && getPid() == agentID.getPid() && getName().equals(agentID.getName()) && getHostName().equals(agentID.getHostName());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getName(), getHostname(), getPort(), getPid());
+    return Objects.hash(getName(), getHostName(), getPort(), getPid());
   }
 
   public static AgentID valueOf(String s) {

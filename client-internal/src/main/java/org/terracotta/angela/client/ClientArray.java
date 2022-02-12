@@ -26,6 +26,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.clientconfig.ClientId;
 import org.terracotta.angela.common.topology.InstanceId;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -162,6 +163,10 @@ public class ClientArray implements AutoCloseable {
     final AgentExecutor agentExecutor = executor.forAgent(agentID);
     String clientWorkDir = agentExecutor.execute(() -> AgentController.getInstance().instanceWorkDir(instanceId));
     return new RemoteFolder(agentExecutor, clientWorkDir, remoteLocation);
+  }
+
+  public void download(String remoteLocation, File localRootPath) {
+    download(remoteLocation, localRootPath.toPath());
   }
 
   public void download(String remoteLocation, Path localRootPath) {

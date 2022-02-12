@@ -140,6 +140,14 @@ public class AngelaOrchestrator implements Closeable {
     private Function<Agent, Executor> executorBuilder;
     private String mode; // just for toString()
 
+    /**
+     * @deprecated Use {@link #igniteFree()} instead
+     */
+    @Deprecated
+    public AngelaOrchestratorBuilder local() {
+      return igniteFree();
+    }
+
     public AngelaOrchestratorBuilder withPortAllocator(PortAllocator portAllocator) {
       this.portAllocator = new PortAllocator() {
         @Override

@@ -210,6 +210,10 @@ public class TerracottaServer implements Serializable {
     return id;
   }
 
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
   public String getHostname() {
     return hostName;
   }

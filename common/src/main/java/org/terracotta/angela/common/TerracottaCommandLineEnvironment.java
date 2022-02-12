@@ -133,6 +133,14 @@ public class TerracottaCommandLineEnvironment implements Serializable {
     return new TerracottaCommandLineEnvironment(true, "", emptySet(), javaOpts);
   }
 
+  /**
+   * @deprecated Use {@link #withCurrentJavaHome()} instead.
+   */
+  @Deprecated
+  public TerracottaCommandLineEnvironment withJavaHome(Path home) {
+    return withCurrentJavaHome();
+  }
+
   public Path getJavaHome() {
     if (useJavaHome) {
       return Paths.get(JAVA_HOME.getValue());

@@ -81,8 +81,8 @@ public class Distribution102Controller extends DistributionController {
 
   @Override
   public TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir,
-                                                   Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
-                                                   TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
+                                          Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
+                                          TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
     Map<String, String> env = tcEnv.buildEnv(envOverrides);
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(TerracottaServerState.STOPPED);
     AtomicInteger javaPid = new AtomicInteger(-1);
@@ -266,7 +266,7 @@ public class Distribution102Controller extends DistributionController {
   public URI tsaUri(Collection<TerracottaServer> servers, Map<ServerSymbolicName, Integer> proxyTsaPorts) {
     return URI.create(servers
         .stream()
-        .map(s -> new HostPort(s.getHostname(), proxyTsaPorts.getOrDefault(s.getServerSymbolicName(), s.getTsaPort())).getHostPort())
+        .map(s -> new HostPort(s.getHostName(), proxyTsaPorts.getOrDefault(s.getServerSymbolicName(), s.getTsaPort())).getHostPort())
         .collect(Collectors.joining(",", "terracotta://", "")));
   }
 

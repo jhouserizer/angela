@@ -16,10 +16,6 @@
 package org.terracotta.angela;
 
 import org.junit.Test;
-import org.terracotta.angela.agent.cluster.AtomicCounter;
-import org.terracotta.angela.agent.cluster.AtomicReference;
-import org.terracotta.angela.agent.cluster.Barrier;
-import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.client.Client;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClientArrayFuture;
@@ -30,6 +26,10 @@ import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.common.clientconfig.ClientArrayConfig;
 import org.terracotta.angela.common.clientconfig.ClientId;
+import org.terracotta.angela.common.cluster.AtomicCounter;
+import org.terracotta.angela.common.cluster.AtomicReference;
+import org.terracotta.angela.common.cluster.Barrier;
+import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
@@ -352,7 +352,7 @@ public class ClientIT extends BaseIT {
       monitor.stopOnAll();
 
       monitor.processMetrics((agentId, transportableFile) -> {
-        assertThat(agentId.getHostname(), is(IpUtils.getHostName()));
+        assertThat(agentId.getHostName(), is(IpUtils.getHostName()));
         assertThat(transportableFile.getName(), is("cpu-stats.log"));
         byte[] content = transportableFile.getContent();
         assertNotNull(content);

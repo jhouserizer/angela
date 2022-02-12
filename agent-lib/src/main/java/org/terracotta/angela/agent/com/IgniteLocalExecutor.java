@@ -31,9 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.client.RemoteClientManager;
-import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.agent.kit.RemoteKitManager;
 import org.terracotta.angela.common.clientconfig.ClientId;
+import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.IpUtils;
@@ -77,7 +77,7 @@ public class IgniteLocalExecutor implements Executor {
     this.agentID = agentID;
     this.ignite = ignite;
 
-    agents.put(agentID.getHostname(), agentID);
+    agents.put(agentID.getHostName(), agentID);
 
     // automatically cleanup the list of known agents when they leave
     ignite.events(clusterGroup()).remoteListen(new IgniteBiPredicate<UUID, Event>() {
@@ -211,7 +211,7 @@ public class IgniteLocalExecutor implements Executor {
     }
 
     // otherwise, it might be an agent spawn but unknown (this should not happen as agents are started from here)
-    final List<AgentID> results = getGroup().getPeers().stream().filter(a -> a.getHostname().equals(hostname)).collect(toList());
+    final List<AgentID> results = getGroup().getPeers().stream().filter(a -> a.getHostName().equals(hostname)).collect(toList());
     if (results.isEmpty()) {
       return Optional.empty();
     }
@@ -244,7 +244,7 @@ public class IgniteLocalExecutor implements Executor {
     agentGroup.remoteAgentIDs()
         .filter(agentID -> !agents.containsValue(agentID))
         .forEach(newRemoteAgent -> {
-          final String hostname = newRemoteAgent.getHostname();
+          final String hostname = newRemoteAgent.getHostName();
           final AgentID known = agents.get(hostname);
           if (known == null) {
             logger.info("Discovered remote agent: {} for hostname: {}", newRemoteAgent, hostname);

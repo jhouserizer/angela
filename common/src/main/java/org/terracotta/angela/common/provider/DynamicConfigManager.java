@@ -146,7 +146,7 @@ public class DynamicConfigManager implements ConfigurationManager, Serializable 
     List<String> hostnames = new ArrayList<>();
     for (Stripe stripe : stripes) {
       for (TerracottaServer terracottaServer : stripe.getServers()) {
-        hostnames.add(terracottaServer.getHostname());
+        hostnames.add(terracottaServer.getHostName());
       }
     }
     return hostnames;
@@ -190,8 +190,8 @@ public class DynamicConfigManager implements ConfigurationManager, Serializable 
     for (TerracottaServer server : allServersInStripe) {
       if (!server.getServerSymbolicName().equals(terracottaServer.getServerSymbolicName())) {
         int tsaRandomGroupPort = portAllocator.reserve(1).next();
-        final InetSocketAddress src = new InetSocketAddress(terracottaServer.getHostname(), tsaRandomGroupPort);
-        final InetSocketAddress dest = new InetSocketAddress(server.getHostname(), server.getTsaGroupPort());
+        final InetSocketAddress src = new InetSocketAddress(terracottaServer.getHostName(), tsaRandomGroupPort);
+        final InetSocketAddress dest = new InetSocketAddress(server.getHostName(), server.getTsaGroupPort());
         disruptionLinks.put(server.getServerSymbolicName(), disruptionProvider.createLink(src, dest));
         proxiedPorts.put(server.getServerSymbolicName(), src.getPort());
       }

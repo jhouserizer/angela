@@ -31,6 +31,7 @@ import org.terracotta.angela.common.metrics.MonitoringCommand;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.UniversalPath;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -101,14 +102,18 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     return this;
   }
 
-  public void downloadTo(Path location) {
+  public void downloadTo(File localPath) {
+    downloadTo(localPath.toPath());
+  }
+
+  public void downloadTo(Path localPath) {
     List<Exception> exceptions = new ArrayList<>();
 
     for (AgentExecutor executor : executors) {
       try {
         // a way to grab a path remotely from an OS (win or lin) and transfer it locally
         UniversalPath fromRemote = executor.execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
-        Path toLocal = location.resolve(executor.getTarget().getHostname());
+        Path toLocal = localPath.resolve(executor.getTarget().getHostName());
         logger.info("Downloading remote metrics from: {} to: {}", fromRemote, toLocal);
         new RemoteFolder(executor, null, fromRemote.toString()).downloadTo(toLocal);
       } catch (IOException e) {

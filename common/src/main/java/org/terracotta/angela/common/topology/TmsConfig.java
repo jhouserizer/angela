@@ -25,7 +25,15 @@ public class TmsConfig {
     this.tmsPort = tmsPort;
   }
 
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
   public String getHostname() {
+    return getHostName();
+  }
+
+  public String getHostName() {
     return hostname;
   }
 

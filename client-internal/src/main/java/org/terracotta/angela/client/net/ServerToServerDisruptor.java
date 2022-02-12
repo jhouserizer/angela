@@ -76,7 +76,7 @@ public class ServerToServerDisruptor implements Disruptor {
           .stream()
           .map(topologyServers::get)
           .collect(Collectors.toList()));
-      final AgentID agentID = executor.getAgentID(server.getHostname());
+      final AgentID agentID = executor.getAgentID(server.getHostName());
       executor.execute(agentID, blockRemotely(instanceId, server, otherServers));
     }
 
@@ -100,7 +100,7 @@ public class ServerToServerDisruptor implements Disruptor {
           .stream()
           .map(topologyServers::get)
           .collect(Collectors.toList()));
-      final AgentID agentID = executor.getAgentID(server.getHostname());
+      final AgentID agentID = executor.getAgentID(server.getHostName());
       executor.execute(agentID, undisruptRemotely(instanceId, server, otherServers));
     }
     state = DisruptorState.UNDISRUPTED;

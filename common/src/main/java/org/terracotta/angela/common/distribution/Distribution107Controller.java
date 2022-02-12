@@ -351,7 +351,7 @@ public class Distribution107Controller extends DistributionController {
   public URI tsaUri(Collection<TerracottaServer> servers, Map<ServerSymbolicName, Integer> proxyTsaPorts) {
     return URI.create(servers
         .stream()
-        .map(s -> new HostPort(s.getHostname(), proxyTsaPorts.getOrDefault(s.getServerSymbolicName(), s.getTsaPort())).getHostPort())
+        .map(s -> new HostPort(s.getHostName(), proxyTsaPorts.getOrDefault(s.getServerSymbolicName(), s.getTsaPort())).getHostPort())
         .collect(Collectors.joining(",", "terracotta://", "")));
   }
 
@@ -403,7 +403,7 @@ public class Distribution107Controller extends DistributionController {
 
     // Add hostname
     options.add("-s");
-    options.add(server.getHostname());
+    options.add(server.getHostName());
 
     if (server.getTsaPort() != 0) {
       options.add("-p");

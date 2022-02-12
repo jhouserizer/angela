@@ -254,8 +254,8 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       clients.put(hostname, new RemoteAgentHolder(hostname, ssh, session, cmd));
 
       // "hostname" is the hostname used here in the angela test to reach the remote host
-      // agentID.getHostname() is the hostname read by IpUtil when starting the agent remotely
-      final String remoteHostname = agentID.getHostname();
+      // agentID.getHostName() is the hostname read by IpUtil when starting the agent remotely
+      final String remoteHostname = agentID.getHostName();
 
       // we register both hostnames just in case on has a dns suffix
       agents.put(hostname, agentID);
