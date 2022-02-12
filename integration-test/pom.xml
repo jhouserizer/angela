@@ -132,7 +132,7 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
             <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
             <angela.java.resolver>user</angela.java.resolver>
             <angela.igniteLogging>false</angela.igniteLogging>
-            <angela.agent.debug>falsetrue</angela.agent.debug>
+            <angela.agent.debug>false</angela.agent.debug>
             <angela.java.opts>-Djdk.security.allowNonCaAnchor=false -Djdk.net.hosts.file=${project.build.directory}/fake-hosts.txt -Dangela.agent.debug=false -DIGNITE_UPDATE_NOTIFIER=false</angela.java.opts>
             <jdk.security.allowNonCaAnchor>true</jdk.security.allowNonCaAnchor>
             <!-- tells the JDK to use this file instead of /etc/hosts -->

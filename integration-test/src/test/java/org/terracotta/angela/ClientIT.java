@@ -37,7 +37,6 @@ import org.terracotta.angela.common.topology.ClientArrayTopology;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.IpUtils;
 import org.terracotta.angela.util.Versions;
 
 import java.io.File;
@@ -351,8 +350,8 @@ public class ClientIT extends BaseIT {
       monitor.downloadTo(resultPath);
       monitor.stopOnAll();
 
-      monitor.processMetrics((agentId, transportableFile) -> {
-        assertThat(agentId.getHostName(), is(IpUtils.getHostName()));
+      monitor.processMetrics((hostName, transportableFile) -> {
+        assertThat(hostName, is(hostName));
         assertThat(transportableFile.getName(), is("cpu-stats.log"));
         byte[] content = transportableFile.getContent();
         assertNotNull(content);
@@ -385,7 +384,7 @@ public class ClientIT extends BaseIT {
       monitor.stopOnAll();
     }
 
-    final Path statFile = resultPath.resolve(IpUtils.getHostName());
+    final Path statFile = resultPath.resolve(hostname);
     assertMetricsFile(statFile.resolve("cpu-stats.log"));
     assertMetricsFile(statFile.resolve("disk-stats.log"));
     assertMetricsFile(statFile.resolve("memory-stats.log"));

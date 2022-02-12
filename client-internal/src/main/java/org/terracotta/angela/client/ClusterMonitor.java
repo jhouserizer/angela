@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.AgentController;
 import org.terracotta.angela.agent.com.AgentExecutor;
-import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.client.filesystem.TransportableFile;
@@ -36,12 +35,13 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
+
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * @author Aurelien Broszniowski
@@ -53,25 +53,25 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
   private static final Logger logger = LoggerFactory.getLogger(ClusterMonitor.class);
 
   private final InstanceId instanceId;
-  private final transient Collection<AgentExecutor> executors;
+  private final transient Map<String, AgentExecutor> executors;
   private final Map<HardwareMetric, MonitoringCommand> commands;
   private boolean closed = false;
 
   ClusterMonitor(Executor executor, InstanceId instanceId, Set<String> hostnames, Map<HardwareMetric, MonitoringCommand> commands) {
     this.instanceId = instanceId;
-    this.executors = hostnames.stream().map(hostname -> executor.forAgent(executor.getAgentID(hostname))).collect(Collectors.toList());
+    this.executors = hostnames.stream().collect(toMap(identity(), hostname -> executor.forAgent(executor.getAgentID(hostname))));
     this.commands = commands;
   }
 
   public ClusterMonitor startOnAll() {
     List<Exception> exceptions = new ArrayList<>();
 
-    for (AgentExecutor executor : executors) {
-      logger.info("Starting monitoring: {} on agent: {}", commands.keySet(), executor.getTarget());
+    for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
+      logger.info("Starting monitoring: {} on: {} with agent: {}", commands.keySet(), entry.getKey(), entry.getValue().getTarget());
       try {
-        executor.execute(() -> AgentController.getInstance().startHardwareMonitoring(getWorkingPath(), commands));
+        entry.getValue().execute(() -> AgentController.getInstance().startHardwareMonitoring(getWorkingPath(), commands));
       } catch (RuntimeException e) {
-        exceptions.add(new RuntimeException("Error starting hardware monitoring on: " + executor.getTarget() + ". Err: " + e.getMessage(), e));
+        exceptions.add(new RuntimeException("Error starting hardware monitoring on: " + entry.getValue().getTarget() + ". Err: " + e.getMessage(), e));
       }
     }
 
@@ -86,9 +86,9 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
   public ClusterMonitor stopOnAll() {
     List<Exception> exceptions = new ArrayList<>();
 
-    for (AgentExecutor executor : executors) {
+    for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       try {
-        executor.execute(() -> AgentController.getInstance().stopHardwareMonitoring());
+        entry.getValue().execute(() -> AgentController.getInstance().stopHardwareMonitoring());
       } catch (Exception e) {
         exceptions.add(e);
       }
@@ -109,13 +109,13 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
   public void downloadTo(Path localPath) {
     List<Exception> exceptions = new ArrayList<>();
 
-    for (AgentExecutor executor : executors) {
+    for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       try {
         // a way to grab a path remotely from an OS (win or lin) and transfer it locally
-        UniversalPath fromRemote = executor.execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
-        Path toLocal = localPath.resolve(executor.getTarget().getHostName());
+        UniversalPath fromRemote = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
+        Path toLocal = localPath.resolve(entry.getKey());
         logger.info("Downloading remote metrics from: {} to: {}", fromRemote, toLocal);
-        new RemoteFolder(executor, null, fromRemote.toString()).downloadTo(toLocal);
+        new RemoteFolder(entry.getValue(), null, fromRemote.toString()).downloadTo(toLocal);
       } catch (IOException e) {
         exceptions.add(e);
       }
@@ -128,14 +128,14 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     }
   }
 
-  public void processMetrics(BiConsumer<AgentID, TransportableFile> processor) {
+  public void processMetrics(BiConsumer<String, TransportableFile> processor) {
     List<Exception> exceptions = new ArrayList<>();
-    for (AgentExecutor executor : executors) {
+    for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       try {
         // a way to grab a path remotely from an OS (win or lin) and transfer it locally
-        UniversalPath metricsPath = executor.execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
-        RemoteFolder remoteFolder = new RemoteFolder(executor, null, metricsPath.toString());
-        remoteFolder.list().forEach(remoteFile -> processor.accept(executor.getTarget(), remoteFile.toTransportableFile()));
+        UniversalPath metricsPath = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
+        RemoteFolder remoteFolder = new RemoteFolder(entry.getValue(), null, metricsPath.toString());
+        remoteFolder.list().forEach(remoteFile -> processor.accept(entry.getKey(), remoteFile.toTransportableFile()));
       } catch (Exception e) {
         exceptions.add(e);
       }
@@ -153,8 +153,8 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
   }
 
   public boolean isMonitoringRunning(HardwareMetric metric) {
-    for (AgentExecutor executor : executors) {
-      boolean running = executor.execute(() -> AgentController.getInstance().isMonitoringRunning(metric));
+    for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
+      boolean running = entry.getValue().execute(() -> AgentController.getInstance().isMonitoringRunning(metric));
       if (!running) {
         return false;
       }
