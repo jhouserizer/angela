@@ -103,7 +103,7 @@ public class MultiServerIT extends BaseIT {
 
   private static String getServerBlockedState(TerracottaServer server) throws Exception {
     ConnectionService connectionService = new DiagnosticConnectionService();
-    URI uri = URI.create("diagnostic://" + server.getHostname() + ":" + server.getTsaPort());
+    URI uri = URI.create("diagnostic://" + server.getHostName() + ":" + server.getTsaPort());
     try (Connection connection = connectionService.connect(uri, new Properties())) {
       EntityRef<Diagnostics, Object, Void> ref = connection.getEntityRef(Diagnostics.class, 1, "root");
       try (Diagnostics diagnostics = ref.fetchEntity(null)) {

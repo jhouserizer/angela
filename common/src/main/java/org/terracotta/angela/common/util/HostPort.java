@@ -28,7 +28,15 @@ public class HostPort {
     this.port = port;
   }
 
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
   public String getHostname() {
+    return getHostName();
+  }
+
+  public String getHostName() {
     return hostname;
   }
 

@@ -49,7 +49,7 @@ public class Distribution107ControllerTest {
     final TerracottaServer terracottaServer = mock(TerracottaServer.class);
     final ServerSymbolicName symbolicName = mock(ServerSymbolicName.class);
     when(terracottaServer.getServerSymbolicName()).thenReturn(symbolicName);
-    when(terracottaServer.getHostname()).thenReturn("localhost");
+    when(terracottaServer.getHostName()).thenReturn("localhost");
     when(symbolicName.getSymbolicName()).thenReturn("Server1");
     final File kitLocation = new File("/somedir");
     final List<String> args = new ArrayList<>();
@@ -72,7 +72,7 @@ public class Distribution107ControllerTest {
     final TerracottaServer terracottaServer = mock(TerracottaServer.class);
     final ServerSymbolicName symbolicName = mock(ServerSymbolicName.class);
     when(terracottaServer.getServerSymbolicName()).thenReturn(symbolicName);
-    when(terracottaServer.getHostname()).thenReturn("localhost");
+    when(terracottaServer.getHostName()).thenReturn("localhost");
     when(symbolicName.getSymbolicName()).thenReturn("Server1");
     final File kitLocation = new File("/somedir");
     final List<String> args = new ArrayList<>();

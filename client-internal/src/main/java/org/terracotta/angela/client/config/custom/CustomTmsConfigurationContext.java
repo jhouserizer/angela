@@ -53,7 +53,7 @@ public class CustomTmsConfigurationContext implements TmsConfigurationContext {
   }
 
   @Override
-  public String getHostname() {
+  public String getHostName() {
     return hostname;
   }
 

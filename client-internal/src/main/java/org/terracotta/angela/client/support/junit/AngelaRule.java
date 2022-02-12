@@ -16,7 +16,6 @@
 package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
-import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClusterFactory;
@@ -27,6 +26,7 @@ import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
 import java.io.Closeable;

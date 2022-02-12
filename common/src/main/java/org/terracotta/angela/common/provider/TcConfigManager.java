@@ -151,7 +151,7 @@ public class TcConfigManager implements ConfigurationManager {
 
   @Override
   public Collection<String> getServersHostnames() {
-    return getServers().stream().map(TerracottaServer::getHostname).collect(Collectors.toList());
+    return getServers().stream().map(TerracottaServer::getHostName).collect(Collectors.toList());
   }
 
   @Override
@@ -220,9 +220,9 @@ public class TcConfigManager implements ConfigurationManager {
     TerracottaServer thisMember = members.get(0);
     for (int i = 1; i < members.size(); ++i) {
       TerracottaServer otherMember = members.get(i);
-      final InetSocketAddress src = new InetSocketAddress(thisMember.getHostname(), otherMember.getProxyPort() > 0 ? otherMember
+      final InetSocketAddress src = new InetSocketAddress(thisMember.getHostName(), otherMember.getProxyPort() > 0 ? otherMember
           .getProxyPort() : thisMember.getTsaGroupPort());
-      final InetSocketAddress dest = new InetSocketAddress(otherMember.getHostname(), otherMember.getTsaGroupPort());
+      final InetSocketAddress dest = new InetSocketAddress(otherMember.getHostName(), otherMember.getTsaGroupPort());
       disruptionLinks.put(otherMember.getServerSymbolicName(), disruptionProvider.createLink(src, dest));
       proxiedPorts.put(otherMember.getServerSymbolicName(), src.getPort());
     }

@@ -33,6 +33,14 @@ public class AngelaOrchestratorRule extends ExtendedTestRule {
   private AngelaOrchestrator.AngelaOrchestratorBuilder builder = AngelaOrchestrator.builder();
   private AngelaOrchestrator angelaOrchestrator;
 
+  /**
+   * @deprecated Use {@link #igniteFree()} instead
+   */
+  @Deprecated
+  public AngelaOrchestratorRule local() {
+    return igniteFree();
+  }
+
   public AngelaOrchestratorRule withPortAllocator(PortAllocator portAllocator) {
     builder = builder.withPortAllocator(portAllocator);
     return this;

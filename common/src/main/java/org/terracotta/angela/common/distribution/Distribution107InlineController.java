@@ -222,7 +222,7 @@ public class Distribution107InlineController extends Distribution107Controller {
 
     // Add hostname
     options.add("-s");
-    options.add(server.getHostname());
+    options.add(server.getHostName());
 
     if (server.getTsaPort() != 0) {
       options.add("-p");

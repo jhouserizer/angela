@@ -300,7 +300,7 @@ public class ConfigTool implements AutoCloseable {
     SecurityRootDirectory securityRootDirectory = configContext.getSecurityRootDirectory();
     License license = tsa.getTsaConfigurationContext().getLicense();
     TerracottaServer terracottaServer = tsa.getTsaConfigurationContext().getTopology().getServers().get(0);
-    logger.info("Activating cluster from {}", terracottaServer.getHostname());
+    logger.info("Activating cluster from {}", terracottaServer.getHostName());
     String clusterName = tsa.getTsaConfigurationContext().getClusterName();
     if (clusterName == null) {
       clusterName = instanceId.toString();

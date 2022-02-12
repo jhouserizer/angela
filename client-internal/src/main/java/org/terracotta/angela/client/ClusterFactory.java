@@ -17,7 +17,6 @@ package org.terracotta.angela.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
@@ -27,6 +26,7 @@ import org.terracotta.angela.client.config.TmsConfigurationContext;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.client.config.VoterConfigurationContext;
+import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
 import org.terracotta.angela.common.net.PortAllocator;
@@ -122,7 +122,7 @@ public class ClusterFactory implements AutoCloseable {
     if (tmsConfigurationContext == null) {
       throw new IllegalArgumentException("tms() configuration missing in the ConfigurationContext");
     }
-    InstanceId instanceId = init(TMS, Collections.singletonList(tmsConfigurationContext.getHostname()));
+    InstanceId instanceId = init(TMS, Collections.singletonList(tmsConfigurationContext.getHostName()));
 
     Tms tms = new Tms(executor, instanceId, tmsConfigurationContext);
     controllers.add(tms);

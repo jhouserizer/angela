@@ -20,7 +20,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.AgentController;
-import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.agent.com.AgentGroup;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
@@ -30,6 +29,7 @@ import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.clientconfig.ClientId;
+import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.topology.InstanceId;
 
 import java.io.Closeable;

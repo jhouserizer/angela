@@ -25,7 +25,15 @@ public interface TmsConfigurationContext {
 
   License getLicense();
 
-  String getHostname();
+  /**
+   * @deprecated Use {@link #getHostName()} instead
+   */
+  @Deprecated
+  default String getHostname() {
+    return getHostName();
+  }
+
+  String getHostName();
 
   TmsServerSecurityConfig getSecurityConfig();
 

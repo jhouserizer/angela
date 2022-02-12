@@ -56,7 +56,7 @@ public class Jcmd {
    */
   public ToolExecutionResult executeCommand(String... arguments) {
     if (terracottaServer != null) {
-      final AgentID agentID = executor.getAgentID(terracottaServer.getHostname());
+      final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
       return executor.execute(agentID, () -> AgentController.getInstance().serverJcmd(instanceId, terracottaServer, tcEnv, arguments));
 
     } else if (client != null) {

@@ -112,7 +112,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
       hostnames.addAll(customTsaConfigurationContext.getTopology().getServersHostnames());
     }
     if (customTmsConfigurationContext != null) {
-      hostnames.add(customTmsConfigurationContext.getHostname());
+      hostnames.add(customTmsConfigurationContext.getHostName());
     }
     for (CustomClientArrayConfigurationContext customClientArrayConfigurationContext : customClientArrayConfigurationContexts) {
       hostnames.addAll(customClientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());

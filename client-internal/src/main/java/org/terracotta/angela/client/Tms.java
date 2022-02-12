@@ -84,7 +84,7 @@ public class Tms implements AutoCloseable {
           || BROWSER_SECURITY.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
       );
     }
-    return (isHttps ? "https://" : "http://") + new HostPort(tmsConfigurationContext.getHostname(), 9480).getHostPort();
+    return (isHttps ? "https://" : "http://") + new HostPort(tmsConfigurationContext.getHostName(), 9480).getHostPort();
   }
 
   public TmsHttpClient httpClient() {
@@ -96,7 +96,7 @@ public class Tms implements AutoCloseable {
   }
 
   public RemoteFolder browse(String root) {
-    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     final AgentExecutor agentExecutor = executor.forAgent(agentID);
     logger.debug("Browse TMS: {} on: {}", instanceId, agentID);
     String path = agentExecutor.execute(() -> AgentController.getInstance().getTmsInstallationPath(instanceId));
@@ -104,7 +104,7 @@ public class Tms implements AutoCloseable {
   }
 
   public TerracottaManagementServerState getTmsState() {
-    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.debug("Get state of TMS: {} on: {}", instanceId, agentID);
     return executor.execute(agentID, () -> AgentController.getInstance().getTmsState(instanceId));
   }
@@ -114,7 +114,7 @@ public class Tms implements AutoCloseable {
   }
 
   public Tms start(Map<String, String> envOverrides) {
-    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Starting TMS: {} on: {}", instanceId, agentID);
     executor.execute(agentID, () -> AgentController.getInstance().startTms(instanceId, envOverrides));
     return this;
@@ -143,7 +143,7 @@ public class Tms implements AutoCloseable {
   }
 
   private void uninstall() {
-    String tmsHostname = tmsConfigurationContext.getHostname();
+    String tmsHostname = tmsConfigurationContext.getHostName();
     TerracottaManagementServerState terracottaServerState = getTmsState();
     if (terracottaServerState == null) {
       return;
@@ -151,7 +151,7 @@ public class Tms implements AutoCloseable {
     if (terracottaServerState != TerracottaManagementServerState.STOPPED) {
       throw new IllegalStateException("Cannot uninstall: server " + tmsHostname + " already in state " + terracottaServerState);
     }
-    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Uninstalling TMS: {} from: {}", instanceId, agentID);
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     final Distribution distribution = tmsConfigurationContext.getDistribution();
@@ -161,7 +161,7 @@ public class Tms implements AutoCloseable {
   }
 
   private void install() {
-    final String tmsHostname = tmsConfigurationContext.getHostname();
+    final String tmsHostname = tmsConfigurationContext.getHostName();
     License license = tmsConfigurationContext.getLicense();
     Distribution distribution = tmsConfigurationContext.getDistribution();
     TmsServerSecurityConfig tmsServerSecurityConfig = tmsConfigurationContext.getSecurityConfig();
@@ -197,7 +197,7 @@ public class Tms implements AutoCloseable {
       throw new IllegalStateException("Cannot stop: TMS server , already in state " + terracottaManagementServerState);
     }
 
-    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostname());
+    final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Stopping TMS: {} on: {}", instanceId, agentID);
     executor.execute(agentID, () -> AgentController.getInstance().stopTms(instanceId));
     ensureStopped(this::getTmsState);

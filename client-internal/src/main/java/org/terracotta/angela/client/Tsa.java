@@ -40,6 +40,7 @@ import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.topology.Topology;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -160,7 +161,7 @@ public class Tsa implements AutoCloseable {
           executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
           executor.execute(agentID, installClosure);
         } catch (Exception e) {
-          throw new RuntimeException("Cannot upload kit to " + terracottaServer.getHostname(), e);
+          throw new RuntimeException("Cannot upload kit to " + terracottaServer.getHostName(), e);
         }
       }
     } else {
@@ -469,6 +470,10 @@ public class Tsa implements AutoCloseable {
     return new RemoteFolder(agentExecutor, kitLocation, relativePath);
   }
 
+  public void uploadPlugin(File localPluginFile) {
+    uploadPlugin(localPluginFile.toPath());
+  }
+
   public void uploadPlugin(Path localPluginFile) {
     List<Exception> exceptions = new ArrayList<>();
 
@@ -489,6 +494,10 @@ public class Tsa implements AutoCloseable {
       exceptions.forEach(re::addSuppressed);
       throw re;
     }
+  }
+
+  public void uploadDataDirectories(File localRootPath) {
+    uploadDataDirectories(localRootPath.toPath());
   }
 
   public void uploadDataDirectories(Path localRootPath) {
@@ -520,6 +529,10 @@ public class Tsa implements AutoCloseable {
       exceptions.forEach(re::addSuppressed);
       throw re;
     }
+  }
+
+  public void downloadDataDirectories(File localRootPath) {
+    downloadDataDirectories(localRootPath.toPath());
   }
 
   public void downloadDataDirectories(Path localRootPath) {

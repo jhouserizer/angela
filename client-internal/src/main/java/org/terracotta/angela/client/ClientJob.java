@@ -15,7 +15,7 @@
  */
 package org.terracotta.angela.client;
 
-import org.terracotta.angela.agent.cluster.Cluster;
+import org.terracotta.angela.common.cluster.Cluster;
 
 import java.io.Serializable;
 
