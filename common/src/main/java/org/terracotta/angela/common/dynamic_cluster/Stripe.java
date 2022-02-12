@@ -17,13 +17,16 @@ package org.terracotta.angela.common.dynamic_cluster;
 
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class Stripe {
+public class Stripe implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final List<TerracottaServer> servers;
 
   private Stripe(TerracottaServer... servers) {

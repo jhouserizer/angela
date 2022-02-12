@@ -16,21 +16,45 @@
 package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
+import org.terracotta.angela.agent.com.Executor;
+import org.terracotta.angela.agent.com.IgniteSshRemoteExecutor;
 import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.common.net.PortAllocator;
+
+import java.util.function.Consumer;
 
 /**
  * @author Mathieu Carbou
  */
 public class AngelaOrchestratorRule extends ExtendedTestRule {
 
-  private boolean local;
-  private volatile AngelaOrchestrator angelaOrchestrator;
+  private AngelaOrchestrator.AngelaOrchestratorBuilder builder = AngelaOrchestrator.builder();
+  private AngelaOrchestrator angelaOrchestrator;
 
-  public AngelaOrchestratorRule local() {
-    this.local = true;
+  public AngelaOrchestratorRule withPortAllocator(PortAllocator portAllocator) {
+    builder = builder.withPortAllocator(portAllocator);
+    return this;
+  }
+
+  public AngelaOrchestratorRule igniteRemote() {
+    builder = builder.igniteRemote();
+    return this;
+  }
+
+  public AngelaOrchestratorRule igniteRemote(Consumer<IgniteSshRemoteExecutor> configurator) {
+    builder = builder.igniteRemote(configurator);
+    return this;
+  }
+
+  public AngelaOrchestratorRule igniteLocal() {
+    builder = builder.igniteLocal();
+    return this;
+  }
+
+  public AngelaOrchestratorRule igniteFree() {
+    builder = builder.igniteFree();
     return this;
   }
 
@@ -43,12 +67,10 @@ public class AngelaOrchestratorRule extends ExtendedTestRule {
 
   @Override
   protected void before(Description description) {
-    AngelaOrchestrator.AgentOrchestratorBuilder builder = AngelaOrchestrator.builder();
-    if (local) {
-      builder = builder.local();
-    }
     angelaOrchestrator = builder.build();
   }
+
+  public Executor getExecutor() {return angelaOrchestrator.getExecutor();}
 
   public PortAllocator getPortAllocator() {return getAngelaOrchestrator().getPortAllocator();}
 

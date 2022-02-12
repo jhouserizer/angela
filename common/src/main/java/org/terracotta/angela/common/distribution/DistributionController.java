@@ -26,15 +26,9 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.JavaBinaries;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -48,26 +42,6 @@ public abstract class DistributionController {
 
   DistributionController(Distribution distribution) {
     this.distribution = distribution;
-  }
-
-  public static ToolExecutionResult invokeJcmd(TerracottaServerHandle terracottaServerInstanceProcess, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    int javaPid = terracottaServerInstanceProcess.getJavaPid();
-    Path javaHome = tcEnv.getJavaHome();
-    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
-    List<String> cmdLine = new ArrayList<>();
-    cmdLine.add(path.toAbsolutePath().toString());
-    cmdLine.add(String.valueOf(javaPid));
-    cmdLine.addAll(Arrays.asList(arguments));
-
-    try {
-      ProcessResult processResult = new ProcessExecutor(cmdLine)
-          .redirectErrorStream(true)
-          .readOutput(true)
-          .execute();
-      return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public abstract TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir, Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs);

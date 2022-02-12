@@ -25,6 +25,7 @@ import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.common.util.Jcmd;
 
 import java.io.Closeable;
 import java.io.File;
@@ -125,7 +126,7 @@ public class TerracottaServerInstance implements Closeable {
   }
 
   public ToolExecutionResult jcmd(TerracottaCommandLineEnvironment env, String... arguments) {
-    return DistributionController.invokeJcmd(getServerHandle(), env, arguments);
+    return Jcmd.jcmd(getServerHandle().getJavaPid(), env, arguments);
   }
 
   public void waitForState(Set<TerracottaServerState> terracottaServerStates) {

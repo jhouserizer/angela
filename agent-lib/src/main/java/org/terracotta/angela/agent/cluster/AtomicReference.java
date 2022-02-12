@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.terracotta.angela.common.cluster;
+package org.terracotta.angela.agent.cluster;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicReference;

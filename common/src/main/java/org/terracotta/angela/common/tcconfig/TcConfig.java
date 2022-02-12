@@ -25,6 +25,7 @@ import org.terracotta.angela.common.topology.Version;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,8 @@ import java.util.Map;
  *
  * @author Tim Eck
  */
-public class TcConfig {
+public class TcConfig implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   protected final TcConfigHolder tcConfigHolder;
   protected String tcConfigName;

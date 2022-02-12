@@ -18,8 +18,6 @@ package org.terracotta.angela.ehc3;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terracotta.angela.KitResolver;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.topology.LicenseType;
@@ -33,6 +31,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.terracotta.angela.common.topology.PackageType.KIT;
 import static org.terracotta.angela.common.util.KitUtils.extractZip;
@@ -43,12 +42,10 @@ import static org.terracotta.angela.common.util.KitUtils.extractZip;
 
 public class Ehc3KitResolver extends KitResolver {
 
-  private static final Logger logger = LoggerFactory.getLogger(Ehc3KitResolver.class);
-
   @Override
-  public String resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType) {
+  public Path resolveLocalInstallerPath(Version version, LicenseType licenseType, PackageType packageType) {
     if (packageType == KIT) {
-      return "ehcache-clustered-" + version.getVersion(true) + "-kit.zip";
+      return Paths.get("ehcache-clustered-" + version.getVersion(true) + "-kit.zip");
     }
     throw new IllegalArgumentException("PackageType " + packageType + " is not supported by " + getClass().getSimpleName() + " in the Open source version.");
   }

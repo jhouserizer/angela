@@ -52,6 +52,7 @@ import static org.terracotta.angela.common.tcconfig.ServerSymbolicName.symbolicN
  * @author Aurelien Broszniowski
  */
 public class TcConfig10Holder extends TcConfigHolder {
+  private static final long serialVersionUID = 1L;
 
   public TcConfig10Holder(final TcConfig10Holder tcConfig10Holder) {
     super(tcConfig10Holder);

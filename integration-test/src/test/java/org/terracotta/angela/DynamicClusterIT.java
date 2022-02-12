@@ -16,16 +16,12 @@
 package org.terracotta.angela;
 
 import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
-import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
 
@@ -36,28 +32,16 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.terracotta.angela.client.config.custom.CustomConfigurationContext.customConfigurationContext;
 import static org.terracotta.angela.common.TerracottaConfigTool.configTool;
-import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.dynamic_cluster.Stripe.stripe;
 import static org.terracotta.angela.common.provider.DynamicConfigManager.dynamicCluster;
 import static org.terracotta.angela.common.tcconfig.TerracottaServer.server;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
-import static org.terracotta.angela.common.topology.PackageType.KIT;
-import static org.terracotta.angela.common.topology.Version.version;
 
-public class DynamicClusterIT {
+public class DynamicClusterIT extends BaseIT {
   private static final Duration TIMEOUT = Duration.ofSeconds(60);
   private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
-  private static final Distribution DISTRIBUTION = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
 
-  int[] ports;
-
-  @Rule
-  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
-
-  @Before
-  public void setUp() {
-    // no need tp close the reservation or port allocator: the rule will do it
-    ports = angelaOrchestratorRule.getPortAllocator().reserve(8).stream().toArray();
+  public DynamicClusterIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
   }
 
   @Test
@@ -66,19 +50,15 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -89,7 +69,7 @@ public class DynamicClusterIT {
             )
         );
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testNodeStartup", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testNodeStartup", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
 
@@ -105,12 +85,10 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -119,18 +97,16 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToSingleNodeStripe", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToSingleNodeStripe", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
 
-      factory.configTool().attachNode(0, server("server-2")
-          .tsaPort(ports[2])
-          .tsaGroupPort(ports[3])
+      factory.configTool().attachNode(0, server("server-2", hostname)
           .configRepo("terracotta2/repository")
           .logs("terracotta2/logs")
           .metaData("terracotta2/metadata")
@@ -147,19 +123,15 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -168,18 +140,16 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToMultiNodeStripe", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToMultiNodeStripe", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(2));
 
-      factory.configTool().attachNode(0, server("server-3")
-          .tsaPort(ports[4])
-          .tsaGroupPort(ports[5])
+      factory.configTool().attachNode(0, server("server-3", hostname)
           .configRepo("terracotta3/repository")
           .logs("terracotta3/logs")
           .metaData("terracotta3/metadata")
@@ -196,12 +166,10 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
@@ -210,18 +178,16 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToSingleStripeCluster", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToSingleStripeCluster", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
 
-      factory.configTool().attachStripe(server("server-2")
-          .tsaPort(ports[2])
-          .tsaGroupPort(ports[3])
+      factory.configTool().attachStripe(server("server-2", hostname)
           .configRepo("terracotta2/repository")
           .logs("terracotta2/logs")
           .metaData("terracotta2/metadata")
@@ -239,21 +205,17 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability")
                         ),
                         stripe(
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -262,9 +224,9 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToMultiStripeCluster", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToMultiStripeCluster", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
 
@@ -272,9 +234,7 @@ public class DynamicClusterIT {
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(1).size(), is(1));
 
-      factory.configTool().attachStripe(server("server-3")
-          .tsaPort(ports[4])
-          .tsaGroupPort(ports[5])
+      factory.configTool().attachStripe(server("server-3", hostname)
           .configRepo("terracotta3/repository")
           .logs("terracotta3/logs")
           .metaData("terracotta3/metadata")
@@ -292,19 +252,15 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -313,10 +269,10 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       factory.configTool().attachAll();
@@ -332,35 +288,27 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
                                 .failoverPriority("availability")
                         ),
                         stripe(
-                            server("server-3")
-                                .tsaPort(ports[4])
-                                .tsaGroupPort(ports[5])
+                            server("server-3", hostname)
                                 .configRepo("terracotta3/repository")
                                 .logs("terracotta3/logs")
                                 .metaData("terracotta3/metadata")
                                 .failoverPriority("availability"),
-                            server("server-4")
-                                .tsaPort(ports[6])
-                                .tsaGroupPort(ports[7])
+                            server("server-4", hostname)
                                 .configRepo("terracotta4/repository")
                                 .logs("terracotta4/logs")
                                 .metaData("terracotta4/metadata")
@@ -369,9 +317,9 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testMultiStripeFormation", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testMultiStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       factory.configTool().attachAll();
@@ -388,21 +336,17 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability")
                         ),
                         stripe(
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -411,9 +355,9 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testDynamicStripeDetach", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeDetach", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       ConfigTool configTool = factory.configTool();
@@ -440,19 +384,15 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
-                            server("server-1")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
+                            server("server-1", hostname)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
+                            server("server-2", hostname)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
@@ -462,10 +402,10 @@ public class DynamicClusterIT {
                 )
             )
         ).configTool(context -> context
-            .configTool(configTool("configTool"))
-            .distribution(DISTRIBUTION));
+            .configTool(configTool("configTool", hostname))
+            .distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testNodeActivation", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testNodeActivation", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       ConfigTool configTool = factory.configTool();
@@ -484,14 +424,12 @@ public class DynamicClusterIT {
         .tsa(tsa -> tsa
             .topology(
                 new Topology(
-                    DISTRIBUTION,
+                    getDistribution(),
                     dynamicCluster(
                         stripe(
                             server("node-1")
                                 .bindAddress("::")
                                 .groupBindAddress("::")
-                                .tsaPort(ports[0])
-                                .tsaGroupPort(ports[1])
                                 .logs("terracotta1/logs")
                                 .configRepo("terracotta1/repo")
                                 .metaData("terracotta1/metadata")
@@ -499,8 +437,6 @@ public class DynamicClusterIT {
                             server("node-2")
                                 .bindAddress("::")
                                 .groupBindAddress("::")
-                                .tsaPort(ports[2])
-                                .tsaGroupPort(ports[3])
                                 .logs("terracotta2/logs")
                                 .configRepo("terracotta2/repo")
                                 .metaData("terracotta2/metadata")
@@ -509,9 +445,9 @@ public class DynamicClusterIT {
                     )
                 )
             )
-        ).configTool(context -> context.configTool(configTool("configTool")).distribution(DISTRIBUTION));
+        ).configTool(context -> context.configTool(configTool("configTool", hostname)).distribution(getDistribution()));
 
-    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testIpv6", configurationContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testIpv6", configurationContext)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
       waitFor(() -> tsa.getDiagnosticModeSevers().size(), is(2));

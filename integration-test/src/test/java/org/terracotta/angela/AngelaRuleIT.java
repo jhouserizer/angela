@@ -16,13 +16,11 @@
 package org.terracotta.angela;
 
 import org.hamcrest.Matcher;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
 import org.terracotta.angela.client.Tsa;
-import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.client.support.junit.AngelaRule;
-import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.Topology;
 
 import java.time.Duration;
@@ -32,35 +30,28 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.terracotta.angela.client.config.custom.CustomConfigurationContext.customConfigurationContext;
 import static org.terracotta.angela.common.TerracottaConfigTool.configTool;
-import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.dynamic_cluster.Stripe.stripe;
 import static org.terracotta.angela.common.provider.DynamicConfigManager.dynamicCluster;
 import static org.terracotta.angela.common.tcconfig.TerracottaServer.server;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
-import static org.terracotta.angela.common.topology.PackageType.KIT;
-import static org.terracotta.angela.common.topology.Version.version;
 
-public class AngelaRuleIT {
+public class AngelaRuleIT extends BaseIT {
 
-  private static final Distribution DISTRIBUTION = distribution(version("3.9-SNAPSHOT"), KIT, TERRACOTTA_OS);
-
-  AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
-  AngelaRule angelaRule = new AngelaRule(
-      () -> angelaOrchestratorRule.getAngelaOrchestrator(),
+  @Rule public AngelaRule angelaRule = new AngelaRule(
+      angelaOrchestrator,
       customConfigurationContext()
-          .configTool(context -> context.configTool(configTool("config-tool")).distribution(DISTRIBUTION))
+          .configTool(context -> context.configTool(configTool("config-tool", hostname)).distribution(getDistribution()))
           .tsa(tsa -> tsa
               .topology(
                   new Topology(
-                      DISTRIBUTION,
+                      getDistribution(),
                       dynamicCluster(
                           stripe(
-                              server("server-1")
+                              server("server-1", hostname)
                                   .configRepo("terracotta1/repository")
                                   .logs("terracotta1/logs")
                                   .metaData("terracotta1/metadata")
                                   .failoverPriority("availability"),
-                              server("server-2")
+                              server("server-2", hostname)
                                   .configRepo("terracotta2/repository")
                                   .logs("terracotta2/logs")
                                   .metaData("terracotta2/metadata")
@@ -71,12 +62,22 @@ public class AngelaRuleIT {
               )
           ), true, true);
 
-  @Rule public RuleChain ruleChain = RuleChain.emptyRuleChain()
-      .around(angelaOrchestratorRule)
-      .around(angelaRule);
+  public AngelaRuleIT(String mode, String hostname, boolean inline, boolean ssh) {
+    super(mode, hostname, inline, ssh);
+  }
+
+  @After
+  @Override
+  public void close() throws Exception {
+    try {
+      angelaRule.close();
+    } finally {
+      super.close();
+    }
+  }
 
   @Test
-  public void testNodeStartup() throws Exception {
+  public void testNodeStartup() {
     Tsa tsa = angelaRule.tsa();
     waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
     waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(2));

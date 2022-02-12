@@ -15,13 +15,15 @@
  */
 package org.terracotta.angela.common.clientconfig;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * @author Aurelien Broszniowski
  */
 
-public class ClientId {
+public class ClientId implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final ClientSymbolicName symbolicName;
   private final String hostname;
@@ -35,7 +37,7 @@ public class ClientId {
     return symbolicName;
   }
 
-  public String getHostname() {
+  public String getHostName() {
     return hostname;
   }
 
@@ -45,7 +47,7 @@ public class ClientId {
     if (o == null || getClass() != o.getClass()) return false;
     ClientId clientId = (ClientId) o;
     return Objects.equals(symbolicName, clientId.symbolicName) &&
-           Objects.equals(hostname, clientId.hostname);
+        Objects.equals(hostname, clientId.hostname);
   }
 
   @Override
@@ -55,9 +57,6 @@ public class ClientId {
 
   @Override
   public String toString() {
-    return "ClientData{" +
-           "symbolicName=" + symbolicName +
-           ", hostname='" + hostname + '\'' +
-           '}';
+    return symbolicName + "@" + hostname;
   }
 }

@@ -13,21 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.terracotta.angela.common.cluster;
+package org.terracotta.angela.agent.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
+import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.common.clientconfig.ClientId;
 
-public class Cluster {
+import java.io.Serializable;
+
+import static java.util.Objects.requireNonNull;
+
+public class Cluster implements Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private final Ignite ignite;
+  private final AgentID from;
   private final ClientId clientId;
 
-  public Cluster(Ignite ignite) {
-    this(ignite, null);
-  }
-
-  public Cluster(Ignite ignite, ClientId clientId) {
-    this.ignite = ignite;
+  public Cluster(Ignite ignite, AgentID from, ClientId clientId) {
+    this.ignite = requireNonNull(ignite);
+    this.from = requireNonNull(from);
     this.clientId = clientId;
   }
 
@@ -53,5 +60,19 @@ public class Cluster {
    */
   public ClientId getClientId() {
     return clientId;
+  }
+
+  /**
+   * The agent from which the Ignite closure was executed
+   */
+  public AgentID getFromAgentId() {
+    return from;
+  }
+
+  /**
+   * The current local agent where we are executing the closure
+   */
+  public AgentID getLocalAgentId() {
+    return AgentID.valueOf(ignite.cluster().localNode().attribute("angela.nodeName"));
   }
 }

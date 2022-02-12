@@ -19,6 +19,7 @@ import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Version;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -33,7 +34,8 @@ import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
  * @author Aurelien Broszniowski
  */
 
-public class Distribution {
+public class Distribution implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final Version version;
   private final PackageType packageType;
@@ -72,9 +74,9 @@ public class Distribution {
   public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType) {
     return new Distribution(version, packageType, licenseType, EnumSet.noneOf(RuntimeOption.class));
   }
-  
-  public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType, RuntimeOption...runtime) {
-    return new Distribution(version, packageType, licenseType, EnumSet.copyOf(Arrays.asList(runtime)));
+
+  public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType, RuntimeOption... runtime) {
+    return new Distribution(version, packageType, licenseType, runtime.length == 0 ? EnumSet.noneOf(RuntimeOption.class) : EnumSet.copyOf(Arrays.asList(runtime)));
   }
 
   public Version getVersion() {
@@ -129,9 +131,9 @@ public class Distribution {
   @Override
   public String toString() {
     return "Distribution{" +
-           "version=" + version +
-           ", packageType=" + packageType +
-           ", licenseType=" + licenseType +
-           '}';
+        "version=" + version +
+        ", packageType=" + packageType +
+        ", licenseType=" + licenseType +
+        '}';
   }
 }

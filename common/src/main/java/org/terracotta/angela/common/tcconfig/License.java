@@ -20,6 +20,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,7 +28,8 @@ import java.nio.file.Files;
 /**
  * Created by esebasti on 7/21/17.
  */
-public class License {
+public class License implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final String licenseContent;
   private final String filename;
@@ -47,7 +49,7 @@ public class License {
   public File writeToFile(File dest) {
     File licenseFile = new File(dest, this.filename);
     // tests are concurrently using a kit so do not re-write a license file
-    if(!licenseFile.exists()) {
+    if (!licenseFile.exists()) {
       try {
         Files.write(licenseFile.toPath(), licenseContent.getBytes(StandardCharsets.UTF_8));
       } catch (IOException ioe) {

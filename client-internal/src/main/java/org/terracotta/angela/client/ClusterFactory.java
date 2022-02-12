@@ -17,7 +17,9 @@ package org.terracotta.angela.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.cluster.Cluster;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.MonitoringConfigurationContext;
@@ -25,13 +27,10 @@ import org.terracotta.angela.client.config.TmsConfigurationContext;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.client.config.VoterConfigurationContext;
-import org.terracotta.angela.client.remote.agent.RemoteAgentLauncher;
-import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
-import org.terracotta.angela.common.util.IpUtils;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -40,14 +39,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
-import static org.terracotta.angela.common.util.IpUtils.isLocal;
+import static java.util.stream.Collectors.toList;
 
 public class ClusterFactory implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(ClusterFactory.class);
@@ -62,64 +61,48 @@ public class ClusterFactory implements AutoCloseable {
   private static final DateTimeFormatter PATH_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-hhmmssSSS");
 
   private final List<AutoCloseable> controllers = new ArrayList<>();
-  private final Agent localAgent;
+  private final Executor executor;
   private final PortAllocator portAllocator;
   private final String idPrefix;
   private final AtomicInteger instanceIndex;
-  private final Map<String, String> agentsInstance = new HashMap<>();
   private final ConfigurationContext configurationContext;
 
-  private transient RemoteAgentLauncher remoteAgentLauncher;
   private InstanceId monitorInstanceId;
 
-  ClusterFactory(Agent agent, PortAllocator portAllocator, String idPrefix, ConfigurationContext configurationContext) {
+  ClusterFactory(Executor executor, PortAllocator portAllocator, String idPrefix, ConfigurationContext configurationContext) {
     // Using UTC to have consistent layout even in case of timezone skew between client and server.
     this.idPrefix = idPrefix + "-" + LocalDateTime.now(ZoneId.of("UTC")).format(PATH_FORMAT);
     this.instanceIndex = new AtomicInteger();
     this.configurationContext = configurationContext;
-    this.remoteAgentLauncher = configurationContext.remoting().buildRemoteAgentLauncher();
-    this.localAgent = agent;
+    this.executor = executor;
     this.portAllocator = portAllocator;
-    agentsInstance.put(IpUtils.getHostName(), IpUtils.getHostName() + ":" + localAgent.getIgniteDiscoveryPort());
   }
 
-  private InstanceId init(String type, Collection<String> hostnames) {
+  private synchronized InstanceId init(String type, Collection<String> hostnames) {
     if (hostnames.isEmpty()) {
       throw new IllegalArgumentException("Cannot initialize with 0 server");
     }
-    InstanceId instanceId = new InstanceId(idPrefix + "-" + instanceIndex.getAndIncrement(), type);
-    for (String hostname : hostnames) {
-      if (hostname == null) {
-        throw new IllegalArgumentException("Cannot initialize with a null server name");
-      }
-
-      if (!isLocal(hostname) && !agentsInstance.containsKey(hostname)) {
-        final String nodeName = hostname + ":" + localAgent.getIgniteDiscoveryPort();
-
-        StringBuilder addressesToDiscover = new StringBuilder();
-        for (String agentAddress : agentsInstance.values()) {
-          addressesToDiscover.append(agentAddress).append(",");
-        }
-        if (addressesToDiscover.length() > 0) {
-          addressesToDiscover.deleteCharAt(addressesToDiscover.length() - 1);
-        }
-        remoteAgentLauncher.remoteStartAgentOn(hostname, nodeName, localAgent.getIgniteDiscoveryPort(), localAgent.getIgniteComPort(), addressesToDiscover.toString());
-        // start remote agent
-        agentsInstance.put(hostname, nodeName);
-      }
+    if (hostnames.stream().anyMatch(Objects::isNull)) {
+      throw new IllegalArgumentException("Cannot initialize with a null server name");
     }
 
-    logger.info("Agents instance (size = {}) : ", agentsInstance.values().size());
-    agentsInstance.values().forEach(value -> logger.info("- agent instance : {}", value));
+    // ensure agents are started on the configured hostnames
+    final List<AgentID> agentIDS = hostnames.stream()
+        .filter(hostname -> !executor.findAgentID(hostname).isPresent()) // no agent built for a hostname ?
+        .map(executor::startRemoteAgent) // then try spawn one
+        .filter(Optional::isPresent) //
+        .map(Optional::get)
+        .collect(toList());
 
-    return instanceId;
+    if (!agentIDS.isEmpty()) {
+      logger.info("Spawned agents: {}", agentIDS);
+    }
+
+    return new InstanceId(idPrefix + "-" + instanceIndex.getAndIncrement(), type);
   }
 
   public Cluster cluster() {
-    if (localAgent.getIgnite() == null) {
-      throw new IllegalStateException("No cluster component started");
-    }
-    return new Cluster(localAgent.getIgnite());
+    return executor.getCluster();
   }
 
   public Tsa tsa() {
@@ -129,7 +112,7 @@ public class ClusterFactory implements AutoCloseable {
     }
     InstanceId instanceId = init(TSA, tsaConfigurationContext.getTopology().getServersHostnames());
 
-    Tsa tsa = new Tsa(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), portAllocator, instanceId, tsaConfigurationContext);
+    Tsa tsa = new Tsa(executor, portAllocator, instanceId, tsaConfigurationContext);
     controllers.add(tsa);
     return tsa;
   }
@@ -141,7 +124,7 @@ public class ClusterFactory implements AutoCloseable {
     }
     InstanceId instanceId = init(TMS, Collections.singletonList(tmsConfigurationContext.getHostname()));
 
-    Tms tms = new Tms(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), instanceId, tmsConfigurationContext);
+    Tms tms = new Tms(executor, instanceId, tmsConfigurationContext);
     controllers.add(tms);
     return tms;
   }
@@ -154,10 +137,10 @@ public class ClusterFactory implements AutoCloseable {
     InstanceId instanceId = init(CLUSTER_TOOL, Collections.singleton(clusterToolConfigurationContext.getHostName()));
     Tsa tsa = controllers.stream()
         .filter(controller -> controller instanceof Tsa)
-        .map(autoCloseable -> (Tsa)autoCloseable)
+        .map(autoCloseable -> (Tsa) autoCloseable)
         .findAny()
         .orElseThrow(() -> new IllegalStateException("Tsa should be defined before cluster tool in ConfigurationContext"));
-    ClusterTool clusterTool = new ClusterTool(localAgent.getIgnite(), instanceId, localAgent.getIgniteDiscoveryPort(), clusterToolConfigurationContext, tsa);
+    ClusterTool clusterTool = new ClusterTool(executor, instanceId, clusterToolConfigurationContext, tsa);
     controllers.add(clusterTool);
     return clusterTool;
   }
@@ -170,10 +153,10 @@ public class ClusterFactory implements AutoCloseable {
     InstanceId instanceId = init(CONFIG_TOOL, Collections.singleton(configToolConfigurationContext.getHostName()));
     Tsa tsa = controllers.stream()
         .filter(controller -> controller instanceof Tsa)
-        .map(autoCloseable -> (Tsa)autoCloseable)
+        .map(autoCloseable -> (Tsa) autoCloseable)
         .findAny()
         .orElseThrow(() -> new IllegalStateException("Tsa should be defined before config tool in ConfigurationContext"));
-    ConfigTool configTool = new ConfigTool(localAgent.getIgnite(), instanceId, localAgent.getIgniteDiscoveryPort(), configToolConfigurationContext, tsa);
+    ConfigTool configTool = new ConfigTool(executor, instanceId, configToolConfigurationContext, tsa);
     controllers.add(configTool);
     return configTool;
   }
@@ -184,7 +167,7 @@ public class ClusterFactory implements AutoCloseable {
       throw new IllegalArgumentException("voter() configuration missing in the ConfigurationContext");
     }
     InstanceId instanceId = init(VOTER, voterConfigurationContext.getHostNames());
-    Voter voter = new Voter(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), instanceId, voterConfigurationContext);
+    Voter voter = new Voter(executor, instanceId, voterConfigurationContext);
     controllers.add(voter);
     return voter;
   }
@@ -197,9 +180,7 @@ public class ClusterFactory implements AutoCloseable {
     ClientArrayConfigurationContext clientArrayConfigurationContext = configurationContext.clientArray(idx);
     init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
 
-    ClientArray clientArray = new ClientArray(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(),
-        () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology()
-            .getClientHostnames()), clientArrayConfigurationContext);
+    ClientArray clientArray = new ClientArray(executor, () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames()), clientArrayConfigurationContext);
     controllers.add(clientArray);
     return clientArray;
   }
@@ -209,13 +190,13 @@ public class ClusterFactory implements AutoCloseable {
         .map(clientArrayConfigurationContext -> {
           init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
 
-          ClientArray clientArray = new ClientArray(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(),
+          ClientArray clientArray = new ClientArray(executor,
               () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology()
                   .getClientHostnames()), clientArrayConfigurationContext);
           controllers.add(clientArray);
           return clientArray;
         })
-        .collect(Collectors.toList());
+        .collect(toList());
   }
 
   public ClusterMonitor monitor() {
@@ -228,42 +209,34 @@ public class ClusterFactory implements AutoCloseable {
 
     if (monitorInstanceId == null) {
       monitorInstanceId = init(MONITOR, hostnames);
-      ClusterMonitor clusterMonitor = new ClusterMonitor(this.localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), monitorInstanceId, hostnames, commands);
+      ClusterMonitor clusterMonitor = new ClusterMonitor(executor, monitorInstanceId, hostnames, commands);
       controllers.add(clusterMonitor);
       return clusterMonitor;
     } else {
-      return new ClusterMonitor(localAgent.getIgnite(), localAgent.getIgniteDiscoveryPort(), monitorInstanceId, hostnames, commands);
+      return new ClusterMonitor(executor, monitorInstanceId, hostnames, commands);
     }
   }
 
   @Override
   public void close() throws IOException {
-      List<Exception> exceptions = new ArrayList<>();
+    List<Exception> exceptions = new ArrayList<>();
 
-      for (AutoCloseable controller : controllers) {
-        try {
-          controller.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-          exceptions.add(e);
-        }
-      }
-      controllers.clear();
-
-      monitorInstanceId = null;
-
+    for (AutoCloseable controller : controllers) {
       try {
-        remoteAgentLauncher.close();
+        controller.close();
       } catch (Exception e) {
         e.printStackTrace();
         exceptions.add(e);
       }
-      remoteAgentLauncher = null;
+    }
+    controllers.clear();
 
-      if (!exceptions.isEmpty()) {
-        IOException ioException = new IOException("Error while closing down Cluster Factory prefixed with " + idPrefix);
-        exceptions.forEach(ioException::addSuppressed);
-        throw ioException;
-      }
+    monitorInstanceId = null;
+
+    if (!exceptions.isEmpty()) {
+      IOException ioException = new IOException("Error while closing down Cluster Factory prefixed with " + idPrefix);
+      exceptions.forEach(ioException::addSuppressed);
+      throw ioException;
+    }
   }
 }

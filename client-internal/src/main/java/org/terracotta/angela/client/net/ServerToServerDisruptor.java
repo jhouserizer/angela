@@ -15,12 +15,12 @@
  */
 package org.terracotta.angela.client.net;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
-import org.terracotta.angela.client.util.IgniteClientHelper;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.common.net.Disruptor;
 import org.terracotta.angela.common.net.DisruptorState;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
@@ -39,19 +39,17 @@ import java.util.stream.Collectors;
  * Disrupt traffic between set of servers.(i.e active and passives)
  */
 public class ServerToServerDisruptor implements Disruptor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ServerToServerDisruptor.class);
+  private static final Logger logger = LoggerFactory.getLogger(ServerToServerDisruptor.class);
   //servers to be linked to serve this disruption
   private final Map<ServerSymbolicName, Collection<ServerSymbolicName>> linkedServers;
-  private final Ignite ignite;
-  private final int ignitePort;
+  private final Executor executor;
   private final InstanceId instanceId;
   private final Topology topology;
   private final Consumer<Disruptor> closeHook;
   private volatile DisruptorState state;
 
-  ServerToServerDisruptor(Ignite ignite, int ignitePort, InstanceId instanceId, Topology topology, Map<ServerSymbolicName, Collection<ServerSymbolicName>> linkedServers, Consumer<Disruptor> closeHook) {
-    this.ignite = ignite;
-    this.ignitePort = ignitePort;
+  ServerToServerDisruptor(Executor executor, InstanceId instanceId, Topology topology, Map<ServerSymbolicName, Collection<ServerSymbolicName>> linkedServers, Consumer<Disruptor> closeHook) {
+    this.executor = executor;
     this.instanceId = instanceId;
     this.topology = topology;
     this.linkedServers = linkedServers;
@@ -66,7 +64,7 @@ public class ServerToServerDisruptor implements Disruptor {
       throw new IllegalStateException("Illegal state before disrupt:" + state);
     }
 
-    LOGGER.info("blocking {}", this);
+    logger.info("disrupting {}", this);
     //invoke disruption remotely on each linked servers.
     Map<ServerSymbolicName, TerracottaServer> topologyServers = new HashMap<>();
     for (TerracottaServer svr : topology.getServers()) {
@@ -78,7 +76,8 @@ public class ServerToServerDisruptor implements Disruptor {
           .stream()
           .map(topologyServers::get)
           .collect(Collectors.toList()));
-      IgniteClientHelper.executeRemotely(ignite, server.getHostname(), ignitePort, blockRemotely(instanceId, server, otherServers));
+      final AgentID agentID = executor.getAgentID(server.getHostname());
+      executor.execute(agentID, blockRemotely(instanceId, server, otherServers));
     }
 
     state = DisruptorState.DISRUPTED;
@@ -90,7 +89,7 @@ public class ServerToServerDisruptor implements Disruptor {
       throw new IllegalStateException("Illegal state before undisrupt:" + state);
     }
 
-    LOGGER.info("undisrupting {}", this);
+    logger.info("undisrupting {}", this);
     Map<ServerSymbolicName, TerracottaServer> topologyServers = new HashMap<>();
     for (TerracottaServer svr : topology.getServers()) {
       topologyServers.put(svr.getServerSymbolicName(), svr);
@@ -101,7 +100,8 @@ public class ServerToServerDisruptor implements Disruptor {
           .stream()
           .map(topologyServers::get)
           .collect(Collectors.toList()));
-      IgniteClientHelper.executeRemotely(ignite, server.getHostname(), ignitePort, undisruptRemotely(instanceId, server, otherServers));
+      final AgentID agentID = executor.getAgentID(server.getHostname());
+      executor.execute(agentID, undisruptRemotely(instanceId, server, otherServers));
     }
     state = DisruptorState.UNDISRUPTED;
   }
@@ -124,24 +124,24 @@ public class ServerToServerDisruptor implements Disruptor {
   }
 
   private static IgniteRunnable blockRemotely(InstanceId instanceId, TerracottaServer server, Collection<TerracottaServer> otherServers) {
-    return (IgniteRunnable)() -> Agent.getInstance().getController().disrupt(instanceId, server, otherServers);
+    return () -> AgentController.getInstance().disrupt(instanceId, server, otherServers);
   }
 
   private static IgniteRunnable undisruptRemotely(InstanceId instanceId, TerracottaServer server, Collection<TerracottaServer> otherServers) {
-    return (IgniteRunnable)() -> Agent.getInstance().getController().undisrupt(instanceId, server, otherServers);
+    return () -> AgentController.getInstance().undisrupt(instanceId, server, otherServers);
   }
 
   @Override
   public String toString() {
     return "ServerToServerDisruptor{" +
-           "linkedServers=" + linkedServers.entrySet()
-               .stream()
-               .map(e -> e.getKey().getSymbolicName() + "->" + e.getValue()
-                   .stream()
-                   .map(ServerSymbolicName::getSymbolicName)
-                   .collect(Collectors.joining(",", "[", "]")))
-               .collect(Collectors.joining(",", "{", "}")) +
-           '}';
+        "linkedServers=" + linkedServers.entrySet()
+        .stream()
+        .map(e -> e.getKey().getSymbolicName() + "->" + e.getValue()
+            .stream()
+            .map(ServerSymbolicName::getSymbolicName)
+            .collect(Collectors.joining(",", "[", "]")))
+        .collect(Collectors.joining(",", "{", "}")) +
+        '}';
   }
 
 }

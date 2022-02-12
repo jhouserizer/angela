@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TcConfigManager implements ConfigurationManager {
+  private static final long serialVersionUID = 1L;
+
   private final List<TcConfig> tcConfigs;
 
   private TcConfigManager(List<TcConfig> tcConfigs) {

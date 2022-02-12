@@ -343,7 +343,7 @@ public class Distribution102Controller extends DistributionController {
   private ToolExecutionResult executeCommand(List<String> command, TerracottaCommandLineEnvironment env,
                                              File workingDir, Map<String, String> envOverrides) {
     try {
-      logger.info("Cluster tool command: {}", command);
+      logger.debug("Cluster tool command: {}", command);
       ProcessResult processResult = new ProcessExecutor(command)
           .directory(workingDir)
           .environment(env.buildEnv(envOverrides))

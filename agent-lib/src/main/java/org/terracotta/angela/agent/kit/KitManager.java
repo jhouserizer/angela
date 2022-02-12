@@ -15,13 +15,13 @@
  */
 package org.terracotta.angela.agent.kit;
 
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.util.FileUtils;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -30,7 +30,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
@@ -74,7 +73,7 @@ public abstract class KitManager {
    */
   boolean isValidLocalInstallerFilePath(boolean offline, Path localInstallerFile) {
     if (!Files.isRegularFile(localInstallerFile)) {
-      logger.info("Kit {} is not an existing file", localInstallerFile.toAbsolutePath());
+      logger.debug("Kit {} is not an existing file", localInstallerFile.toAbsolutePath());
       return false;
     }
 
@@ -87,7 +86,7 @@ public abstract class KitManager {
     }
 
     if (!offline && distribution.getVersion().isSnapshot() && timeSinceLastModified > STALE_SNAPSHOT_LIMIT_HOURS * 60 * 60 * 1000) {
-      logger.info("Mode is online, distribution is snapshot, and {} is older than {} hours", localInstallerFile.getFileName(), STALE_SNAPSHOT_LIMIT_HOURS);
+      logger.debug("Mode is online, distribution is snapshot, and {} is older than {} hours", localInstallerFile.getFileName(), STALE_SNAPSHOT_LIMIT_HOURS);
       FileUtils.deleteQuietly(localInstallerFile.getParent());
       return false;
     }
@@ -97,7 +96,7 @@ public abstract class KitManager {
       return true;
     }
 
-    String md5File = localInstallerFile.toAbsolutePath().toString() + ".md5";
+    String md5File = localInstallerFile.toAbsolutePath() + ".md5";
     String md5FileHash;
     try {
       byte[] bytes = Files.readAllBytes(Paths.get(md5File));
@@ -111,31 +110,17 @@ public abstract class KitManager {
       throw new RuntimeException("Error reading " + md5File, ioe);
     }
 
-    try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      try (InputStream fis = Files.newInputStream(localInstallerFile)) {
-        byte[] buffer = new byte[8192];
-        while (true) {
-          int read = fis.read(buffer);
-          if (read == -1) {
-            break;
-          } else {
-            md.update(buffer, 0, read);
-          }
-        }
-      }
-      String localInstallerFileHash = DatatypeConverter.printHexBinary(md.digest());
-
-      if (!localInstallerFileHash.equalsIgnoreCase(md5FileHash)) {
+    try (InputStream fis = Files.newInputStream(localInstallerFile)) {
+      if (!IgniteUtils.calculateMD5(fis).equalsIgnoreCase(md5FileHash)) {
         // MD5 does not match? let's consider the archive corrupt
         logger.warn("{} secure hash does not match the contents of {} secure hash file on disk, considering it corrupt", localInstallerFile, md5File);
         FileUtils.deleteQuietly(localInstallerFile.getParent());
         return false;
       }
-    } catch (NoSuchAlgorithmException nsae) {
-      throw new RuntimeException("Missing MD5 secure hash implementation", nsae);
     } catch (IOException ioe) {
       throw new RuntimeException("Error reading " + localInstallerFile, ioe);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
     }
 
     return true;

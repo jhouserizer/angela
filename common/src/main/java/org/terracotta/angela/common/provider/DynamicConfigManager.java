@@ -22,6 +22,7 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-public class DynamicConfigManager implements ConfigurationManager {
+public class DynamicConfigManager implements ConfigurationManager, Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final List<Stripe> stripes;
 
   private DynamicConfigManager(Stripe... stripes) {

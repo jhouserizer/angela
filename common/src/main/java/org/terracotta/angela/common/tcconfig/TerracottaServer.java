@@ -18,6 +18,7 @@ package org.terracotta.angela.common.tcconfig;
 import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.IpUtils;
 
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,8 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Aurelien Broszniowski
  */
-public class TerracottaServer {
+public class TerracottaServer implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final ServerSymbolicName serverSymbolicName;
   private final String hostName;

@@ -15,18 +15,21 @@
  */
 package org.terracotta.angela.common.topology;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * @author Aurelien Broszniowski
  */
 
-public class InstanceId {
+public class InstanceId implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final String prefix;
   private final String type;
 
   public InstanceId(String idPrefix, String type) {
-    this.prefix = Objects.requireNonNull(idPrefix).replaceAll("[^a-zA-Z0-9.-]", "_");;
+    this.prefix = Objects.requireNonNull(idPrefix).replaceAll("[^a-zA-Z0-9.-]", "_"); ;
     this.type = type;
   }
 

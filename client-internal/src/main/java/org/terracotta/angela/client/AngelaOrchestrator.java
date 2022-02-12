@@ -18,6 +18,11 @@ package org.terracotta.angela.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.Executor;
+import org.terracotta.angela.agent.com.IgniteFreeExecutor;
+import org.terracotta.angela.agent.com.IgniteLocalExecutor;
+import org.terracotta.angela.agent.com.IgniteSshRemoteExecutor;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
@@ -27,35 +32,39 @@ import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.IpUtils;
 
-import java.util.Collections;
+import java.io.Closeable;
 import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  *
  */
-public class AngelaOrchestrator implements AutoCloseable {
+public class AngelaOrchestrator implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(AngelaOrchestrator.class);
 
-  private final Agent localAgent;
+  private final Agent mainAgent;
+  private final AgentController agentController;
+  private final Executor executor;
   private final PortAllocator portAllocator;
 
-  private AngelaOrchestrator(boolean local) {
-    this.portAllocator = new DefaultPortAllocator();
-    if (local) {
-      this.localAgent = Agent.startLocalCluster();
-    } else {
-      PortAllocator.PortReservation reservation = portAllocator.reserve(2);
-      int igniteDiscoveryPort = reservation.next();
-      int igniteComPort = reservation.next();
-      this.localAgent = Agent.startCluster(Collections.singleton(IpUtils.getHostName() + ":" + igniteDiscoveryPort), IpUtils.getHostName() + ":" + igniteDiscoveryPort, igniteDiscoveryPort, igniteComPort);
-    }
+  private AngelaOrchestrator(Agent mainAgent, Executor executor, PortAllocator portAllocator) {
+    this.mainAgent = mainAgent;
+    this.executor = executor;
+    this.portAllocator = portAllocator;
+    this.agentController = new AgentController(mainAgent.getAgentID(), portAllocator);
 
-    // Since Ignite deported closures require to access a static instance of an agent (Agent.getInstance())
-    // started through a main class, even within the same JVM we have to put that instance static to be able
-    // to re-use the same closures.
-    Agent.setUniqueInstance(localAgent);
+    // because we need to be able to access statically the controller from ignite closure
+    // when they are executed on our local ignite node, or locally by the overriding layer
+    // when in local mode
+    AgentController.setUniqueInstance(agentController);
+  }
+
+  public Executor getExecutor() {
+    return executor;
   }
 
   public PortAllocator getPortAllocator() {
@@ -99,33 +108,107 @@ public class AngelaOrchestrator implements AutoCloseable {
       }
     });
 
-    return new ClusterFactory(localAgent, portAllocator, idPrefix, configurationContext);
+    return new ClusterFactory(executor, portAllocator, idPrefix, configurationContext);
   }
 
   @Override
   public void close() {
     try {
-      localAgent.close();
+      executor.close();
     } finally {
-      Agent.removeUniqueInstance(localAgent);
-      portAllocator.close();
+      try {
+        mainAgent.close();
+      } finally {
+        try {
+          portAllocator.close();
+        } finally {
+          AgentController.removeUniqueInstance(agentController);
+        }
+      }
     }
   }
 
-  public static AgentOrchestratorBuilder builder() {
-    return new AgentOrchestratorBuilder();
+  public static AngelaOrchestratorBuilder builder() {
+    return new AngelaOrchestratorBuilder().igniteRemote();
   }
 
-  public static class AgentOrchestratorBuilder {
-    boolean local = false;
+  public static class AngelaOrchestratorBuilder {
 
-    public AgentOrchestratorBuilder local() {
-      local = true;
+    private final UUID group = UUID.randomUUID();
+    private PortAllocator portAllocator = new DefaultPortAllocator();
+    private Supplier<Agent> agentBuilder;
+    private Function<Agent, Executor> executorBuilder;
+    private String mode; // just for toString()
+
+    public AngelaOrchestratorBuilder withPortAllocator(PortAllocator portAllocator) {
+      this.portAllocator = new PortAllocator() {
+        @Override
+        public PortReservation reserve(int portCounts) {
+          return portAllocator.reserve(portCounts);
+        }
+
+        @Override
+        public void close() {
+          // do not close a port allocator which has been provided by the user
+        }
+      };
+      return this;
+    }
+
+    /**
+     * Local Ignite agent started, plus one per remote hostname, deployed trough SSH. Client jobs are executed on their specified hostnames.
+     */
+    public AngelaOrchestratorBuilder igniteRemote() {
+      agentBuilder = () -> Agent.igniteOrchestrator(group, portAllocator);
+      executorBuilder = agent -> new IgniteSshRemoteExecutor(agent.getGroupId(), agent.getAgentID(), agent.getIgnite());
+      mode = IgniteSshRemoteExecutor.class.getSimpleName();
+      return this;
+    }
+
+    /**
+     * Local Ignite agent started, plus one per remote hostname, deployed trough SSH. Client jobs are executed on their specified hostnames.
+     */
+    public AngelaOrchestratorBuilder igniteRemote(Consumer<IgniteSshRemoteExecutor> configurator) {
+      agentBuilder = () -> Agent.igniteOrchestrator(group, portAllocator);
+      executorBuilder = agent -> {
+        final IgniteSshRemoteExecutor executor = new IgniteSshRemoteExecutor(agent);
+        configurator.accept(executor);
+        return executor;
+      };
+      mode = IgniteSshRemoteExecutor.class.getSimpleName();
+      return this;
+    }
+
+    /**
+     * Only one local Ignite instance, plus eventually one per client job, for all hostnames.
+     * No Ignite agents will be deployed through SSH.
+     */
+    public AngelaOrchestratorBuilder igniteLocal() {
+      agentBuilder = () -> Agent.igniteOrchestrator(group, portAllocator);
+      executorBuilder = IgniteLocalExecutor::new;
+      mode = IgniteLocalExecutor.class.getSimpleName();
+      return this;
+    }
+
+    /**
+     * No Ignite started: everything runs withing the test JVM, even client jobs.
+     */
+    public AngelaOrchestratorBuilder igniteFree() {
+      agentBuilder = () -> Agent.local(group);
+      executorBuilder = IgniteFreeExecutor::new;
+      mode = IgniteFreeExecutor.class.getSimpleName();
       return this;
     }
 
     public AngelaOrchestrator build() {
-      return new AngelaOrchestrator(local);
+      final Agent agent = agentBuilder.get();
+      final Executor executor = executorBuilder.apply(agent);
+      return new AngelaOrchestrator(agent, executor, portAllocator);
+    }
+
+    @Override
+    public String toString() {
+      return mode;
     }
   }
 }

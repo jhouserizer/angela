@@ -13,22 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.terracotta.angela.agent;
+package org.terracotta.angela.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.terracotta.angela.common.net.PortAllocator;
-
-import java.util.Collections;
-
-/**
- * @author Aurelien Broszniowski
- */
-public class LocalAgentController extends AgentController {
-  private final static Logger logger = LoggerFactory.getLogger(LocalAgentController.class);
-
-  LocalAgentController(PortAllocator portAllocator) {
-    super(null, Collections.emptyList(), 0, portAllocator);
-  }
-
+public class Versions {
+  public static final String EHCACHE_VERSION_XML = System.getProperty("ehcache.version.xml", "3.8.1");
+  public static final String EHCACHE_VERSION_DC = System.getProperty("ehcache.version.dc", "3.9.9");
 }

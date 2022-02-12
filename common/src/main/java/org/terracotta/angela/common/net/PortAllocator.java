@@ -31,8 +31,7 @@ public interface PortAllocator extends Closeable {
   PortReservation reserve(int portCounts);
 
   @Override
-  default void close() {
-  }
+  void close();
 
   interface PortReservation extends AutoCloseable, Iterator<Integer> {
     @Override

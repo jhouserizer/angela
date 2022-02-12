@@ -15,23 +15,19 @@
  */
 package org.terracotta.angela.common.util;
 
-import java.nio.file.Path;
-
 public class JDK {
 
-  private final Path home;
+  private final UniversalPath home;
   private final String version;
   private final String vendor;
-  private final boolean valid;
 
-  public JDK(Path home, String version, String vendor, boolean valid) {
+  public JDK(UniversalPath home, String version, String vendor) {
     this.home = home;
     this.version = version;
     this.vendor = vendor;
-    this.valid = valid;
   }
 
-  public Path getHome() {
+  public UniversalPath getHome() {
     return home;
   }
 
@@ -43,17 +39,12 @@ public class JDK {
     return vendor;
   }
 
-  public boolean isValid() {
-    return valid;
-  }
-
   @Override
   public String toString() {
     return "JDK{" +
         "home='" + home + '\'' +
         ", version='" + version + '\'' +
         ", vendor='" + vendor + '\'' +
-        ", valid=" + valid +
         '}';
   }
 }

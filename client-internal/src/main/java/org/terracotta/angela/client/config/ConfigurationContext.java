@@ -22,8 +22,6 @@ public interface ConfigurationContext {
 
   void visit(ConfigurationContextVisitor visitor);
 
-  RemotingConfigurationContext remoting();
-
   TsaConfigurationContext tsa();
 
   TmsConfigurationContext tms();

@@ -17,10 +17,11 @@ package org.terracotta.angela.agent;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.IOUtils;
-import org.apache.ignite.Ignite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.client.RemoteClientManager;
+import org.terracotta.angela.agent.com.AgentGroup;
+import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.kit.MonitoringInstance;
 import org.terracotta.angela.agent.kit.RemoteKitManager;
 import org.terracotta.angela.agent.kit.TerracottaInstall;
@@ -49,9 +50,8 @@ import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.FileMetadata;
 import org.terracotta.angela.common.util.FileUtils;
-import org.terracotta.angela.common.util.IgniteCommonHelper;
+import org.terracotta.angela.common.util.Jcmd;
 import org.terracotta.angela.common.util.ProcessUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -64,7 +64,6 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,13 +74,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.function.BiFunction;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static java.util.stream.Collectors.toList;
-import static org.terracotta.angela.common.util.FileUtils.setCorrectPermissions;
 
 /**
  * @author Aurelien Broszniowski
@@ -95,16 +92,12 @@ public class AgentController {
   private final Map<InstanceId, ToolInstall> clusterToolInstalls = new HashMap<>();
   private final Map<InstanceId, ToolInstall> configToolInstalls = new HashMap<>();
 
-  private final Ignite ignite;
-  private final Collection<String> joinedNodes;
-  private final int ignitePort;
+  private final AgentID localAgentID;
   private final PortAllocator portAllocator;
   private volatile MonitoringInstance monitoringInstance;
 
-  AgentController(Ignite ignite, Collection<String> joinedNodes, int ignitePort, PortAllocator portAllocator) {
-    this.ignite = ignite;
-    this.joinedNodes = Collections.unmodifiableList(new ArrayList<>(joinedNodes));
-    this.ignitePort = ignitePort;
+  public AgentController(AgentID localAgentID, PortAllocator portAllocator) {
+    this.localAgentID = localAgentID;
     this.portAllocator = portAllocator;
   }
 
@@ -125,13 +118,13 @@ public class AgentController {
           return false;
         }
 
-        logger.info("Installing kit for {} from {}", terracottaServer, distribution);
+        logger.debug("[{}] Installing kit for {} from {}", localAgentID, terracottaServer, distribution);
         kitLocation = kitManager.installKit(license, topology.getServersHostnames());
         terracottaInstall = tsaInstalls.computeIfAbsent(instanceId, (iid) -> new TerracottaInstall(portAllocator));
       } else {
         // DO NOT ALTER THE KIT CONTENT IF kitInstallationPath IS USED
         kitLocation = new File(kitInstallationPath);
-        if (license !=null) {
+        if (license != null) {
           license.writeToFile(kitLocation);
         }
 
@@ -139,7 +132,7 @@ public class AgentController {
       }
     } else {
       kitLocation = terracottaInstall.kitLocation(distribution);
-      logger.info("Kit for {} already installed", terracottaServer);
+      logger.debug("[{}] Kit for {} already installed", localAgentID, terracottaServer);
     }
     // work directory separate from kit directory
     Path workingPath = Agent.WORK_DIR.resolve(instanceId.toString());
@@ -386,15 +379,15 @@ public class AgentController {
         RemoteKitManager kitManager = new RemoteKitManager(instanceId, topology.getDistribution(), kitInstallationName);
         if (kitInstallationPath == null) {
           File installLocation = Agent.WORK_DIR.resolve(instanceId.toString()).toFile();
-          logger.info("Uninstalling kit(s) from {} for TSA", installLocation);
+          logger.debug("[{}] Uninstalling kit(s) from {} for TSA", localAgentID, installLocation);
           kitManager.deleteInstall(installLocation);
         }
         tsaInstalls.remove(instanceId);
       } else {
-        logger.info("Kit installation still in use by {} instances. Skipping uninstall", tsaInstalls.size());
+        logger.debug("[{}] Kit installation still in use by {} instances. Skipping uninstall", localAgentID, tsaInstalls.size());
       }
     } else {
-      logger.info("No installed kit for " + topology);
+      logger.debug("[{}] No installed kit for " + topology, localAgentID);
     }
   }
 
@@ -412,11 +405,11 @@ public class AgentController {
       tmsInstall.removeServer();
       tmsInstalls.remove(instanceId);
       File installLocation = tmsInstall.getWorkingDir();
-      logger.info("Uninstalling kit(s) from {} for TMS", installLocation);
+      logger.debug("[{}] Uninstalling kit(s) from {} for TMS", localAgentID, installLocation);
       RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
       kitManager.deleteInstall(installLocation);
     } else {
-      logger.info("No installed kit for " + tmsHostname);
+      logger.debug("[{}] No installed kit for " + tmsHostname, localAgentID);
     }
   }
 
@@ -426,15 +419,15 @@ public class AgentController {
       int installationsCount = voterInstall.removeVoter(terracottaVoter);
       if (installationsCount == 0) {
         File installLocation = voterInstall.getWorkingDir();
-        logger.info("Uninstalling kit(s) from {} for voter", installLocation);
+        logger.debug("[{}] Uninstalling kit(s) from {} for voter", localAgentID, installLocation);
         RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
         kitManager.deleteInstall(installLocation);
         voterInstalls.remove(instanceId);
       } else {
-        logger.info("Kit installation still in use by {} voter instances. Skipping uninstall", voterInstalls.size());
+        logger.debug("[{}] Kit installation still in use by {} voter instances. Skipping uninstall", localAgentID, voterInstalls.size());
       }
     } else {
-      logger.info("No installed kit for " + terracottaVoter.getHostName());
+      logger.debug("[{}] No installed kit for " + terracottaVoter.getHostName());
     }
   }
 
@@ -443,11 +436,11 @@ public class AgentController {
     if (clusterToolInstall != null) {
       clusterToolInstalls.remove(instanceId);
       File installLocation = clusterToolInstall.getWorkingDir();
-      logger.info("Uninstalling kit(s) from {} for cluster tool", installLocation);
+      logger.debug("[{}] Uninstalling kit(s) from {} for cluster tool", localAgentID, installLocation);
       RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
       kitManager.deleteInstall(installLocation);
     } else {
-      logger.info("No installed kit for " + hostName);
+      logger.debug("[{}] No installed kit for " + hostName);
     }
   }
 
@@ -456,11 +449,11 @@ public class AgentController {
     if (configToolInstall != null) {
       configToolInstalls.remove(instanceId);
       File installLocation = configToolInstall.getWorkingDir();
-      logger.info("Uninstalling kit(s) from {} for config tool", installLocation);
+      logger.debug("[{}] Uninstalling kit(s) from {} for config tool", localAgentID, installLocation);
       RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
       kitManager.deleteInstall(installLocation);
     } else {
-      logger.info("No installed kit for " + hostName);
+      logger.debug("[{}] No installed kit for " + hostName, localAgentID);
     }
   }
 
@@ -592,15 +585,17 @@ public class AgentController {
     return terracottaInstall.getTerracottaServerInstance(terracottaServer).jcmd(tcEnv, arguments);
   }
 
-  public ToolExecutionResult clientJcmd(InstanceId instanceId, int clientPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    RemoteClientManager remoteClientManager = new RemoteClientManager(instanceId);
-    return remoteClientManager.jcmd(clientPid, tcEnv, arguments);
+  public ToolExecutionResult clientJcmd(int clientPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
+    return Jcmd.jcmd(clientPid, tcEnv, arguments);
   }
 
-  public void startHardwareMonitoring(String workingPath, Map<HardwareMetric, MonitoringCommand> commands) {
+  public void startHardwareMonitoring(Path workingPath, Map<HardwareMetric, MonitoringCommand> commands) {
     if (monitoringInstance == null) {
-      monitoringInstance = new MonitoringInstance(new File(workingPath));
+      logger.debug("[{}] Starting monitoring: {}...", localAgentID, commands.keySet());
+      monitoringInstance = new MonitoringInstance(workingPath);
       monitoringInstance.startHardwareMonitoring(commands);
+    } else {
+      logger.debug("[{}] Monitoring was already started", localAgentID);
     }
   }
 
@@ -617,71 +612,31 @@ public class AgentController {
 
   public void stopClient(InstanceId instanceId, int pid) {
     try {
-      logger.info("killing client '{}' with PID {}", instanceId, pid);
-      ProcessUtil.destroyGracefullyOrForcefullyAndWait(pid);
+      logger.info("[{}] killing client '{}' with PID {}", localAgentID, instanceId, pid);
+      if (!localAgentID.isIgniteFree()) {
+        ProcessUtil.destroyGracefullyOrForcefullyAndWait(pid);
+      }
     } catch (Exception e) {
       throw new RuntimeException("Error stopping client " + instanceId, e);
     }
   }
 
   public void deleteClient(InstanceId instanceId) {
-    File subAgentRoot = new RemoteClientManager(instanceId).getClientInstallationPath();
-    logger.info("Cleaning up directory structure '{}' of client {}", subAgentRoot, instanceId);
-    FileUtils.deleteTree(subAgentRoot.toPath());
+    Path subAgentRoot = new RemoteClientManager(instanceId).getClientInstallationPath();
+    logger.debug("[{}] Cleaning up directory structure '{}' of client {}", localAgentID, subAgentRoot, instanceId);
+    FileUtils.deleteTree(subAgentRoot);
   }
 
   public String instanceWorkDir(InstanceId instanceId) {
     return Agent.WORK_DIR.resolve(instanceId.toString()).toAbsolutePath().toString();
   }
 
-  public int spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv) {
-    RemoteClientManager remoteClientManager = new RemoteClientManager(instanceId);
-    return remoteClientManager.spawnClient(instanceId, tcEnv, joinedNodes, ignitePort, portAllocator);
-  }
-
-  @SuppressWarnings("ResultOfMethodCallIgnored")
-  @SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "REC_CATCH_EXCEPTION"})
-  public void downloadFiles(InstanceId instanceId, File installDir) {
-    final BlockingQueue<Object> queue = IgniteCommonHelper.fileTransferQueue(ignite, instanceId);
-    try {
-      logger.info("Downloading files into {}", installDir);
-      if (!installDir.exists()) {
-        if (!installDir.mkdirs()) {
-          throw new RuntimeException("Cannot create directory '" + installDir + "'");
-        }
-      }
-
-      while (true) {
-        Object read = queue.take();
-        if (read.equals(Boolean.TRUE)) {
-          logger.info("Downloaded files into {}", installDir);
-          break;
-        }
-
-        FileMetadata fileMetadata = (FileMetadata) read;
-        logger.debug("downloading " + fileMetadata);
-        if (!fileMetadata.isDirectory()) {
-          long readFileLength = 0L;
-          File file = new File(installDir + File.separator + fileMetadata.getPathName());
-          file.getParentFile().mkdirs();
-          try (FileOutputStream fos = new FileOutputStream(file)) {
-            while (readFileLength != fileMetadata.getLength()) {
-              if (readFileLength > fileMetadata.getLength()) {
-                throw new RuntimeException("Error downloading file : " + fileMetadata);
-              }
-
-              byte[] buffer = (byte[]) queue.take();
-              fos.write(buffer);
-              readFileLength += buffer.length;
-            }
-          }
-          logger.debug("downloaded " + fileMetadata);
-        }
-      }
-      setCorrectPermissions(installDir.toPath());
-    } catch (Exception e) {
-      throw new RuntimeException("Cannot download files to " + installDir.getAbsolutePath(), e);
+  public AgentID spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv, AgentGroup group) {
+    if (localAgentID.isIgniteFree()) {
+      return localAgentID;
     }
+    RemoteClientManager remoteClientManager = new RemoteClientManager(instanceId);
+    return remoteClientManager.spawnClient(tcEnv, group);
   }
 
   public List<String> listFiles(String folder) {
@@ -718,7 +673,7 @@ public class AgentController {
     try (FileOutputStream fos = new FileOutputStream(file)) {
       fos.write(data);
     } catch (IOException ioe) {
-      throw new RuntimeException("Error uploading file " + filename, ioe);
+      throw new UncheckedIOException("Error uploading file " + filename, ioe);
     }
   }
 
@@ -728,7 +683,7 @@ public class AgentController {
       File root = new File(file);
       zipFolder(zos, "", root);
     } catch (IOException ioe) {
-      throw new RuntimeException("Error downloading folder " + file, ioe);
+      throw new UncheckedIOException("Error downloading folder " + file, ioe);
     }
     return baos.toByteArray();
   }
@@ -756,10 +711,6 @@ public class AgentController {
     }
   }
 
-  public Map<String, ?> getNodeAttributes() {
-    return ignite.configuration().getUserAttributes();
-  }
-
   private static class Dirs {
     final File kitDir;
     final File workingDir;
@@ -779,7 +730,7 @@ public class AgentController {
           return Optional.empty();
         }
         kitPath = kitManager.installKit(license, Collections.singletonList(hostName));
-        logger.info("Installing kit on host {} from {}", hostName, distribution);
+        logger.debug("Installing kit on host {} from {}", hostName, distribution);
       } else {
         // DO NOT ALTER THE KIT CONTENT IF kitInstallationPath IS USED
         kitPath = new File(kitInstallationPath);
@@ -800,5 +751,40 @@ public class AgentController {
           null
       ));
     }
+  }
+
+  // 1 controller (linked to 1 agent) per test JVM
+
+  @Override
+  public String toString() {
+    return localAgentID.toString();
+  }
+
+  private static volatile AgentController instance;
+
+  public static synchronized AgentController getInstance() {
+    if (instance == null) {
+      throw new IllegalStateException("AgentController not initialized");
+    }
+    return instance;
+  }
+
+  public static synchronized void setUniqueInstance(AgentController agentController) {
+    if (AgentController.instance != null) {
+      throw new IllegalStateException("AgentController already initialized to: " + AgentController.instance);
+    }
+    logger.info("Installing AgentController: " + agentController);
+    AgentController.instance = agentController;
+  }
+
+  public static void removeUniqueInstance(AgentController agentController) {
+    if (AgentController.instance == null) {
+      throw new IllegalStateException("AgentController not initialized");
+    }
+    if (AgentController.instance != agentController) {
+      throw new IllegalStateException("Unable to remove installed AgentController: " + AgentController.instance + ": caller has another AgentController: " + agentController);
+    }
+    logger.info("Uninstalling AgentController: " + agentController);
+    AgentController.instance = null;
   }
 }

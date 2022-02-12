@@ -16,7 +16,7 @@
 package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
-import org.junit.runners.model.MultipleFailureException;
+import org.terracotta.angela.agent.cluster.Cluster;
 import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClusterFactory;
@@ -27,10 +27,10 @@ import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
-import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
-import java.util.ArrayList;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
@@ -42,7 +42,7 @@ import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASS
 /**
  * @author Mathieu Carbou
  */
-public class AngelaRule extends ExtendedTestRule {
+public class AngelaRule extends ExtendedTestRule implements Closeable {
 
   private final Supplier<AngelaOrchestrator> angelaOrchestratorSupplier;
   private ConfigurationContext configuration;
@@ -114,16 +114,15 @@ public class AngelaRule extends ExtendedTestRule {
 
   @Override
   protected void after(Description description) throws Throwable {
-    List<Throwable> errs = new ArrayList<>(0);
-    try {
-      if (clusterFactory != null) {
-        clusterFactory.close();
-        clusterFactory = null;
-      }
-    } catch (Throwable e) {
-      errs.add(e);
+    close();
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (clusterFactory != null) {
+      clusterFactory.close();
+      clusterFactory = null;
     }
-    MultipleFailureException.assertEmpty(errs);
   }
 
   // =========================================

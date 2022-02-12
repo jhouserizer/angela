@@ -19,29 +19,28 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.com.AgentGroup;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Exceptions;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
-import org.terracotta.angela.common.ToolExecutionResult;
-import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.ExternalLoggers;
-import org.terracotta.angela.common.util.JavaBinaries;
 import org.terracotta.angela.common.util.LogOutputStream;
 import org.terracotta.angela.common.util.OS;
 import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 import org.zeroturnaround.exec.StartedProcess;
 import org.zeroturnaround.process.PidUtil;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
-import static org.terracotta.angela.common.AngelaProperties.DIRECT_JOIN;
-import static org.terracotta.angela.common.AngelaProperties.NODE_NAME;
 import static org.terracotta.angela.common.AngelaProperties.ROOT_DIR;
 
 /**
@@ -53,83 +52,80 @@ public class RemoteClientManager {
   private final static Logger logger = LoggerFactory.getLogger(RemoteClientManager.class);
 
   private static final String CLASSPATH_SUBDIR_NAME = "lib";
-  private final File kitInstallationPath;
+
+  private final Path kitInstallationPath;
+  private final InstanceId instanceId;
 
   public RemoteClientManager(InstanceId instanceId) {
-    this.kitInstallationPath = Agent.WORK_DIR.resolve(instanceId.toString()).toFile();
+    this.kitInstallationPath = Agent.WORK_DIR.resolve(instanceId.toString());
+    this.instanceId = instanceId;
   }
 
-  public File getClientInstallationPath() {
+  public Path getClientInstallationPath() {
     return kitInstallationPath;
   }
 
-  public File getClientClasspathRoot() {
-    return new File(kitInstallationPath, CLASSPATH_SUBDIR_NAME);
-  }
-
-  public ToolExecutionResult jcmd(int javaPid, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    Path javaHome = tcEnv.getJavaHome();
-    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
-    List<String> cmdLine = new ArrayList<>();
-    cmdLine.add(path.toAbsolutePath().toString());
-    cmdLine.add(Integer.toString(javaPid));
-    cmdLine.addAll(Arrays.asList(arguments));
-
-    try {
-      ProcessResult processResult = new ProcessExecutor(cmdLine)
-          .readOutput(true)
-          .redirectErrorStream(true)
-          .execute();
-      return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  public Path getClientClasspathRoot() {
+    return kitInstallationPath.resolve(CLASSPATH_SUBDIR_NAME);
   }
 
   @SuppressWarnings("BusyWait")
   @SuppressFBWarnings("REC_CATCH_EXCEPTION")
-  public int spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv, Collection<String> joinedNodes, int ignitePort, PortAllocator portAllocator) {
+  public AgentID spawnClient(TerracottaCommandLineEnvironment tcEnv, AgentGroup group) {
     try {
+      // tcEnv comes from the main agent through ignite serialization (from the client array config).
+      // Its content will either be what the user has configured for the client array or the default tcEnv used in the main agent.
+      // If the main agent is using resolver=user, then the JVM used to spawn the current agent will be used.
+      // If the main agent is suing resolver=toolchain, then the JVM used will be the one matching the version/vendor criteria in teh toolchain
+      // If the user has overridden the env to use for this client, then it will be either one or the other option above.
       Path javaHome = tcEnv.getJavaHome();
 
       final AtomicBoolean started = new AtomicBoolean(false);
+      AtomicReference<AgentID> agentID = new AtomicReference<>();
       List<String> cmdLine = new ArrayList<>();
       if (OS.INSTANCE.isWindows()) {
         cmdLine.add(javaHome + "\\bin\\java.exe");
       } else {
         cmdLine.add(javaHome + "/bin/java");
       }
+      cmdLine.add("-classpath");
+      cmdLine.add(buildClasspath());
       if (!tcEnv.getJavaOpts().isEmpty()) {
         cmdLine.addAll(tcEnv.getJavaOpts());
       }
-      cmdLine.add("-classpath");
-      cmdLine.add(buildClasspath());
-
-      PortAllocator.PortReservation reservation = portAllocator.reserve(2);
-      cmdLine.add("-Dignite.discovery.port=" + reservation.next());
-      cmdLine.add("-Dignite.com.port=" + reservation.next());
-      cmdLine.add("-D" + DIRECT_JOIN.getPropertyName() + "=" + String.join(",", joinedNodes));
-      cmdLine.add("-D" + NODE_NAME.getPropertyName() + "=" + instanceId + ":" + ignitePort);
+      // angela.java.resolver=user will ensure that any usage of TerracottaCommandLineEnvironment
+      // will point to the exact same JVM as the one used to start the process by default
+      cmdLine.add("-Dangela.java.resolver=user");
+      cmdLine.add("-Dangela.process=spawned");
+      cmdLine.add("-Dangela.directJoin=" + String.join(",", group.getPeerAddresses()));
+      cmdLine.add("-Dangela.group=" + group.getId());
+      cmdLine.add("-Dangela.instanceName=" + instanceId);
       cmdLine.add("-D" + ROOT_DIR.getPropertyName() + "=" + Agent.ROOT_DIR);
       cmdLine.add(Agent.class.getName());
 
-      logger.info("Spawning client with: {}", String.join(" ", cmdLine));
+      if (logger.isDebugEnabled()) {
+        logger.info("Spawning client agent: {} with: {}", instanceId, String.join(" ", cmdLine));
+      } else {
+        logger.info("Spawning client agent: {}", instanceId);
+      }
+
       ProcessExecutor processExecutor = new ProcessExecutor()
           .command(cmdLine)
           .redirectOutput(new LogOutputStream() {
             @Override
             protected void processLine(String line) {
               ExternalLoggers.clientLogger.info("[{}] {}", instanceId, line);
-              if (line.equals(Agent.AGENT_IS_READY_MARKER_LOG)) {
+              if (line.startsWith(Agent.AGENT_IS_READY_MARKER_LOG)) {
+                agentID.set(AgentID.valueOf(line.substring(Agent.AGENT_IS_READY_MARKER_LOG.length() + 2)));
                 started.set(true);
               }
             }
           })
           .redirectErrorStream(true)
-          .directory(getClientInstallationPath());
+          .directory(getClientInstallationPath().toFile());
       StartedProcess startedProcess = processExecutor.start();
 
-      logger.debug("Waiting for spawned agent to be ready having PID: {}", PidUtil.getPid(startedProcess.getProcess()));
+      logger.info("Waiting for spawned agent with PID: {} to be ready...", PidUtil.getPid(startedProcess.getProcess()));
       while (startedProcess.getProcess().isAlive() && !started.get()) {
         Thread.sleep(500); // no need to do a short wait because ignite startup is really slow
       }
@@ -137,23 +133,26 @@ public class RemoteClientManager {
         throw new RuntimeException("Client process died in infancy");
       }
 
-      int pid = PidUtil.getPid(startedProcess.getProcess());
-      logger.info("Spawned client with PID {}", pid);
-      return pid;
-    } catch (Exception e) {
-      throw new RuntimeException("Error spawning client " + instanceId, e);
+      AgentID id = agentID.get();
+      if (id == null) {
+        throw new AssertionError("No AgentID");
+      }
+
+      logger.info("Spawned client with PID {}", id.getPid());
+      return id;
+    } catch (IOException | InterruptedException e) {
+      throw Exceptions.rethrow("Error spawning client " + instanceId, e);
     }
   }
 
-  private String buildClasspath() {
-    String[] cpEntries = getClientClasspathRoot().list();
-    if (cpEntries == null) {
+  private String buildClasspath() throws IOException {
+    final Path root = getClientClasspathRoot();
+    if (!Files.isDirectory(root)) {
       throw new RuntimeException("Cannot build client classpath before the classpath root is uploaded");
     }
-
     StringBuilder sb = new StringBuilder();
-    for (String cpentry : cpEntries) {
-      sb.append(CLASSPATH_SUBDIR_NAME).append(File.separator).append(cpentry).append(File.pathSeparator);
+    try (Stream<Path> list = Files.list(root)) {
+      list.forEach(cpentry -> sb.append(CLASSPATH_SUBDIR_NAME).append(File.separator).append(cpentry.getFileName()).append(File.pathSeparator));
     }
 
     String agentClassName = Agent.class.getName().replace('.', '/');

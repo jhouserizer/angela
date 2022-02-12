@@ -19,7 +19,7 @@ import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.metrics.HardwareMetricsCollector;
 import org.terracotta.angela.common.metrics.MonitoringCommand;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 
 /**
@@ -28,10 +28,10 @@ import java.util.Map;
 
 public class MonitoringInstance {
 
-  private final File workingPath;
+  private final Path workingPath;
   private final HardwareMetricsCollector hardwareMetricsCollector = new HardwareMetricsCollector();
 
-  public MonitoringInstance(File workingPath) {
+  public MonitoringInstance(Path workingPath) {
     this.workingPath = workingPath;
   }
 
