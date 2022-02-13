@@ -23,6 +23,7 @@ import org.terracotta.angela.common.util.JavaLocationResolver;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -64,12 +65,12 @@ public class TerracottaCommandLineEnvironment implements Serializable {
         // Important - Use a LinkedHashSet to preserve the order of preferred Java vendor
         Set<String> vendors = JAVA_VENDOR.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_VENDOR.getValue());
         // Important - Use a LinkedHashSet to preserve the order of opts, as some opts are position-sensitive
-        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_OPTS.getValue());
+        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(JAVA_OPTS.getValue().split(" ")));
         DEFAULT = new TerracottaCommandLineEnvironment(false, version, vendors, opts);
         break;
       }
       case "user": {
-        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_OPTS.getValue());
+        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(JAVA_OPTS.getValue().split(" ")));
         DEFAULT = new TerracottaCommandLineEnvironment(true, "", emptySet(), opts);
         break;
       }
