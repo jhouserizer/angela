@@ -127,7 +127,7 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
           <argLine>-Xmx1024m</argLine>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
-            <angela.skipUninstall>true</angela.skipUninstall>
+            <angela.skipUninstall>false</angela.skipUninstall>
             <angela.kitCopy>false</angela.kitCopy>
             <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
             <angela.java.resolver>user</angela.java.resolver>
