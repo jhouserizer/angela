@@ -52,7 +52,6 @@ import static org.terracotta.angela.util.Versions.EHCACHE_VERSION_XML;
 /**
  * @author Aurelien Broszniowski
  */
-@SuppressWarnings("serial")
 public class InstallIT extends BaseIT {
 
   public InstallIT(String mode, String hostname, boolean inline, boolean ssh) {

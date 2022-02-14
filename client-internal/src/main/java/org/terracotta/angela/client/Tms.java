@@ -28,6 +28,7 @@ import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerState;
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tms.security.config.TmsClientSecurityConfig;
 import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
@@ -63,11 +64,11 @@ public class Tms implements AutoCloseable {
   @Deprecated
   public static final String FULL = "full";
 
-  Tms(Executor executor, InstanceId instanceId, TmsConfigurationContext tmsConfigurationContext) {
+  Tms(Executor executor, PortAllocator portAllocator, InstanceId instanceId, TmsConfigurationContext tmsConfigurationContext) {
     this.tmsConfigurationContext = tmsConfigurationContext;
     this.instanceId = instanceId;
     this.executor = executor;
-    this.localKitManager = new LocalKitManager(tmsConfigurationContext.getDistribution());
+    this.localKitManager = new LocalKitManager(portAllocator, tmsConfigurationContext.getDistribution());
     install();
   }
 

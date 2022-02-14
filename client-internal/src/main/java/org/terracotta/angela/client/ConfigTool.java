@@ -28,6 +28,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.ToolException;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
@@ -57,11 +58,11 @@ public class ConfigTool implements AutoCloseable {
   private final transient LocalKitManager localKitManager;
   private final transient Tsa tsa;
 
-  ConfigTool(Executor executor, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
+  ConfigTool(Executor executor, PortAllocator portAllocator, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
     this.instanceId = instanceId;
     this.executor = executor.forAgent(executor.getAgentID(configContext.getHostName()));
     this.configContext = configContext;
-    this.localKitManager = new LocalKitManager(configContext.getDistribution());
+    this.localKitManager = new LocalKitManager(portAllocator, configContext.getDistribution());
     this.tsa = tsa;
     install();
   }

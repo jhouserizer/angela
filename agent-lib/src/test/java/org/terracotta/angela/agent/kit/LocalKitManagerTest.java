@@ -42,7 +42,7 @@ public class LocalKitManagerTest {
     System.out.println(file.getAbsolutePath());
     file.delete();
 
-    final LocalKitManager localKitManager = new LocalKitManager(null);
+    final LocalKitManager localKitManager = new LocalKitManager(null, null);
 
     List<Thread> threads = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
