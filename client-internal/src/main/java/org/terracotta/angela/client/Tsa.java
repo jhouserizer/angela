@@ -88,7 +88,7 @@ public class Tsa implements AutoCloseable {
     this.instanceId = instanceId;
     this.executor = executor;
     this.disruptionController = new DisruptionController(executor, instanceId, tsaConfigurationContext.getTopology());
-    this.localKitManager = new LocalKitManager(tsaConfigurationContext.getTopology().getDistribution());
+    this.localKitManager = new LocalKitManager(portAllocator, tsaConfigurationContext.getTopology().getDistribution());
     installAll();
   }
 
@@ -174,7 +174,7 @@ public class Tsa implements AutoCloseable {
   public Tsa upgrade(TerracottaServer server, Distribution newDistribution) {
     logger.info("Upgrading TSA: {} to: {}", server, newDistribution);
     uninstall(server);
-    LocalKitManager localKitManager = new LocalKitManager(newDistribution);
+    LocalKitManager localKitManager = new LocalKitManager(portAllocator, newDistribution);
     installWithKitManager(server, tsaConfigurationContext.getTopology(), localKitManager);
     return this;
   }

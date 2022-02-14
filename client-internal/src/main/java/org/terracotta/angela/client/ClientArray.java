@@ -24,6 +24,7 @@ import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.clientconfig.ClientId;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 
 import java.io.File;
@@ -52,11 +53,11 @@ public class ClientArray implements AutoCloseable {
   private final transient ClientArrayConfigurationContext clientArrayConfigurationContext;
   private boolean closed = false;
 
-  ClientArray(Executor executor, Supplier<InstanceId> clientInstanceIdSupplier, ClientArrayConfigurationContext clientArrayConfigurationContext) {
+  ClientArray(Executor executor, PortAllocator portAllocator, Supplier<InstanceId> clientInstanceIdSupplier, ClientArrayConfigurationContext clientArrayConfigurationContext) {
     this.clientArrayConfigurationContext = clientArrayConfigurationContext;
     this.clientInstanceIdSupplier = clientInstanceIdSupplier;
     this.executor = executor;
-    this.localKitManager = new LocalKitManager(clientArrayConfigurationContext.getClientArrayTopology().getDistribution());
+    this.localKitManager = new LocalKitManager(portAllocator, clientArrayConfigurationContext.getClientArrayTopology().getDistribution());
     installAll();
   }
 

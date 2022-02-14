@@ -28,6 +28,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.TerracottaVoterState;
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.topology.InstanceId;
@@ -55,11 +56,11 @@ public class Voter implements AutoCloseable {
   private final transient LocalKitManager localKitManager;
   private boolean closed = false;
 
-  Voter(Executor executor, InstanceId instanceId, VoterConfigurationContext voterConfigurationContext) {
+  Voter(Executor executor, PortAllocator portAllocator, InstanceId instanceId, VoterConfigurationContext voterConfigurationContext) {
     this.voterConfigurationContext = voterConfigurationContext;
     this.instanceId = instanceId;
     this.executor = executor;
-    this.localKitManager = new LocalKitManager(voterConfigurationContext.getDistribution());
+    this.localKitManager = new LocalKitManager(portAllocator, voterConfigurationContext.getDistribution());
     installAll();
   }
 

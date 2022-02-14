@@ -124,7 +124,7 @@ public class ClusterFactory implements AutoCloseable {
     }
     InstanceId instanceId = init(TMS, Collections.singletonList(tmsConfigurationContext.getHostName()));
 
-    Tms tms = new Tms(executor, instanceId, tmsConfigurationContext);
+    Tms tms = new Tms(executor, portAllocator, instanceId, tmsConfigurationContext);
     controllers.add(tms);
     return tms;
   }
@@ -140,7 +140,7 @@ public class ClusterFactory implements AutoCloseable {
         .map(autoCloseable -> (Tsa) autoCloseable)
         .findAny()
         .orElseThrow(() -> new IllegalStateException("Tsa should be defined before cluster tool in ConfigurationContext"));
-    ClusterTool clusterTool = new ClusterTool(executor, instanceId, clusterToolConfigurationContext, tsa);
+    ClusterTool clusterTool = new ClusterTool(executor, portAllocator, instanceId, clusterToolConfigurationContext, tsa);
     controllers.add(clusterTool);
     return clusterTool;
   }
@@ -156,7 +156,7 @@ public class ClusterFactory implements AutoCloseable {
         .map(autoCloseable -> (Tsa) autoCloseable)
         .findAny()
         .orElseThrow(() -> new IllegalStateException("Tsa should be defined before config tool in ConfigurationContext"));
-    ConfigTool configTool = new ConfigTool(executor, instanceId, configToolConfigurationContext, tsa);
+    ConfigTool configTool = new ConfigTool(executor, portAllocator, instanceId, configToolConfigurationContext, tsa);
     controllers.add(configTool);
     return configTool;
   }
@@ -167,7 +167,7 @@ public class ClusterFactory implements AutoCloseable {
       throw new IllegalArgumentException("voter() configuration missing in the ConfigurationContext");
     }
     InstanceId instanceId = init(VOTER, voterConfigurationContext.getHostNames());
-    Voter voter = new Voter(executor, instanceId, voterConfigurationContext);
+    Voter voter = new Voter(executor, portAllocator, instanceId, voterConfigurationContext);
     controllers.add(voter);
     return voter;
   }
@@ -180,7 +180,7 @@ public class ClusterFactory implements AutoCloseable {
     ClientArrayConfigurationContext clientArrayConfigurationContext = configurationContext.clientArray(idx);
     init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
 
-    ClientArray clientArray = new ClientArray(executor, () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames()), clientArrayConfigurationContext);
+    ClientArray clientArray = new ClientArray(executor, portAllocator, () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames()), clientArrayConfigurationContext);
     controllers.add(clientArray);
     return clientArray;
   }
@@ -190,7 +190,7 @@ public class ClusterFactory implements AutoCloseable {
         .map(clientArrayConfigurationContext -> {
           init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology().getClientHostnames());
 
-          ClientArray clientArray = new ClientArray(executor,
+          ClientArray clientArray = new ClientArray(executor, portAllocator,
               () -> init(CLIENT_ARRAY, clientArrayConfigurationContext.getClientArrayTopology()
                   .getClientHostnames()), clientArrayConfigurationContext);
           controllers.add(clientArray);

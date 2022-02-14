@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.KitResolver;
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 
 import java.io.File;
@@ -48,7 +49,7 @@ public class LocalKitManager extends KitManager {
   private final KitResolver kitResolver;
   static final String INSTALLATION_LOCK_FILE_NAME = "angela-install.lock";
 
-  public LocalKitManager(Distribution distribution) {
+  public LocalKitManager(PortAllocator portAllocator, Distribution distribution) {
     super(distribution);
 
     if (distribution != null) {
@@ -69,6 +70,7 @@ public class LocalKitManager extends KitManager {
         throw new IllegalArgumentException("Current LicenceType " + distribution.getLicenseType() + " can't find a corresponding KitResolver service (" + kitResolverCount + " services available)");
       } else {
         this.kitResolver = currentKitResolver;
+        this.kitResolver.init(portAllocator);
       }
     } else {
       this.kitResolver = null;

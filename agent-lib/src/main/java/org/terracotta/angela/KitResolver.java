@@ -17,6 +17,7 @@ package org.terracotta.angela;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
@@ -38,7 +39,7 @@ import static org.terracotta.angela.common.topology.PackageType.KIT;
 
 /**
  * The KitResolver implementation will resolve the appropriate coordinates of the Terracotta installation
- *
+ * <p>
  * We rely on the Java SPI in order to dynamically load the appropriate implementation according to the type (KIT or SAG based)
  * and the license (OSS or EE).
  *
@@ -49,11 +50,14 @@ public abstract class KitResolver {
 
   private static final Logger logger = LoggerFactory.getLogger(KitResolver.class);
 
+  public void init(PortAllocator portAllocator) {
+  }
+
   /**
    * Resolves the installer path on the local machine.
    * This will allow Angela to call the installer and do a local install.
    *
-   * @param version {@link Version}
+   * @param version     {@link Version}
    * @param licenseType {@link LicenseType}
    * @param packageType {@link PackageType}
    * @return path of the installer on the local machine
@@ -62,10 +66,11 @@ public abstract class KitResolver {
 
   /**
    * Uses the local installer and create a Terracotta install on the local machine.
-   * @param version {@link Version}
-   * @param packageType {@link PackageType}
-   * @param license {@link License}
-   * @param localInstallerPath path of the installer on the local machine
+   *
+   * @param version              {@link Version}
+   * @param packageType          {@link PackageType}
+   * @param license              {@link License}
+   * @param localInstallerPath   path of the installer on the local machine
    * @param rootInstallationPath directory where installs are stored for caching
    */
   public abstract void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath);
@@ -73,9 +78,9 @@ public abstract class KitResolver {
   /**
    * Resolves the root of the local Terracotta install path.
    *
-   * @param version {@link Version}
-   * @param packageType {@link PackageType}
-   * @param localInstallerPath path of the installer on the local machine
+   * @param version              {@link Version}
+   * @param packageType          {@link PackageType}
+   * @param localInstallerPath   path of the installer on the local machine
    * @param rootInstallationPath directory where installs are stored for caching
    * @return
    */
@@ -84,7 +89,7 @@ public abstract class KitResolver {
   /**
    * Resolves the Terracotta installation kit URL.
    *
-   * @param version {@link Version}
+   * @param version     {@link Version}
    * @param licenseType {@link LicenseType}
    * @param packageType {@link PackageType}
    * @return URL of the installation kit
@@ -93,6 +98,7 @@ public abstract class KitResolver {
 
   /**
    * Verifies if the {@link LicenseType} is supported by the KitResolver implementation.
+   *
    * @param licenseType {@link LicenseType}
    * @return true if the LicenseType is supported
    */
@@ -101,9 +107,9 @@ public abstract class KitResolver {
   /**
    * Downloads the installer on the local machine
    *
-   * @param version {@link Version}
-   * @param licenseType {@link LicenseType}
-   * @param packageType {@link PackageType}
+   * @param version            {@link Version}
+   * @param licenseType        {@link LicenseType}
+   * @param packageType        {@link PackageType}
    * @param localInstallerFile path of the installer on the local machine
    */
   public void downloadLocalInstaller(Version version, LicenseType licenseType, PackageType packageType, Path localInstallerFile) {
@@ -159,7 +165,7 @@ public abstract class KitResolver {
   // Adapted from https://programming.guide/java/formatting-byte-size-to-human-readable-format.html
   private static String humanReadableByteCount(long bytes) {
     if (bytes < 1024) return bytes + " B";
-    int exp = (int)(Math.log(bytes) / Math.log(1024));
+    int exp = (int) (Math.log(bytes) / Math.log(1024));
     String pre = "" + "KMGTPE".charAt(exp - 1);
     return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
   }
