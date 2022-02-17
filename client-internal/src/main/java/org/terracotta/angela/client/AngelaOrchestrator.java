@@ -129,7 +129,7 @@ public class AngelaOrchestrator implements Closeable {
   }
 
   public static AngelaOrchestratorBuilder builder() {
-    return new AngelaOrchestratorBuilder().igniteRemote();
+    return new AngelaOrchestratorBuilder();
   }
 
   public static class AngelaOrchestratorBuilder {
@@ -139,6 +139,10 @@ public class AngelaOrchestrator implements Closeable {
     private Supplier<Agent> agentBuilder;
     private Function<Agent, Executor> executorBuilder;
     private String mode; // just for toString()
+
+    private AngelaOrchestratorBuilder() {
+      igniteRemote();
+    }
 
     /**
      * @deprecated Use {@link #igniteFree()} instead
