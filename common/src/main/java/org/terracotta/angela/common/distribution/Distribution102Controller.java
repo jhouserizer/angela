@@ -35,6 +35,7 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TcConfig;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
+import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.angela.common.util.ExternalLoggers;
@@ -288,6 +289,16 @@ public class Distribution102Controller extends DistributionController {
   @Override
   public String terracottaInstallationRoot() {
     return "TerracottaDB";
+  }
+
+  @Override
+  public void prepareTMS(File kitDir, File workingDir, TmsServerSecurityConfig tmsServerSecurityConfig) {
+    if (!AngelaProperties.KIT_COPY.getBooleanValue()) {
+      throw new IllegalStateException(AngelaProperties.KIT_COPY.getPropertyName() + "=true is required with the kit version used");
+    }
+    File tmcPropertiesInput = new File(kitDir, "tools/management/conf/tmc.properties");
+    File tmcPropertiesOutput = new File(workingDir, "tools/management/conf/tmc.properties");
+    prepareTMS(tmcPropertiesInput, tmcPropertiesOutput, tmsServerSecurityConfig, workingDir);
   }
 
   private List<String> createClusterToolCommand(File installLocation, File workingDir, SecurityRootDirectory securityDir, String[] arguments) {

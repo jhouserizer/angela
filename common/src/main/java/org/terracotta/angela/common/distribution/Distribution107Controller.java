@@ -17,6 +17,7 @@ package org.terracotta.angela.common.distribution;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance.TerracottaManagementServerInstanceProcess;
 import org.terracotta.angela.common.TerracottaManagementServerState;
@@ -30,6 +31,7 @@ import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
+import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
 import org.terracotta.angela.common.util.ExternalLoggers;
@@ -199,6 +201,12 @@ public class Distribution107Controller extends DistributionController {
   @Override
   public TerracottaManagementServerInstanceProcess startTms(File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides) {
     Map<String, String> env = tcEnv.buildEnv(envOverrides);
+
+    if (!AngelaProperties.KIT_COPY.getBooleanValue() && !env.containsKey("TMC_HOME")) {
+      // when using the kit to start from, we have our config in the angela working dir.
+      // we have to point to the right working dir to not modify files inside the kit
+      env.put("TMC_HOME", workingDir.getAbsolutePath());
+    }
 
     AtomicReference<TerracottaManagementServerState> stateRef = new AtomicReference<>(TerracottaManagementServerState.STOPPED);
     AtomicInteger javaPid = new AtomicInteger(-1);
@@ -644,5 +652,17 @@ public class Distribution107Controller extends DistributionController {
   @Override
   public String terracottaInstallationRoot() {
     return "TerracottaDB";
+  }
+
+  @Override
+  public void prepareTMS(File kitDir, File workingDir, TmsServerSecurityConfig tmsServerSecurityConfig) {
+    File tmcPropertiesInput = new File(kitDir, "tools/management/conf/tmc.properties");
+    File tmcPropertiesOutput;
+    if (AngelaProperties.KIT_COPY.getBooleanValue()) {
+      tmcPropertiesOutput = new File(workingDir, "tools/management/conf/tmc.properties");
+    } else {
+      tmcPropertiesOutput = new File(workingDir, "conf/tmc.properties");
+    }
+    prepareTMS(tmcPropertiesInput, tmcPropertiesOutput, tmsServerSecurityConfig, workingDir);
   }
 }

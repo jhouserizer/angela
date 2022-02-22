@@ -59,8 +59,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,10 +67,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.zip.ZipEntry;
@@ -224,10 +222,7 @@ public class AgentController {
 
       // DO NOT ALTER THE KIT CONTENT IF kitInstallationPath IS USED
       if (kitInstallationPath == null) {
-        File tmcProperties = new File(dirs.get().kitDir, "/tools/management/conf/tmc.properties");
-        if (tmsServerSecurityConfig != null) {
-          enableTmsSecurity(tmcProperties, tmsServerSecurityConfig);
-        }
+        distribution.createDistributionController().prepareTMS(dirs.get().kitDir, dirs.get().workingDir, tmsServerSecurityConfig);
       }
 
       tmsInstalls.put(instanceId, new TmsInstall(distribution, dirs.get().kitDir, dirs.get().workingDir, tcEnv));
@@ -300,52 +295,14 @@ public class AgentController {
     return true;
   }
 
-  private void enableTmsSecurity(File tmcProperties, TmsServerSecurityConfig tmsServerSecurityConfig) {
-    Properties properties = new Properties();
-
-    try (InputStream inputStream = new FileInputStream(tmcProperties)) {
-      properties.load(inputStream);
-    } catch (Exception ex) {
-      throw new RuntimeException("Unable to enable security in TMS tmc.properties file", ex);
-    }
-
-    tmsServerSecurityConfig.toMap().forEach((key, value) -> {
-      if (value == null) {
-        properties.remove(key);
-      } else {
-        properties.put(key, value);
-      }
-    });
-
-    try (OutputStream outputStream = new FileOutputStream(tmcProperties)) {
-      properties.store(outputStream, null);
-    } catch (Exception ex) {
-      throw new RuntimeException("Unable to enable security in TMS tmc.properties file", ex);
-    }
-  }
-
-  private void disableTmsSecurity(File tmcProperties, TmsServerSecurityConfig tmsServerSecurityConfig) {
-    Properties properties = new Properties();
-
-    try (InputStream inputStream = new FileInputStream(tmcProperties)) {
-      properties.load(inputStream);
-    } catch (Exception ex) {
-      throw new RuntimeException("Unable to disable security in TMS tmc.properties file", ex);
-    }
-
-    tmsServerSecurityConfig.toMap().forEach((key, value) -> properties.remove(key));
-
-    try (OutputStream outputStream = new FileOutputStream(tmcProperties)) {
-      properties.store(outputStream, null);
-    } catch (Exception ex) {
-      throw new RuntimeException("Unable to disable security in TMS tmc.properties file", ex);
-    }
-  }
-
-  public void startTms(InstanceId instanceId, Map<String, String> envOverrides) {
+  public int startTms(InstanceId instanceId, Map<String, String> envOverrides) {
     TerracottaManagementServerInstance serverInstance = tmsInstalls.get(instanceId)
         .getTerracottaManagementServerInstance();
+    int port = portAllocator.reserve(1).next();
+    envOverrides = new LinkedHashMap<>(envOverrides);
+    envOverrides.put("SERVER_PORT", String.valueOf(port));
     serverInstance.start(envOverrides);
+    return port;
   }
 
   public void stopTms(InstanceId instanceId) {
@@ -395,13 +352,6 @@ public class AgentController {
                            String kitInstallationName, String tmsHostname, String kitInstallationPath) {
     TmsInstall tmsInstall = tmsInstalls.get(instanceId);
     if (tmsInstall != null) {
-      // DO NOT ALTER THE KIT CONTENT IF kitInstallationPath IS USED
-      if (kitInstallationPath == null) {
-        File tmcProperties = new File(tmsInstall.getKitLocation(), "/tools/management/conf/tmc.properties");
-        if (tmsServerSecurityConfig != null) {
-          disableTmsSecurity(tmcProperties, tmsServerSecurityConfig);
-        }
-      }
       tmsInstall.removeServer();
       tmsInstalls.remove(instanceId);
       File installLocation = tmsInstall.getWorkingDir();
