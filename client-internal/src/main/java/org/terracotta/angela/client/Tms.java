@@ -54,6 +54,7 @@ public class Tms implements AutoCloseable {
   private final transient Executor executor;
   private final InstanceId instanceId;
   private final transient LocalKitManager localKitManager;
+  private volatile int port;
 
   @Deprecated
   private static final String NONE = "none";
@@ -85,7 +86,10 @@ public class Tms implements AutoCloseable {
           || BROWSER_SECURITY.equals(tmsServerSecurityConfig.getDeprecatedSecurityLevel())
       );
     }
-    return (isHttps ? "https://" : "http://") + new HostPort(tmsConfigurationContext.getHostName(), 9480).getHostPort();
+    if (port == 0) {
+      throw new IllegalStateException("TMS not started");
+    }
+    return (isHttps ? "https://" : "http://") + new HostPort(tmsConfigurationContext.getHostName(), port).getHostPort();
   }
 
   public TmsHttpClient httpClient() {
@@ -117,8 +121,13 @@ public class Tms implements AutoCloseable {
   public Tms start(Map<String, String> envOverrides) {
     final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Starting TMS: {} on: {}", instanceId, agentID);
-    executor.execute(agentID, () -> AgentController.getInstance().startTms(instanceId, envOverrides));
+    port = executor.execute(agentID, () -> AgentController.getInstance().startTms(instanceId, envOverrides));
+    logger.info("TMS started on port: {}", port);
     return this;
+  }
+
+  public int getPort() {
+    return port;
   }
 
   public void stop() {

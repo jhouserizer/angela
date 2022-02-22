@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.distribution;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance;
 import org.terracotta.angela.common.TerracottaServerHandle;
@@ -25,13 +26,23 @@ import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
+import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.Topology;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+
+import static java.util.Collections.emptyMap;
 
 /**
  * @author Aurelien Broszniowski
@@ -74,4 +85,46 @@ public abstract class DistributionController {
   public abstract String pluginJarsRootFolderName(Distribution distribution);
 
   public abstract String terracottaInstallationRoot();
+
+  public abstract void prepareTMS(File kitDir, File workingDir, TmsServerSecurityConfig tmsServerSecurityConfig);
+
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  protected void prepareTMS(File tmcPropertiesInput, File tmcPropertiesOutput, TmsServerSecurityConfig tmsServerSecurityConfig, File workDir) {
+    Properties properties = new Properties();
+
+    if (tmcPropertiesInput.exists()) {
+      try (InputStream inputStream = new FileInputStream(tmcPropertiesInput)) {
+        properties.load(inputStream);
+      } catch (IOException ex) {
+        throw new UncheckedIOException(ex);
+      }
+    }
+
+    tmcPropertiesOutput.getParentFile().mkdirs();
+
+    Map<String, String> props = tmsServerSecurityConfig == null ? emptyMap() : tmsServerSecurityConfig.toMap();
+
+    if (props.containsKey(TmsServerSecurityConfig.AUDIT_DIRECTORY)) {
+      File path = new File(props.get(TmsServerSecurityConfig.AUDIT_DIRECTORY));
+      if (!path.isAbsolute()) {
+        path = new File(workDir, path.getPath());
+      }
+      path.mkdirs();
+    }
+
+    props.forEach((key, value) -> {
+      if (value == null) {
+        properties.remove(key);
+      } else {
+        properties.put(key, value);
+      }
+    });
+
+    try (OutputStream outputStream = new FileOutputStream(tmcPropertiesOutput)) {
+      properties.store(outputStream, null);
+    } catch (Exception ex) {
+      throw new RuntimeException("Unable to enable security in TMS tmc.properties file", ex);
+    }
+  }
 }
