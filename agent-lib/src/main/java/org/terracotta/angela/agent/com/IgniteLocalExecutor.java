@@ -50,6 +50,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static java.util.function.Predicate.isEqual;
 import static java.util.stream.Collectors.toList;
@@ -89,10 +91,9 @@ public class IgniteLocalExecutor implements Executor {
           AgentID left = AgentID.valueOf(((DiscoveryEvent) event).eventNode().attribute("angela.nodeName"));
           logger.info("Agent: {} has left cluster group: {}", left, group);
           agents.values().remove(left);
-          CountDownLatch latch = shutdowns.remove(left);
-          if (latch != null) {
-            latch.countDown();
-          }
+          // keep a history of recorded shutdowns
+          CountDownLatch latch = shutdowns.computeIfAbsent(left, agentID1 -> new CountDownLatch(1));
+          latch.countDown();
         }
         return true;
       }
@@ -114,7 +115,13 @@ public class IgniteLocalExecutor implements Executor {
   public void close() {
     getGroup().spawnedAgentIDs()
         .filter(isEqual(getLocalAgentID()).negate())
-        .forEach(this::shutdown);
+        .forEach(a -> {
+          try {
+            shutdown(a);
+          } catch (TimeoutException e) {
+            logger.warn("Agent: {} did not shutdown in stime", a, e);
+          }
+        });
   }
 
   @Override
@@ -134,7 +141,7 @@ public class IgniteLocalExecutor implements Executor {
   }
 
   @Override
-  public void shutdown(AgentID agentID) {
+  public void shutdown(AgentID agentID) throws TimeoutException {
     if (getLocalAgentID().equals(agentID)) {
       throw new IllegalArgumentException("Cannot kill myself: " + agentID);
     }
@@ -145,7 +152,7 @@ public class IgniteLocalExecutor implements Executor {
 
       // already closed ?
       if (!group.contains(agentID)) {
-        return null;
+        return new CountDownLatch(0);
       }
 
       // not remotely closeable ?
@@ -156,34 +163,33 @@ public class IgniteLocalExecutor implements Executor {
       logger.info("Requesting shutdown of agent: {}", agentID);
 
       try {
-        execute(agentID, () -> new Thread() {
+        executeAsync(agentID, () -> new Thread() {
           {setDaemon(true);}
 
           @SuppressFBWarnings("DM_EXIT")
           @Override
           public void run() {
+            try {
+              Thread.sleep(1_000);
+            } catch (InterruptedException ignored) {
+            }
             System.exit(0);
           }
         }.start());
       } catch (ClusterGroupEmptyException e) {
         logger.debug("Agent: {} has been closed concurrently through another mean", agentID);
-        return null;
+        return new CountDownLatch(0);
       }
 
       return new CountDownLatch(1);
     });
 
-    if (done == null) {
-      // already closed ?
-      agents.values().remove(agentID);
-      shutdowns.remove(agentID);
-
-    } else {
-      try {
-        done.await();
-      } catch (InterruptedException e) {
-        throw Exceptions.rethrow(e);
+    try {
+      if (!done.await(15, TimeUnit.SECONDS)) {
+        throw new TimeoutException("Agent: " + agentID + " did not shutown within 15 seconds...");
       }
+    } catch (InterruptedException e) {
+      throw Exceptions.rethrow(e);
     }
   }
 

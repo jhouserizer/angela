@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 /**
@@ -75,7 +76,7 @@ public interface Executor extends AutoCloseable {
 
   void uploadKit(AgentID agentID, InstanceId instanceId, Distribution distribution, String kitInstallationName, Path kitInstallationPath);
 
-  void shutdown(AgentID agentID);
+  void shutdown(AgentID agentID) throws TimeoutException;
 
   // defaults
 
