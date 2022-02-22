@@ -27,6 +27,7 @@ import org.terracotta.angela.util.SshServer;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -100,7 +101,7 @@ public class IgniteSshRemoteExecutorIT {
   }
 
   @Test
-  public void testShutdown() {
+  public void testShutdown() throws TimeoutException {
     try (Executor executor = new IgniteSshRemoteExecutor(agent)
         .setStrictHostKeyChecking(false)
         .setPort(sshServer.getPort())) {
