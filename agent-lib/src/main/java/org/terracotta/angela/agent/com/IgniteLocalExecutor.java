@@ -189,7 +189,7 @@ public class IgniteLocalExecutor implements Executor {
         throw new TimeoutException("Agent: " + agentID + " did not shutown within 15 seconds...");
       }
     } catch (InterruptedException e) {
-      throw Exceptions.rethrow(e);
+      throw Exceptions.asRuntime(e);
     }
   }
 

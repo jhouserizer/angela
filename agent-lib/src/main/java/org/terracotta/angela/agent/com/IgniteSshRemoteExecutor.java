@@ -267,7 +267,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       if (holder != null) {
         safeClose(hostname, holder);
       }
-      throw Exceptions.rethrow("Failed to launch Ignite agent at: " + remoteUserName + "@" + hostname + " (using SSH)", e);
+      throw Exceptions.asRuntime("Failed to launch Ignite agent at: " + remoteUserName + "@" + hostname + " (using SSH)", e);
     }
   }
 
