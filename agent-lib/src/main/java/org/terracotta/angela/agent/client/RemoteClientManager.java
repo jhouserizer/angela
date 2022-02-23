@@ -141,7 +141,7 @@ public class RemoteClientManager {
       logger.info("Spawned client with PID {}", id.getPid());
       return id;
     } catch (IOException | InterruptedException e) {
-      throw Exceptions.rethrow("Error spawning client " + instanceId, e);
+      throw Exceptions.asRuntime("Error spawning client " + instanceId, e);
     }
   }
 

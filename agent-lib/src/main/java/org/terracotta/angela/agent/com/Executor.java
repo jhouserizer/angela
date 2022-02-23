@@ -84,7 +84,7 @@ public interface Executor extends AutoCloseable {
     try {
       executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {
-      throw Exceptions.rethrow(e);
+      throw Exceptions.asRuntime(e);
     }
   }
 
@@ -92,7 +92,7 @@ public interface Executor extends AutoCloseable {
     try {
       return executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {
-      throw Exceptions.rethrow(e);
+      throw Exceptions.asRuntime(e);
     }
   }
 
@@ -151,7 +151,7 @@ public interface Executor extends AutoCloseable {
         remoteDownloadFuture.get();
       }
     } catch (ExecutionException | InterruptedException e) {
-      throw Exceptions.rethrow(e);
+      throw Exceptions.asRuntime(e);
     }
   }
 }

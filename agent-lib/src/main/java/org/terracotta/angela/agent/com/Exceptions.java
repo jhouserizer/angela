@@ -20,11 +20,11 @@ import java.io.UncheckedIOException;
 import java.util.concurrent.ExecutionException;
 
 public class Exceptions {
-  public static RuntimeException rethrow(Throwable e) {
-    return rethrow(null, e);
+  public static RuntimeException asRuntime(Throwable e) {
+    return asRuntime(null, e);
   }
 
-  public static RuntimeException rethrow(String msg, Throwable e) {
+  public static RuntimeException asRuntime(String msg, Throwable e) {
     if (e instanceof ExecutionException) {
       e = e.getCause();
     }
@@ -35,7 +35,7 @@ public class Exceptions {
       return (RuntimeException) e;
     }
     if (e instanceof IOException) {
-      throw new UncheckedIOException((IOException) e);
+      return new UncheckedIOException((IOException) e);
     }
     if (e instanceof InterruptedException) {
       Thread.currentThread().interrupt();
