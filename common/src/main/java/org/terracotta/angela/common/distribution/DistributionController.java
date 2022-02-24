@@ -105,8 +105,9 @@ public abstract class DistributionController {
 
     Map<String, String> props = tmsServerSecurityConfig == null ? emptyMap() : tmsServerSecurityConfig.toMap();
 
-    if (props.containsKey(TmsServerSecurityConfig.AUDIT_DIRECTORY)) {
-      File path = new File(props.get(TmsServerSecurityConfig.AUDIT_DIRECTORY));
+    String auditDir = props.get(TmsServerSecurityConfig.AUDIT_DIRECTORY);
+    if (auditDir != null && !auditDir.isEmpty()) {
+      File path = new File(auditDir);
       if (!path.isAbsolute()) {
         path = new File(workDir, path.getPath());
       }
