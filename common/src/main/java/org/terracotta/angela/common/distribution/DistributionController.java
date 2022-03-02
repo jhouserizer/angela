@@ -30,12 +30,8 @@ import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.Topology;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
@@ -90,17 +86,7 @@ public abstract class DistributionController {
 
   @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   @SuppressWarnings("ResultOfMethodCallIgnored")
-  protected void prepareTMS(File tmcPropertiesInput, File tmcPropertiesOutput, TmsServerSecurityConfig tmsServerSecurityConfig, File workDir) {
-    Properties properties = new Properties();
-
-    if (tmcPropertiesInput.exists()) {
-      try (InputStream inputStream = new FileInputStream(tmcPropertiesInput)) {
-        properties.load(inputStream);
-      } catch (IOException ex) {
-        throw new UncheckedIOException(ex);
-      }
-    }
-
+  protected void prepareTMS(Properties properties, File tmcPropertiesOutput, TmsServerSecurityConfig tmsServerSecurityConfig, File workDir) {
     tmcPropertiesOutput.getParentFile().mkdirs();
 
     Map<String, String> props = tmsServerSecurityConfig == null ? emptyMap() : tmsServerSecurityConfig.toMap();
