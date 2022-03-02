@@ -17,7 +17,6 @@ package org.terracotta.angela.common.distribution;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance.TerracottaManagementServerInstanceProcess;
 import org.terracotta.angela.common.TerracottaManagementServerState;
@@ -57,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -202,12 +202,6 @@ public class Distribution107Controller extends DistributionController {
   public TerracottaManagementServerInstanceProcess startTms(File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides) {
     Map<String, String> env = tcEnv.buildEnv(envOverrides);
 
-    if (!AngelaProperties.KIT_COPY.getBooleanValue() && !env.containsKey("TMC_HOME")) {
-      // when using the kit to start from, we have our config in the angela working dir.
-      // we have to point to the right working dir to not modify files inside the kit
-      env.put("TMC_HOME", workingDir.getAbsolutePath());
-    }
-
     AtomicReference<TerracottaManagementServerState> stateRef = new AtomicReference<>(TerracottaManagementServerState.STOPPED);
     AtomicInteger javaPid = new AtomicInteger(-1);
 
@@ -223,7 +217,7 @@ public class Distribution107Controller extends DistributionController {
         outputStream.andTriggerOn(compile("^.*(WARN|ERROR).*$"), mr -> ExternalLoggers.tmsLogger.info(mr.group()));
 
     WatchedProcess<TerracottaManagementServerState> watchedProcess = new WatchedProcess<>(new ProcessExecutor()
-        .command(startTmsCommand(kitDir))
+        .command(startTmsCommand(workingDir, kitDir))
         .directory(workingDir)
         .environment(env)
         .redirectErrorStream(true)
@@ -607,15 +601,16 @@ public class Distribution107Controller extends DistributionController {
     throw new IllegalStateException("Can not define cluster tool command for distribution: " + distribution);
   }
 
-  List<String> startTmsCommand(File installLocation) {
+  List<String> startTmsCommand(File workingDir, File installLocation) {
     List<String> command = new ArrayList<>();
     command.add(getStartTmsExecutable(installLocation));
+    command.add("--tms.work=" + workingDir.getAbsolutePath());
     LOGGER.debug("Start TMS command: {}", command);
     return command;
   }
 
   private String getStartTmsExecutable(File installLocation) {
-    String execPath = "tools" + separator + "management" + separator + "bin" + separator + "start" + OS.INSTANCE.getShellExtension();
+    String execPath = "tools" + separator + "management" + separator + "bin" + separator + "management-server" + OS.INSTANCE.getShellExtension();
     if (distribution.getPackageType() == PackageType.KIT) {
       return installLocation.getAbsolutePath() + separator + execPath;
     } else if (distribution.getPackageType() == PackageType.SAG_INSTALLER) {
@@ -656,13 +651,6 @@ public class Distribution107Controller extends DistributionController {
 
   @Override
   public void prepareTMS(File kitDir, File workingDir, TmsServerSecurityConfig tmsServerSecurityConfig) {
-    File tmcPropertiesInput = new File(kitDir, "tools/management/conf/tmc.properties");
-    File tmcPropertiesOutput;
-    if (AngelaProperties.KIT_COPY.getBooleanValue()) {
-      tmcPropertiesOutput = new File(workingDir, "tools/management/conf/tmc.properties");
-    } else {
-      tmcPropertiesOutput = new File(workingDir, "conf/tmc.properties");
-    }
-    prepareTMS(tmcPropertiesInput, tmcPropertiesOutput, tmsServerSecurityConfig, workingDir);
+    prepareTMS(new Properties(), new File(workingDir, "tms.custom.properties"), tmsServerSecurityConfig, workingDir);
   }
 }

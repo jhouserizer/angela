@@ -49,6 +49,10 @@ import org.zeroturnaround.exec.ProcessResult;
 import org.zeroturnaround.exec.stream.slf4j.Slf4jStream;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -56,6 +60,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -297,8 +302,17 @@ public class Distribution102Controller extends DistributionController {
       throw new IllegalStateException(AngelaProperties.KIT_COPY.getPropertyName() + "=true is required with the kit version used");
     }
     File tmcPropertiesInput = new File(kitDir, "tools/management/conf/tmc.properties");
+    Properties properties = new Properties();
+    if (tmcPropertiesInput.exists()) {
+      try (InputStream inputStream = new FileInputStream(tmcPropertiesInput)) {
+        properties.load(inputStream);
+      } catch (IOException ex) {
+        throw new UncheckedIOException(ex);
+      }
+    }
+
     File tmcPropertiesOutput = new File(workingDir, "tools/management/conf/tmc.properties");
-    prepareTMS(tmcPropertiesInput, tmcPropertiesOutput, tmsServerSecurityConfig, workingDir);
+    prepareTMS(properties, tmcPropertiesOutput, tmsServerSecurityConfig, workingDir);
   }
 
   private List<String> createClusterToolCommand(File installLocation, File workingDir, SecurityRootDirectory securityDir, String[] arguments) {

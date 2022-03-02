@@ -194,10 +194,10 @@ public class Distribution107ControllerTest {
     Distribution107Controller controller = new Distribution107Controller(distribution);
 
     final File installLocation = new File("/somedir");
-    final List<String> tsaCommand = controller.startTmsCommand(installLocation);
+    final List<String> tsaCommand = controller.startTmsCommand(new File("."), installLocation);
 
-    assertThat(tsaCommand.get(0), is(equalTo(new File("/somedir/tools/management/bin/start").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
-    assertThat(tsaCommand.size(), is(1));
+    assertThat(tsaCommand.get(0), is(equalTo(new File("/somedir/tools/management/bin/management-server").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
+    assertThat(tsaCommand.size(), is(2));
   }
 
   @Test
@@ -207,10 +207,10 @@ public class Distribution107ControllerTest {
     Distribution107Controller controller = new Distribution107Controller(distribution);
 
     final File installLocation = new File("/somedir");
-    final List<String> tsaCommand = controller.startTmsCommand(installLocation);
+    final List<String> tsaCommand = controller.startTmsCommand(new File("."), installLocation);
 
-    assertThat(tsaCommand.get(0), is(equalTo(new File("/somedir/TerracottaDB/tools/management/bin/start").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
-    assertThat(tsaCommand.size(), is(1));
+    assertThat(tsaCommand.get(0), is(equalTo(new File("/somedir/TerracottaDB/tools/management/bin/management-server").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
+    assertThat(tsaCommand.size(), is(2));
   }
 
   @Test
