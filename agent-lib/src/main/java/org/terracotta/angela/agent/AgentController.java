@@ -62,6 +62,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -220,10 +221,7 @@ public class AgentController {
         return false;
       }
 
-      // DO NOT ALTER THE KIT CONTENT IF kitInstallationPath IS USED
-      if (kitInstallationPath == null) {
-        distribution.createDistributionController().prepareTMS(dirs.get().kitDir, dirs.get().workingDir, tmsServerSecurityConfig);
-      }
+      distribution.createDistributionController().prepareTMS(dirs.get().kitDir, dirs.get().workingDir, tmsServerSecurityConfig);
 
       tmsInstalls.put(instanceId, new TmsInstall(distribution, dirs.get().kitDir, dirs.get().workingDir, tcEnv));
       return true;
@@ -407,9 +405,9 @@ public class AgentController {
     }
   }
 
-  public void createTsa(InstanceId instanceId, TerracottaServer terracottaServer, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
+  public void createTsa(InstanceId instanceId, TerracottaServer terracottaServer, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs, Duration inactivityKillerDelay) {
     TerracottaServerInstance serverInstance = tsaInstalls.get(instanceId).getTerracottaServerInstance(terracottaServer);
-    serverInstance.create(tcEnv, envOverrides, startUpArgs);
+    serverInstance.create(tcEnv, envOverrides, startUpArgs, inactivityKillerDelay);
   }
 
   public void stopTsa(InstanceId instanceId, TerracottaServer terracottaServer) {
