@@ -25,6 +25,7 @@ import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.util.OS;
 
 import java.io.File;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -223,12 +224,12 @@ public class Distribution107ControllerTest {
     final File installLocation = new File("/somedir");
     final File workDir = new File("/workdir");
     final TerracottaVoter terracottaVoter = mock(TerracottaVoter.class);
-    when(terracottaVoter.getHostPorts()).thenReturn(Arrays.asList("9410", "9510"));
+    when(terracottaVoter.getHostAddresses()).thenReturn(Arrays.asList(InetSocketAddress.createUnresolved("localhost", 9410), InetSocketAddress.createUnresolved("localhost", 9510)));
     final List<String> voterCommand = controller.startVoterCommand(installLocation, workDir, null, terracottaVoter);
 
     assertThat(voterCommand.get(0), is(equalTo(new File("/somedir/tools/voter/bin/start-tc-voter").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
     assertThat(voterCommand.get(1), is("-s"));
-    assertThat(voterCommand.get(2), is("9410,9510"));
+    assertThat(voterCommand.get(2), is("localhost:9410,localhost:9510"));
     assertThat(voterCommand.size(), is(3));
   }
 
@@ -242,12 +243,12 @@ public class Distribution107ControllerTest {
     final File installLocation = new File("/somedir");
     final File workDir = new File("/workDir");
     final TerracottaVoter terracottaVoter = mock(TerracottaVoter.class);
-    when(terracottaVoter.getHostPorts()).thenReturn(Arrays.asList("9410", "9510"));
+    when(terracottaVoter.getHostAddresses()).thenReturn(Arrays.asList(InetSocketAddress.createUnresolved("localhost", 9410), InetSocketAddress.createUnresolved("localhost", 9510)));
     final List<String> voterCommand = controller.startVoterCommand(installLocation, workDir, null, terracottaVoter);
 
     assertThat(voterCommand.get(0), is(equalTo(new File("/somedir/TerracottaDB/tools/voter/bin/start-tc-voter").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
     assertThat(voterCommand.get(1), is("-s"));
-    assertThat(voterCommand.get(2), is("9410,9510"));
+    assertThat(voterCommand.get(2), is("localhost:9410,localhost:9510"));
     assertThat(voterCommand.size(), is(3));
   }
 }

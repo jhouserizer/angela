@@ -18,6 +18,7 @@ package org.terracotta.angela.common;
 import org.terracotta.angela.common.util.IpUtils;
 
 import java.io.Serializable;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,29 +30,29 @@ public class TerracottaVoter implements Serializable {
 
   private final String id;
   private final String hostName;
-  private final List<String> hostPorts = new ArrayList<>();
+  private final List<InetSocketAddress> hostPorts = new ArrayList<>();
   private final List<String> serverNames = new ArrayList<>();
 
-  private TerracottaVoter(String id, String hostName, List<String> hostPorts, List<String> serverNames) {
+  private TerracottaVoter(String id, String hostName, List<InetSocketAddress> hostPorts, List<String> serverNames) {
     this.id = id;
     this.hostName = hostName;
     this.hostPorts.addAll(hostPorts);
     this.serverNames.addAll(serverNames);
   }
 
-  public static TerracottaVoter voter(String id, String hostName, String... hostPorts) {
+  public static TerracottaVoter voter(String id, String hostName, InetSocketAddress... hostPorts) {
     return new TerracottaVoter(id, hostName, Arrays.asList(hostPorts), emptyList());
   }
 
-  public static TerracottaVoter dcVoter(String id, String hostName, String... serverNames) {
+  public static TerracottaVoter voter(String id, String hostName, String... serverNames) {
     return new TerracottaVoter(id, hostName, emptyList(), Arrays.asList(serverNames));
   }
 
-  public static TerracottaVoter localVoter(String id, String... hostPorts) {
+  public static TerracottaVoter localVoter(String id, InetSocketAddress... hostPorts) {
     return new TerracottaVoter(id, IpUtils.getHostName(), Arrays.asList(hostPorts), emptyList());
   }
 
-  public static TerracottaVoter localDCVoter(String id, String... serverNames) {
+  public static TerracottaVoter localVoter(String id, String... serverNames) {
     return new TerracottaVoter(id, IpUtils.getHostName(), emptyList(), Arrays.asList(serverNames));
   }
 
@@ -63,7 +64,16 @@ public class TerracottaVoter implements Serializable {
     return hostName;
   }
 
+  /**
+   * @deprecated backward compatibility: this method was returning the string parameters.
+   * Use instead {@link #getHostAddresses()} or {@link #getServerNames()}
+   */
+  @Deprecated
   public List<String> getHostPorts() {
+    return serverNames;
+  }
+
+  public List<InetSocketAddress> getHostAddresses() {
     return hostPorts;
   }
 
