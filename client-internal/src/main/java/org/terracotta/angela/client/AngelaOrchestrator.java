@@ -30,15 +30,17 @@ import org.terracotta.angela.client.config.VoterConfigurationContext;
 import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
-import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
 
 import java.io.Closeable;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  *
@@ -87,7 +89,7 @@ public class AngelaOrchestrator implements Closeable {
       @Override
       public void visit(VoterConfigurationContext voterConfigurationContext) {
         for (TerracottaVoter terracottaVoter : voterConfigurationContext.getTerracottaVoters()) {
-          final List<String> hostPorts = terracottaVoter.getHostPorts();
+          final List<InetSocketAddress> hostPorts = terracottaVoter.getHostAddresses();
           final List<String> serverNames = terracottaVoter.getServerNames();
           if (hostPorts.isEmpty() && serverNames.isEmpty()) {
             throw new IllegalArgumentException("Voter incorrectly configured: missing hosts/ports or server names");
@@ -95,12 +97,37 @@ public class AngelaOrchestrator implements Closeable {
           if (hostPorts.isEmpty()) {
             // pickups allocated ports
             for (String serverName : serverNames) {
+              // Try to find the server matching this server name.
+              // If not found because serverName is a "host:port" or "host" parameter,
+              // then assume serverName is a "host" and try to find the server matching this hostname.
+              // If several found, throws, asking the user to specify a port: "host:port"
+              // If not found, it must be a host:port combination. Try to parse it.
               hostPorts.add(configurationContext.tsa().getTopology().getServers()
                   .stream()
                   .filter(server -> server.getServerSymbolicName().getSymbolicName().equals(serverName))
                   .findFirst()
-                  .map(TerracottaServer::getHostPort)
-                  .orElseThrow(() -> new IllegalArgumentException("Incorrect voter configuration: server name '" + serverName + "' not found")));
+                  .map(terracottaServer -> InetSocketAddress.createUnresolved(terracottaServer.getHostName(), terracottaServer.getTsaPort()))
+                  .orElseGet(() -> {
+                    List<InetSocketAddress> found = configurationContext.tsa().getTopology().getServers()
+                        .stream()
+                        .filter(server -> server.getHostName().equals(serverName))
+                        .map(terracottaServer -> InetSocketAddress.createUnresolved(terracottaServer.getHostName(), terracottaServer.getTsaPort()))
+                        .collect(toList());
+                    switch (found.size()) {
+                      case 0:
+                        // it must be a "host:port" combination
+                        final int i = serverName.lastIndexOf(":");
+                        try {
+                          return InetSocketAddress.createUnresolved(serverName.substring(0, i), Integer.parseInt(serverName.substring(i + 1)));
+                        } catch (RuntimeException e) {
+                          throw new IllegalStateException("Invalid 'hostname:port' combination: " + serverName, e);
+                        }
+                      case 1:
+                        return found.get(0);
+                      default:
+                        throw new IllegalStateException("Hostname: " + serverName + " points to several servers. Please specify a port.");
+                    }
+                  }));
             }
             logger.trace("Voter configured to connect to: " + hostPorts);
           }
