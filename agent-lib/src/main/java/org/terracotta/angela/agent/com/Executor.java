@@ -128,26 +128,30 @@ public interface Executor extends AutoCloseable {
 
   default void uploadFiles(InstanceId instanceId, List<Path> locations, Future<Void> remoteDownloadFuture) {
     try {
+      BlockingQueue<FileTransfer> queue = getFileTransferQueue(instanceId);
       try {
-        BlockingQueue<FileTransfer> queue = getFileTransferQueue(instanceId);
         for (Path root : locations) {
-          logger.debug("Uploading files from: {}", root);
-          try (Stream<Path> stream = Files.walk(root).filter(Files::isRegularFile)) {
-            stream.map(path -> FileTransfer.from(root, path)).forEach(fileTransfer -> {
-              try {
-                queue.put(fileTransfer);
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-              }
-              logger.debug("Uploaded: {}", fileTransfer);
-            });
-          } catch (IOException e) {
-            throw new UncheckedIOException(e);
+          if(Files.exists(root)) {
+            logger.debug("Uploading files from: {}", root);
+            try (Stream<Path> stream = Files.walk(root).filter(Files::isRegularFile)) {
+              stream.map(path -> FileTransfer.from(root, path)).forEach(fileTransfer -> {
+                try {
+                  queue.put(fileTransfer);
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  throw new RuntimeException(e);
+                }
+                logger.debug("Uploaded: {}", fileTransfer);
+              });
+            } catch (IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          } else {
+            logger.debug("Skipping non-existing root: {}", root);
           }
         }
-        queue.put(FileTransfer.END); // end of upload marker
       } finally {
+        queue.put(FileTransfer.END); // end of upload marker
         remoteDownloadFuture.get();
       }
     } catch (ExecutionException | InterruptedException e) {
