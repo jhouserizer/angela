@@ -207,8 +207,9 @@ public class AgentController {
     }
   }
 
-  public boolean installVoter(InstanceId instanceId, TerracottaVoter terracottaVoter, Distribution distribution, License license,
-                              String kitInstallationName, TerracottaCommandLineEnvironment tcEnv) {
+  public boolean installVoter(InstanceId instanceId, TerracottaVoter terracottaVoter, Distribution distribution,
+                              License license, String kitInstallationName, SecurityRootDirectory securityRootDirectory,
+                              TerracottaCommandLineEnvironment tcEnv) {
     VoterInstall voterInstall = voterInstalls.get(instanceId);
 
     if (voterInstall == null) {
@@ -220,7 +221,7 @@ public class AgentController {
       logger.info("Installing kit for {} from {}", terracottaVoter, distribution);
       File kitDir = kitManager.installKit(license, Collections.singletonList(terracottaVoter.getHostName()));
       File workingDir = kitManager.getWorkingDir().toFile();
-      voterInstall = voterInstalls.computeIfAbsent(instanceId, (id) -> new VoterInstall(distribution, kitDir, workingDir, tcEnv));
+      voterInstall = voterInstalls.computeIfAbsent(instanceId, (id) -> new VoterInstall(distribution, kitDir, workingDir, securityRootDirectory, tcEnv));
     }
 
     voterInstall.addVoter(terracottaVoter);
@@ -310,18 +311,14 @@ public class AgentController {
       int numOfVoterInstances = (voterInstall != null ? voterInstall.terracottaVoterInstanceCount() : 0);
       if (installationsCount == 0 && (tmsInstall == null || tmsInstall.getTerracottaManagementServerInstance() == null) && numOfVoterInstances == 0) {
         File installLocation = terracottaInstall.getRootInstallLocation();
-        try {
-          logger.info("Uninstalling kit(s) from {}", installLocation);
-          RemoteKitManager kitManager = new RemoteKitManager(instanceId, topology.getDistribution(), kitInstallationName);
-          // TODO : get log files
+        logger.info("Uninstalling kit(s) from {}", installLocation);
+        RemoteKitManager kitManager = new RemoteKitManager(instanceId, topology.getDistribution(), kitInstallationName);
+        // TODO : get log files
 
-          if (kitInstallationPath == null) {
-            kitManager.deleteInstall(installLocation);
-          }
-          kitsInstalls.remove(instanceId);
-        } catch (IOException ioe) {
-          throw new RuntimeException("Unable to uninstall kit at " + installLocation.getAbsolutePath() + " on " + terracottaServer, ioe);
+        if (kitInstallationPath == null) {
+          kitManager.deleteInstall(installLocation);
         }
+        kitsInstalls.remove(instanceId);
       } else {
         logger.info("Kit install still in use by {} Terracotta servers",
             installationsCount + (tmsInstall == null ? 0 : tmsInstall.getTerracottaManagementServerInstance() == null ? 0 : 1) + numOfVoterInstances);
@@ -347,17 +344,12 @@ public class AgentController {
       VoterInstall voterInstall = voterInstalls.get(instanceId);
       int numberOfVoterInstances = (voterInstall != null ? voterInstall.terracottaVoterInstanceCount() : 0);
       if (numberOfTerracottaInstances == 0 && numberOfVoterInstances == 0) {
-        try {
-          logger.info("Uninstalling kit for " + tmsHostname);
-          RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
-          // TODO : get log files
+        logger.info("Uninstalling kit for " + tmsHostname);
+        RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
+        // TODO : get log files
 
-          kitManager.deleteInstall(tmsInstall.getKitLocation());
-          kitsInstalls.remove(instanceId);
-        } catch (IOException ioe) {
-          throw new RuntimeException("Unable to uninstall kit at " + tmsInstall.getKitLocation()
-              .getAbsolutePath(), ioe);
-        }
+        kitManager.deleteInstall(tmsInstall.getKitLocation());
+        kitsInstalls.remove(instanceId);
       } else {
         if (numberOfTerracottaInstances != 0) {
           logger.info("Kit install still in use by {} Terracotta servers", numberOfTerracottaInstances);
@@ -379,16 +371,12 @@ public class AgentController {
       int numOfTerracottaInstances = (terracottaInstall != null ? terracottaInstall.terracottaServerInstanceCount() : 0);
       if (installationsCount == 0 && (tmsInstall == null || tmsInstall.getTerracottaManagementServerInstance() == null) && numOfTerracottaInstances == 0) {
         File installLocation = voterInstall.getKitLocation();
-        try {
-          logger.info("Uninstalling kit(s) from {}", installLocation);
-          RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
-          // TODO : get log files
+        logger.info("Uninstalling kit(s) from {}", installLocation);
+        RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
+        // TODO : get log files
 
-          kitManager.deleteInstall(installLocation);
-          voterInstalls.remove(instanceId);
-        } catch (IOException ioe) {
-          throw new RuntimeException("Unable to uninstall kit at " + installLocation.getAbsolutePath() + " on " + terracottaVoter, ioe);
-        }
+        kitManager.deleteInstall(installLocation);
+        voterInstalls.remove(instanceId);
       } else {
         logger.info("Kit install still in use by {} ",
             installationsCount + (tmsInstall == null ? 0 : tmsInstall.getTerracottaManagementServerInstance() == null ? 0 : 1) + numOfTerracottaInstances);
@@ -555,13 +543,9 @@ public class AgentController {
   }
 
   public void deleteClient(InstanceId instanceId) {
-    try {
-      File subAgentRoot = new RemoteClientManager(instanceId).getClientInstallationPath();
-      logger.info("Cleaning up directory structure '{}' of client {}", subAgentRoot, instanceId);
-      FileUtils.deleteDirectory(subAgentRoot.toPath());
-    } catch (Exception e) {
-      throw new RuntimeException("Error deleting client " + instanceId, e);
-    }
+    File subAgentRoot = new RemoteClientManager(instanceId).getClientInstallationPath();
+    logger.info("Cleaning up directory structure '{}' of client {}", subAgentRoot, instanceId);
+    FileUtils.deleteTree(subAgentRoot.toPath());
   }
 
   public String instanceWorkDir(InstanceId instanceId) {

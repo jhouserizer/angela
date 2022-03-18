@@ -14,7 +14,6 @@
  * The Initial Developer of the Covered Software is
  * Terracotta, Inc., a Software AG company
  */
-
 package org.terracotta.angela.client.config.custom;
 
 import org.terracotta.angela.client.config.VoterConfigurationContext;
@@ -22,15 +21,18 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.License;
+import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CustomVoterConfigurationContext implements VoterConfigurationContext {
-  private List<TerracottaVoter> terracottaVoters = new ArrayList<>();
+  private final List<TerracottaVoter> terracottaVoters = new ArrayList<>();
+  private TerracottaCommandLineEnvironment tcEnv = TerracottaCommandLineEnvironment.DEFAULT;
+  private SecurityRootDirectory securityRootDirectory;
   private Distribution distribution;
   private License license;
-  private TerracottaCommandLineEnvironment terracottaCommandLineEnvironment = TerracottaCommandLineEnvironment.DEFAULT;
 
   protected CustomVoterConfigurationContext() {
   }
@@ -40,8 +42,9 @@ public class CustomVoterConfigurationContext implements VoterConfigurationContex
     return this;
   }
 
-  public List<TerracottaVoter> getTerracottaVoters() {
-    return terracottaVoters;
+  public CustomVoterConfigurationContext securityRootDirectory(Path securityDir) {
+    this.securityRootDirectory = SecurityRootDirectory.securityRootDirectory(securityDir);
+    return this;
   }
 
   public CustomVoterConfigurationContext distribution(Distribution distribution) {
@@ -49,14 +52,18 @@ public class CustomVoterConfigurationContext implements VoterConfigurationContex
     return this;
   }
 
-  @Override
-  public Distribution getDistribution() {
-    return distribution;
-  }
-
   public CustomVoterConfigurationContext license(License license) {
     this.license = license;
     return this;
+  }
+
+  public void terracottaCommandLineEnvironment(TerracottaCommandLineEnvironment tcEnv) {
+    this.tcEnv = tcEnv;
+  }
+
+  @Override
+  public Distribution getDistribution() {
+    return distribution;
   }
 
   @Override
@@ -66,7 +73,17 @@ public class CustomVoterConfigurationContext implements VoterConfigurationContex
 
   @Override
   public TerracottaCommandLineEnvironment getTerracottaCommandLineEnvironment() {
-    return terracottaCommandLineEnvironment;
+    return tcEnv;
+  }
+
+  @Override
+  public List<TerracottaVoter> getTerracottaVoters() {
+    return terracottaVoters;
+  }
+
+  @Override
+  public SecurityRootDirectory getSecurityRootDirectory() {
+    return securityRootDirectory;
   }
 
   @Override

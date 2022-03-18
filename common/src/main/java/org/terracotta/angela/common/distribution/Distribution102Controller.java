@@ -29,7 +29,7 @@ import org.terracotta.angela.common.TerracottaManagementServerState;
 import org.terracotta.angela.common.TerracottaServerInstance.TerracottaServerInstanceProcess;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.TerracottaVoter;
-import org.terracotta.angela.common.TerracottaVoterInstance;
+import org.terracotta.angela.common.TerracottaVoterInstance.TerracottaVoterInstanceProcess;
 import org.terracotta.angela.common.provider.ConfigurationManager;
 import org.terracotta.angela.common.provider.TcConfigManager;
 import org.terracotta.angela.common.tcconfig.SecureTcConfig;
@@ -210,11 +210,7 @@ public class Distribution102Controller extends DistributionController {
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
-      try {
-        FileUtils.deleteDirectory(tmpConfigDir.toPath());
-      } catch (IOException ioe) {
-        logger.error("Error deleting temporary cluster tool TC config files", ioe);
-      }
+      FileUtils.deleteTree(tmpConfigDir.toPath());
     }
 
     if (processResult.getExitValue() != 0) {
@@ -371,12 +367,13 @@ public class Distribution102Controller extends DistributionController {
   }
 
   @Override
-  public TerracottaVoterInstance.TerracottaVoterInstanceProcess startVoter(TerracottaVoter terracottaVoter, File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv) {
+  public TerracottaVoterInstanceProcess startVoter(TerracottaVoter terracottaVoter, File kitDir, File workingDir,
+                                                   SecurityRootDirectory securityDir, TerracottaCommandLineEnvironment tcEnv) {
     throw new UnsupportedOperationException("Running voter is supported not in this distribution version");
   }
 
   @Override
-  public void stopVoter(TerracottaVoterInstance.TerracottaVoterInstanceProcess terracottaVoterInstanceProcess) {
+  public void stopVoter(TerracottaVoterInstanceProcess terracottaVoterInstanceProcess) {
     throw new UnsupportedOperationException("Running voter is supported not in this distribution version");
   }
 
