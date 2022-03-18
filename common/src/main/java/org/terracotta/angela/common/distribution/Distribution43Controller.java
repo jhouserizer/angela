@@ -1,35 +1,33 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.common.distribution;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.common.ClusterToolExecutionResult;
-import org.terracotta.angela.common.ConfigToolExecutionResult;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance.TerracottaManagementServerInstanceProcess;
-import org.terracotta.angela.common.TerracottaServerInstance.TerracottaServerInstanceProcess;
+import org.terracotta.angela.common.TerracottaServerHandle;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.TerracottaVoter;
 import org.terracotta.angela.common.TerracottaVoterInstance.TerracottaVoterInstanceProcess;
+import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.provider.ConfigurationManager;
 import org.terracotta.angela.common.provider.TcConfigManager;
+import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TcConfig;
@@ -39,6 +37,8 @@ import org.terracotta.angela.common.topology.Version;
 import org.terracotta.angela.common.util.ExternalLoggers;
 import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.OS;
+import org.terracotta.angela.common.util.ProcessUtil;
+import org.terracotta.angela.common.util.RetryUtils;
 import org.terracotta.angela.common.util.TriggeringOutputStream;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
@@ -46,7 +46,7 @@ import org.zeroturnaround.exec.ProcessResult;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -85,9 +85,9 @@ public class Distribution43Controller extends DistributionController {
   }
 
   @Override
-  public TerracottaServerInstanceProcess createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir,
+  public TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir,
                                                    Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
-                                                   TerracottaCommandLineEnvironment tcEnv, List<String> startUpArgs) {
+                                                   TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(STOPPED);
     AtomicReference<TerracottaServerState> tempStateRef = new AtomicReference<>(STOPPED);
 
@@ -115,7 +115,7 @@ public class Distribution43Controller extends DistributionController {
         serverLogOutputStream.andTriggerOn(compile("^.*(WARN|ERROR).*$"), mr -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), mr.group()));
 
     // add an identifiable ID to the JVM's system properties
-    Map<String, String> env = buildEnv(tcEnv);
+    Map<String, String> env = tcEnv.buildEnv(envOverrides);
     env.compute("JAVA_OPTS", (key, value) -> {
       String prop = " -Dangela.processIdentifier=" + terracottaServer.getId();
       return value == null ? prop : value + prop;
@@ -131,13 +131,53 @@ public class Distribution43Controller extends DistributionController {
         stateRef,
         STOPPED);
 
-    int wrapperPid = watchedProcess.getPid();
     Number javaPid = findWithJcmdJavaPidOf(terracottaServer.getId().toString(), tcEnv);
-    return new TerracottaServerInstanceProcess(stateRef, wrapperPid, javaPid);
+    return new TerracottaServerHandle() {
+      @Override
+      public TerracottaServerState getState() {
+        return stateRef.get();
+      }
+
+      @Override
+      public int getJavaPid() {
+        return javaPid.intValue();
+      }
+
+      @Override
+      public boolean isAlive() {
+        return watchedProcess.isAlive();
+      }
+
+      @Override
+      public void stop() {
+        try {
+          ProcessUtil.destroyGracefullyOrForcefullyAndWait(javaPid.intValue());
+        } catch (Exception e) {
+          throw new RuntimeException("Could not destroy TC server process with PID " + watchedProcess.getPid(), e);
+        }
+        try {
+          ProcessUtil.destroyGracefullyOrForcefullyAndWait(watchedProcess.getPid());
+        } catch (Exception e) {
+          throw new RuntimeException("Could not destroy TC server process with PID " + watchedProcess.getPid(), e);
+        }
+        final int maxWaitTimeMillis = 30000;
+        if (!RetryUtils.waitFor(() -> getState() == TerracottaServerState.STOPPED, maxWaitTimeMillis)) {
+          throw new RuntimeException(
+              String.format(
+                  "Tried for %dms, but server %s did not get the state %s [remained at state %s]",
+                  maxWaitTimeMillis,
+                  terracottaServer.getServerSymbolicName().getSymbolicName(),
+                  TerracottaServerState.STOPPED,
+                  getState()
+              )
+          );
+        }
+      }
+    };
   }
 
   private Number findWithJcmdJavaPidOf(String serverUuid, TerracottaCommandLineEnvironment tcEnv) {
-    String javaHome = tcEnv.getJavaHome().orElseGet(()->javaLocationResolver.resolveJavaLocation(tcEnv).getHome());
+    String javaHome = tcEnv.getJavaHome();
 
     List<String> cmdLine = new ArrayList<>();
     if (OS.INSTANCE.isWindows()) {
@@ -204,18 +244,27 @@ public class Distribution43Controller extends DistributionController {
   }
 
   @Override
-  public void configure(String clusterName, File kitDir, File workingDir, String licensePath, Topology topology, Map<ServerSymbolicName, Integer> proxyTsaPorts, SecurityRootDirectory securityRootDirectory, TerracottaCommandLineEnvironment tcEnv, boolean verbose) {
-    logger.info("There is no licensing step in 4.x");
+  public ToolExecutionResult configureCluster(File kitDir, File workingDir, Topology topology, Map<ServerSymbolicName, Integer> proxyTsaPorts, License license, SecurityRootDirectory securityDir,
+                                              TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running cluster tool is not supported in this distribution version");
   }
 
   @Override
-  public ClusterToolExecutionResult invokeClusterTool(File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv, Path securityDir, String... arguments) {
-    throw new UnsupportedOperationException("4.x does not have a cluster tool");
+  public ToolExecutionResult activateCluster(File kitDir, File workingDir, License license, SecurityRootDirectory securityDir,
+                                             TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running config tool is not supported in this distribution version");
   }
 
   @Override
-  public ConfigToolExecutionResult invokeConfigTool(File kitDir, File workingDir, TerracottaCommandLineEnvironment env, Path securityDir, String... arguments) {
-    throw new UnsupportedOperationException("4.x does not support config tool");
+  public ToolExecutionResult invokeClusterTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+                                               TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running cluster tool is not supported in this distribution version");
+  }
+
+  @Override
+  public ToolExecutionResult invokeConfigTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+                                              TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running config tool is not supported in this distribution version");
   }
 
   /**
@@ -248,10 +297,10 @@ public class Distribution43Controller extends DistributionController {
         String modifiedTcConfigPath = tcConfig.getPath()
             .substring(0, tcConfig.getPath()
                 .length() - 4) + "-" + serverSymbolicName.getSymbolicName() + ".xml";
-        String modifiedConfig = FileUtils.readFileToString(new File(tcConfig.getPath())).
+        String modifiedConfig = FileUtils.readFileToString(new File(tcConfig.getPath()), StandardCharsets.UTF_8).
             replaceAll(Pattern.quote("${restart-data}"), "restart-data/" + serverSymbolicName).
             replaceAll(Pattern.quote("${SERVER_NAME_TEMPLATE}"), serverSymbolicName.getSymbolicName());
-        FileUtils.write(new File(modifiedTcConfigPath), modifiedConfig);
+        FileUtils.write(new File(modifiedTcConfigPath), modifiedConfig, StandardCharsets.UTF_8);
         options.add("-f");
         options.add(modifiedTcConfigPath);
       } catch (IOException ioe) {
@@ -279,9 +328,8 @@ public class Distribution43Controller extends DistributionController {
     throw new IllegalStateException("Can not define Terracotta server Start Command for distribution: " + distribution);
   }
 
-
   @Override
-  public TerracottaManagementServerInstanceProcess startTms(File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv) {
+  public TerracottaManagementServerInstanceProcess startTms(File kitDir, File workingDir, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides) {
     throw new UnsupportedOperationException("NOT YET IMPLEMENTED");
   }
 
@@ -292,15 +340,15 @@ public class Distribution43Controller extends DistributionController {
 
   @Override
   public TerracottaVoterInstanceProcess startVoter(TerracottaVoter terracottaVoter, File kitDir, File workingDir,
-                                                   SecurityRootDirectory securityDir, TerracottaCommandLineEnvironment tcEnv) {
-    throw new UnsupportedOperationException("Running voter is supported not in this distribution version");
+                                                   SecurityRootDirectory securityDir, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides) {
+    throw new UnsupportedOperationException("Running voter is not supported in this distribution version");
   }
 
   @Override
   public void stopVoter(TerracottaVoterInstanceProcess terracottaVoterInstanceProcess) {
-    throw new UnsupportedOperationException("Running voter is supported not in this distribution version");
+    throw new UnsupportedOperationException("Running voter is not supported in this distribution version");
   }
-  
+
   @Override
   public URI tsaUri(Collection<TerracottaServer> servers, Map<ServerSymbolicName, Integer> proxyTsaPorts) {
     return URI.create(servers

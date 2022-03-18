@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.common.tcconfig;
 
 import org.apache.commons.io.IOUtils;
@@ -23,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 /**
@@ -39,7 +38,7 @@ public class License {
       if (is == null) {
         throw new IllegalArgumentException("License file is not present");
       }
-      licenseContent = IOUtils.toString(is);
+      licenseContent = IOUtils.toString(is, StandardCharsets.UTF_8);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
@@ -47,10 +46,13 @@ public class License {
 
   public File writeToFile(File dest) {
     File licenseFile = new File(dest, this.filename);
-    try {
-      Files.write(licenseFile.toPath(), licenseContent.getBytes());
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
+    // tests are concurrently using a kit so do not re-write a license file
+    if(!licenseFile.exists()) {
+      try {
+        Files.write(licenseFile.toPath(), licenseContent.getBytes(StandardCharsets.UTF_8));
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
     }
     return licenseFile;
   }

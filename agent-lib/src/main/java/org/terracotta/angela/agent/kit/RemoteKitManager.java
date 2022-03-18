@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.agent.kit;
 
 import org.slf4j.Logger;
@@ -33,7 +31,6 @@ import java.util.Collection;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.terracotta.angela.common.AngelaProperties.KIT_COPY;
-import static org.terracotta.angela.common.AngelaProperties.SKIP_KIT_COPY_LOCALHOST;
 import static org.terracotta.angela.common.util.IpUtils.areAllLocal;
 import static org.terracotta.utilities.io.Files.ExtendedOption.RECURSIVE;
 
@@ -45,44 +42,44 @@ import static org.terracotta.utilities.io.Files.ExtendedOption.RECURSIVE;
 public class RemoteKitManager extends KitManager {
   private static final Logger logger = LoggerFactory.getLogger(RemoteKitManager.class);
 
-  private final Path workingDir; // The location containing server logs
+  private final Path kitPath; // The location containing server logs
 
   public RemoteKitManager(InstanceId instanceId, Distribution distribution, String kitInstallationName) {
     super(distribution);
     this.kitInstallationPath = rootInstallationPath.resolve(kitInstallationName);
-    Path workingDir = Agent.WORK_DIR.resolve(instanceId.toString());
-    logger.info("Working directory is: {}", workingDir);
-    this.workingDir = workingDir;
+    Path workingPath = Agent.WORK_DIR.resolve(instanceId.toString());
+    logger.info("Working directory is: {}", workingPath);
+    this.kitPath = workingPath;
   }
 
   // Returns the location to be used for kit - could be the source kit path itself, or a new location based on if or not
   // the kit was copied
   public File installKit(License license, Collection<String> serversHostnames) {
     try {
-      Files.createDirectories(workingDir);
+      Files.createDirectories(kitPath);
 
       logger.info("should copy a separate kit install ? {}", KIT_COPY.getBooleanValue());
-      if (areAllLocal(serversHostnames) && SKIP_KIT_COPY_LOCALHOST.getBooleanValue() && !KIT_COPY.getBooleanValue()) {
-        logger.info("Skipped copying kit from {} to {}", kitInstallationPath.toAbsolutePath(), workingDir);
+      if (areAllLocal(serversHostnames) && !KIT_COPY.getBooleanValue()) {
+        logger.info("Skipped copying kit from {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
         if (license != null) {
-          license.writeToFile(kitInstallationPath.toFile());
+          license.writeToFile(kitPath.toFile());
         }
         return kitInstallationPath.toFile();
       } else {
-        logger.info("Copying {} to {}", kitInstallationPath.toAbsolutePath(), workingDir);
-        FileUtils.copy(kitInstallationPath, workingDir, REPLACE_EXISTING, RECURSIVE);
+        logger.info("Copying {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
+        FileUtils.copy(kitInstallationPath, kitPath, REPLACE_EXISTING, RECURSIVE);
         if (license != null) {
-          license.writeToFile(workingDir.toFile());
+          license.writeToFile(kitPath.toFile());
         }
-        return workingDir.toFile();
+        return kitPath.toFile();
       }
     } catch (IOException e) {
       throw new RuntimeException("Can not create working install", e);
     }
   }
 
-  public Path getWorkingDir() {
-    return workingDir;
+  public Path getKitDir() {
+    return kitPath;
   }
 
   public boolean isKitAvailable() {
@@ -96,6 +93,6 @@ public class RemoteKitManager extends KitManager {
 
   public void deleteInstall(File installLocation) {
     logger.info("Deleting installation in {}", installLocation.getAbsolutePath());
-    FileUtils.deleteTree(installLocation.toPath());
+    FileUtils.deleteQuietly(installLocation.toPath());
   }
 }

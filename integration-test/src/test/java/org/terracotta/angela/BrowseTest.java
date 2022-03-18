@@ -1,24 +1,24 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.terracotta.angela;
 
 import org.junit.Test;
 import org.terracotta.angela.client.Client;
 import org.terracotta.angela.client.ClientArray;
+import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
@@ -60,7 +60,7 @@ public class BrowseTest {
         .clientArray(clientArray -> clientArray.license(TERRACOTTA_OS.defaultLicense())
             .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
         );
-    try (ClusterFactory factory = new ClusterFactory("BrowseTest::testClient", configContext)) {
+    try (ClusterAgent agent = new ClusterAgent(false); ClusterFactory factory = new ClusterFactory(agent, "BrowseTest::testClient", configContext)) {
       ClientArray clientArray = factory.clientArray();
       Client client = clientArray.getClients().stream().findFirst().get();
 
@@ -101,7 +101,7 @@ public class BrowseTest {
             .license(TERRACOTTA_OS.defaultLicense())
         );
 
-    try (ClusterFactory factory = new ClusterFactory("BrowseTest::testUploadPlugin", configContext)) {
+    try (ClusterAgent agent = new ClusterAgent(false); ClusterFactory factory = new ClusterFactory(agent, "BrowseTest::testUploadPlugin", configContext)) {
       Tsa tsa = factory.tsa();
       tsa.uploadPlugin(new File(getClass().getResource("/keep-this-file-empty.txt").getFile()));
 
@@ -121,7 +121,7 @@ public class BrowseTest {
             .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
         );
 
-    try (ClusterFactory factory = new ClusterFactory("BrowseTest::testNonExistentFolder", configContext)) {
+    try (ClusterAgent agent = new ClusterAgent(false); ClusterFactory factory = new ClusterFactory(agent, "BrowseTest::testNonExistentFolder", configContext)) {
       ClientArray clientArray = factory.clientArray();
       try {
         Client localhost = clientArray.getClients().stream().findFirst().get();
@@ -140,7 +140,7 @@ public class BrowseTest {
             .clientArrayTopology(new ClientArrayTopology(distribution(version(EHCACHE_VERSION), PackageType.KIT, TERRACOTTA_OS), newClientArrayConfig().host("localhost")))
         );
 
-    try (ClusterFactory factory = new ClusterFactory("BrowseTest::testUpload", configContext)) {
+    try (ClusterAgent agent = new ClusterAgent(false); ClusterFactory factory = new ClusterFactory(agent, "BrowseTest::testUpload", configContext)) {
       ClientArray clientArray = factory.clientArray();
       Client localhost = clientArray.getClients().stream().findFirst().get();
       RemoteFolder folder = localhost.browse("does-not-exist"); // check that we can upload to non-existent folder & the folder will be created

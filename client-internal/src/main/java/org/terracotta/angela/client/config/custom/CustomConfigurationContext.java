@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.client.config.custom;
 
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
@@ -22,6 +20,7 @@ import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.MonitoringConfigurationContext;
 import org.terracotta.angela.client.config.RemotingConfigurationContext;
 import org.terracotta.angela.client.config.TmsConfigurationContext;
+import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
 import org.terracotta.angela.client.config.VoterConfigurationContext;
 import org.terracotta.angela.client.remote.agent.SshRemoteAgentLauncher;
@@ -38,6 +37,8 @@ public class CustomConfigurationContext implements ConfigurationContext {
   private CustomMonitoringConfigurationContext customMonitoringConfigurationContext;
   private CustomClientArrayConfigurationContext customClientArrayConfigurationContext;
   private CustomVoterConfigurationContext customVoterConfigurationContext;
+  private CustomClusterToolConfigurationContext customClusterToolConfigurationContext;
+  private CustomConfigToolConfigurationContext customConfigToolConfigurationContext;
 
   public static CustomConfigurationContext customConfigurationContext() {
     return new CustomConfigurationContext();
@@ -132,8 +133,36 @@ public class CustomConfigurationContext implements ConfigurationContext {
   }
 
   @Override
+  public ToolConfigurationContext clusterTool() {
+    return customClusterToolConfigurationContext;
+  }
+
+  @Override
+  public ToolConfigurationContext configTool() {
+    return customConfigToolConfigurationContext;
+  }
+
+  @Override
   public VoterConfigurationContext voter() {
     return customVoterConfigurationContext;
+  }
+
+  public CustomConfigurationContext clusterTool(Consumer<CustomClusterToolConfigurationContext> clusterTool) {
+    if (customClusterToolConfigurationContext != null) {
+      throw new IllegalStateException("Cluster tool config already defined");
+    }
+    customClusterToolConfigurationContext = new CustomClusterToolConfigurationContext();
+    clusterTool.accept(customClusterToolConfigurationContext);
+    return this;
+  }
+
+  public CustomConfigurationContext configTool(Consumer<CustomConfigToolConfigurationContext> configTool) {
+    if (customConfigToolConfigurationContext != null) {
+      throw new IllegalStateException("Config tool config already defined");
+    }
+    customConfigToolConfigurationContext = new CustomConfigToolConfigurationContext();
+    configTool.accept(customConfigToolConfigurationContext);
+    return this;
   }
 
   public CustomConfigurationContext voter(Consumer<CustomVoterConfigurationContext> voter) {

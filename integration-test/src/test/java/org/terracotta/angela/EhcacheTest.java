@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela;
 
 import org.ehcache.Cache;
@@ -30,6 +28,7 @@ import org.junit.Test;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClientArrayFuture;
 import org.terracotta.angela.client.ClientJob;
+import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
@@ -61,8 +60,10 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterFactory factory = new ClusterFactory("EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
-      factory.tsa().startAll();
+    try (ClusterAgent agent = new ClusterAgent(false)) {
+      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testTsaWithEhcacheReleaseKit", configContext)) {
+        factory.tsa().startAll();
+      }
     }
   }
 
@@ -78,8 +79,10 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterFactory factory = new ClusterFactory("EhcacheTest::testTsaWithEhcacheSnapshotKit", configContext)) {
-      factory.tsa().startAll();
+    try (ClusterAgent agent = new ClusterAgent(false)) {
+      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testTsaWithEhcacheSnapshotKit", configContext)) {
+        factory.tsa().startAll();
+      }
     }
   }
 
@@ -102,28 +105,30 @@ public class EhcacheTest {
             )
         );
 
-    try (ClusterFactory factory = new ClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
-      factory.tsa().startAll();
-      ClientArray clientArray = factory.clientArray();
-      String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
-      String cacheAlias = "clustered-cache";
+    try (ClusterAgent agent = new ClusterAgent(false)) {
+      try (ClusterFactory factory = new ClusterFactory(agent, "EhcacheTest::testClusteredEhcacheOperations", configContext)) {
+        factory.tsa().startAll();
+        ClientArray clientArray = factory.clientArray();
+        String uri = factory.tsa().uri().toString() + "/clustered-cache-manager";
+        String cacheAlias = "clustered-cache";
 
-      ClientJob clientJob = (cluster) -> {
-        try (CacheManager cacheManager = createCacheManager(uri, cacheAlias)) {
-          Cache<Long, String> cache = cacheManager.getCache(cacheAlias, Long.class, String.class);
-          final int numKeys = 10;
-          for (long key = 0; key < numKeys; key++) {
-            cache.put(key, String.valueOf(key) + key);
+        ClientJob clientJob = (cluster) -> {
+          try (CacheManager cacheManager = createCacheManager(uri, cacheAlias)) {
+            Cache<Long, String> cache = cacheManager.getCache(cacheAlias, Long.class, String.class);
+            final int numKeys = 10;
+            for (long key = 0; key < numKeys; key++) {
+              cache.put(key, String.valueOf(key) + key);
+            }
+
+            for (long key = 0; key < numKeys; key++) {
+              assertEquals(cache.get(key), String.valueOf(key) + key);
+            }
           }
+        };
 
-          for (long key = 0; key < numKeys; key++) {
-            assertEquals(cache.get(key), String.valueOf(key) + key);
-          }
-        }
-      };
-
-      ClientArrayFuture caf = clientArray.executeOnAll(clientJob);
-      caf.get();
+        ClientArrayFuture caf = clientArray.executeOnAll(clientJob);
+        caf.get();
+      }
     }
   }
 

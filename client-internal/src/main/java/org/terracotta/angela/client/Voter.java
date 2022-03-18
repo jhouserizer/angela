@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.client;
 
 import org.apache.ignite.Ignite;
@@ -35,9 +33,12 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.topology.InstanceId;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.terracotta.angela.common.AngelaProperties.KIT_COPY;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
 import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
@@ -83,7 +84,11 @@ public class Voter implements AutoCloseable {
   }
 
   public Voter start(TerracottaVoter terracottaVoter) {
-    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.controller.startVoter(instanceId, terracottaVoter));
+    return start(terracottaVoter, Collections.emptyMap());
+  }
+
+  public Voter start(TerracottaVoter terracottaVoter, Map<String, String> envOverrides) {
+    IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, () -> Agent.controller.startVoter(instanceId, terracottaVoter, envOverrides));
     return this;
   }
 
@@ -141,7 +146,7 @@ public class Voter implements AutoCloseable {
 
     Distribution distribution = voterConfigurationContext.getDistribution();
     License license = voterConfigurationContext.getLicense();
-    TerracottaCommandLineEnvironment tcEnv = voterConfigurationContext.getTerracottaCommandLineEnvironment();
+    TerracottaCommandLineEnvironment tcEnv = voterConfigurationContext.commandLineEnv();
     SecurityRootDirectory securityRootDirectory = voterConfigurationContext.getSecurityRootDirectory();
 
     logger.info("starting voter on {}", terracottaVoter.getHostName());
@@ -150,10 +155,9 @@ public class Voter implements AutoCloseable {
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
     IgniteCallable<Boolean> callable = () -> Agent.controller.installVoter(instanceId, terracottaVoter, distribution, license,
-        localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv);
-    boolean isRemoteInstallationSuccessful = kitInstallationPath == null && IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, callable);
-
-    if (!isRemoteInstallationSuccessful) {
+        localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
+    boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, terracottaVoter.getHostName(), ignitePort, callable);
+    if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
         IgniteClientHelper.uploadKit(ignite, terracottaVoter.getHostName(), ignitePort, instanceId, distribution,
             localKitManager.getKitInstallationName(), localKitManager.getKitInstallationPath().toFile());

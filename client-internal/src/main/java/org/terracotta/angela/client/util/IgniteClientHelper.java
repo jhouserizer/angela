@@ -1,22 +1,21 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.client.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -49,7 +48,15 @@ public class IgniteClientHelper {
   private final static Logger logger = LoggerFactory.getLogger(IgniteClientHelper.class);
 
   public static void executeRemotely(Ignite ignite, String hostname, int ignitePort, IgniteRunnable job) {
-    executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+    if (ignite == null) {
+      executeLocally(job);
+    } else {
+      executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+    }
+  }
+
+  private static void executeLocally(IgniteRunnable job) {
+    job.run();
   }
 
   public static IgniteFuture<Void> executeRemotelyAsync(Ignite ignite, String hostname, int ignitePort, IgniteRunnable job) {
@@ -62,7 +69,19 @@ public class IgniteClientHelper {
   }
 
   public static <R> R executeRemotely(Ignite ignite, String hostname, int ignitePort, IgniteCallable<R> job) {
-    return executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+    if (ignite == null) {
+      return executeLocally(job);
+    } else {
+      return executeRemotelyAsync(ignite, hostname, ignitePort, job).get();
+    }
+  }
+
+  private static <R> R executeLocally(IgniteCallable<R> job) {
+    try {
+      return job.call();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static <R> IgniteFuture<R> executeRemotelyAsync(Ignite ignite, String hostname, int ignitePort, IgniteCallable<R> job) {
@@ -73,6 +92,9 @@ public class IgniteClientHelper {
   }
 
   private static void checkAgentHealth(Ignite ignite, String hostname, int ignitePort) {
+    if (ignite == null) {
+      throw new IllegalStateException("No ignite instance");
+    }
     final String nodeName = getNodeName(hostname, ignitePort);
     ClusterGroup location = ignite.cluster().forAttribute("nodename", nodeName);
     IgniteFuture<Collection<Map<String, ?>>> future = ignite.compute(location)
@@ -135,6 +157,8 @@ public class IgniteClientHelper {
     }
   }
 
+  @SuppressWarnings("ConstantConditions")
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   private static void uploadFile(IgniteFuture<Void> remoteDownloadFuture, BlockingQueue<Object> queue, File file, String path) throws InterruptedException, IOException {
     if (remoteDownloadFuture.isDone()) {
       throw new RuntimeException("Download process failed, cancelling upload");

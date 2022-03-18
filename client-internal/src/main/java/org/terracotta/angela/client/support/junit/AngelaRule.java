@@ -1,32 +1,33 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
 import org.junit.runners.model.MultipleFailureException;
 import org.terracotta.angela.client.ClientArray;
+import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
+import org.terracotta.angela.client.ClusterTool;
+import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.common.cluster.Cluster;
-import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
@@ -45,8 +46,8 @@ import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASS
  */
 public class AngelaRule extends ExtendedTestRule {
 
-  private final PortAllocator portAllocator = new DefaultPortAllocator();
-  private final ConfigurationContext configuration;
+  private final ClusterAgent localAgent;
+  private ConfigurationContext configuration;
   private final boolean autoStart;
   private final boolean autoActivate;
 
@@ -57,11 +58,24 @@ public class AngelaRule extends ExtendedTestRule {
   private Supplier<ClientArray> clientArray;
   private Supplier<ClusterMonitor> clusterMonitor;
   private Supplier<Voter> voter;
+  private Supplier<ConfigTool> configTool;
+  private Supplier<ClusterTool> clusterTool;
 
-  public AngelaRule(ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration) {
+    this(localAgent, configuration, false, false);
+  }
+
+  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+    this.localAgent = localAgent;
     this.configuration = configuration;
     this.autoStart = autoStart;
     this.autoActivate = autoActivate;
+  }
+
+  public ConfigurationContext configure(ConfigurationContext configuration) {
+    ConfigurationContext old = this.configuration;
+    this.configuration = configuration;
+    return old;
   }
 
   // =========================================
@@ -72,7 +86,7 @@ public class AngelaRule extends ExtendedTestRule {
   protected void before(Description description) throws Throwable {
     final int nodePortCount = computeNodePortCount();
 
-    PortAllocator.PortReservation nodePortReservation = portAllocator.reserve(nodePortCount);
+    PortAllocator.PortReservation nodePortReservation = localAgent.getPortAllocator().reserve(nodePortCount);
 
     // assign generated ports to nodes
     for (TerracottaServer node : configuration.tsa().getTopology().getServers()) {
@@ -84,8 +98,12 @@ public class AngelaRule extends ExtendedTestRule {
       }
     }
 
-    int hash = description.getMethodName() == null ? 0 : description.getMethodName().hashCode();
-    this.clusterFactory = new ClusterFactory(description.getTestClass().getSimpleName() + "-" + hash, configuration);
+    String id = description.getTestClass().getSimpleName();
+    if (description.getMethodName() != null) {
+      id += "." + description.getMethodName();
+    }
+
+    this.clusterFactory = new ClusterFactory(localAgent, id, configuration);
 
     tsa = memoize(clusterFactory::tsa);
     cluster = memoize(clusterFactory::cluster);
@@ -93,12 +111,14 @@ public class AngelaRule extends ExtendedTestRule {
     clientArray = memoize(clusterFactory::clientArray);
     clusterMonitor = memoize(clusterFactory::monitor);
     voter = memoize(clusterFactory::voter);
+    configTool = memoize(clusterFactory::configTool);
+    clusterTool = memoize(clusterFactory::clusterTool);
 
     if (autoStart) {
       startNodes();
       if (autoActivate) {
-        tsa().attachAll();
-        tsa().activateAll();
+        configTool().attachAll();
+        configTool().activate();
       }
     }
   }
@@ -111,11 +131,6 @@ public class AngelaRule extends ExtendedTestRule {
         clusterFactory.close();
         clusterFactory = null;
       }
-    } catch (Throwable e) {
-      errs.add(e);
-    }
-    try {
-      portAllocator.close();
     } catch (Throwable e) {
       errs.add(e);
     }
@@ -222,6 +237,14 @@ public class AngelaRule extends ExtendedTestRule {
 
   public Tsa tsa() {
     return tsa.get();
+  }
+
+  public ConfigTool configTool() {
+    return configTool.get();
+  }
+
+  public ClusterTool clusterTool() {
+    return clusterTool.get();
   }
 
   public Cluster cluster() {

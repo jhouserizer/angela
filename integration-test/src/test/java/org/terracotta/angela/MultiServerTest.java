@@ -1,18 +1,17 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.terracotta.angela;
 
@@ -20,6 +19,7 @@ import com.terracotta.connection.api.DiagnosticConnectionService;
 import com.terracotta.diagnostic.Diagnostics;
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Test;
+import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
@@ -64,32 +64,34 @@ public class MultiServerTest {
             tcConfig(version(EHCACHE_VERSION), getClass().getResource("/configs/tc-config-app-consistent.xml"))))
         );
 
-    try (ClusterFactory factory = new ClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
-      try (Tsa tsa = factory.tsa().startAll()) {
-        TerracottaServer active = tsa.getActive();
-        Collection<TerracottaServer> passives = tsa.getPassives();
-        Iterator<TerracottaServer> iterator = passives.iterator();
-        TerracottaServer passive1 = iterator.next();
-        TerracottaServer passive2 = iterator.next();
+    try (ClusterAgent agent = new ClusterAgent(false)) {
+      try (ClusterFactory factory = new ClusterFactory(agent, "MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
+        try (Tsa tsa = factory.tsa().startAll()) {
+          TerracottaServer active = tsa.getActive();
+          Collection<TerracottaServer> passives = tsa.getPassives();
+          Iterator<TerracottaServer> iterator = passives.iterator();
+          TerracottaServer passive1 = iterator.next();
+          TerracottaServer passive2 = iterator.next();
 
 
-        SplitCluster split1 = new SplitCluster(active);
-        SplitCluster split2 = new SplitCluster(passives);
+          SplitCluster split1 = new SplitCluster(active);
+          SplitCluster split2 = new SplitCluster(passives);
 
-        //server to server disruption with active at one end and passives at other end.
-        try (ServerToServerDisruptor disruptor = tsa.disruptionController().newServerToServerDisruptor(split1, split2)) {
+          //server to server disruption with active at one end and passives at other end.
+          try (ServerToServerDisruptor disruptor = tsa.disruptionController().newServerToServerDisruptor(split1, split2)) {
 
-          //start partition
-          disruptor.disrupt();
-          //verify active gets into blocked state and one of passives gets promoted to active
-          assertTrue(waitForServerBlocked(active));
-          assertTrue(waitForActive(tsa, passive1, passive2));
+            //start partition
+            disruptor.disrupt();
+            //verify active gets into blocked state and one of passives gets promoted to active
+            assertTrue(waitForServerBlocked(active));
+            assertTrue(waitForActive(tsa, passive1, passive2));
 
-          //stop partition
-          disruptor.undisrupt();
-          //verify former active gets zapped and becomes passive after network restored
-          assertTrue(waitForPassive(tsa, active));
+            //stop partition
+            disruptor.undisrupt();
+            //verify former active gets zapped and becomes passive after network restored
+            assertTrue(waitForPassive(tsa, active));
 
+          }
         }
       }
     }

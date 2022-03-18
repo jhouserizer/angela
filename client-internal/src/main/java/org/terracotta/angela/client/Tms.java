@@ -1,20 +1,18 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.client;
 
 import org.apache.ignite.Ignite;
@@ -35,7 +33,9 @@ import org.terracotta.angela.common.tms.security.config.TmsServerSecurityConfig;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.HostPort;
 
-import static java.util.Collections.singleton;
+import java.util.Collections;
+import java.util.Map;
+
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
 import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
@@ -106,9 +106,13 @@ public class Tms implements AutoCloseable {
   }
 
   public Tms start() {
+    return start(Collections.emptyMap());
+  }
+
+  public Tms start(Map<String, String> envOverrides) {
     String tmsHostname = tmsConfigurationContext.getHostname();
     logger.info("Starting TMS on {}", tmsHostname);
-    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.controller.startTms(instanceId));
+    IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, () -> Agent.controller.startTms(instanceId, envOverrides));
     return this;
   }
 
@@ -145,10 +149,11 @@ public class Tms implements AutoCloseable {
     }
 
     logger.info("Uninstalling TMS from {}", tmsHostname);
+    String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort,
         () -> Agent.controller.uninstallTms(instanceId, tmsConfigurationContext.getDistribution(),
             tmsConfigurationContext.getSecurityConfig(),
-            localKitManager.getKitInstallationName(), tmsHostname));
+            localKitManager.getKitInstallationName(), tmsHostname, kitInstallationPath));
   }
 
   private void install() {
@@ -166,9 +171,8 @@ public class Tms implements AutoCloseable {
 
     logger.info("Attempting to remotely install if distribution already exists on {}", tmsHostname);
     IgniteCallable<Boolean> callable = () -> Agent.controller.installTms(instanceId, tmsHostname, distribution, license,
-        tmsServerSecurityConfig, localKitManager.getKitInstallationName(), tcEnv, singleton(tmsConfigurationContext.getHostname()));
-    boolean isRemoteInstallationSuccessful = kitInstallationPath == null
-                                             && IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, callable);
+        tmsServerSecurityConfig, localKitManager.getKitInstallationName(), tcEnv, tmsConfigurationContext.getHostname(), kitInstallationPath);
+    boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, tmsHostname, ignitePort, callable);
 
     if (!isRemoteInstallationSuccessful) {
       try {

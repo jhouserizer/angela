@@ -1,22 +1,21 @@
 /*
- * The contents of this file are subject to the Terracotta Public License Version
- * 2.0 (the "License"); You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Copyright Terracotta, Inc.
  *
- * http://terracotta.org/legal/terracotta-public-license.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
- * the specific language governing rights and limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Covered Software is Angela.
- *
- * The Initial Developer of the Covered Software is
- * Terracotta, Inc., a Software AG company
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.terracotta.angela.common;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.IpUtils;
@@ -26,6 +25,7 @@ import java.nio.file.Paths;
 /**
  * Listing of all system properties supported in angela
  */
+@SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")
 public enum AngelaProperties {
   // root dir where Angela puts installation, work directories and any file that is needed
   ROOT_DIR("angela.rootDir", Paths.get("/data/angela").toAbsolutePath().toString()),
@@ -41,13 +41,6 @@ public enum AngelaProperties {
   // running the test offline (no network connection)
   OFFLINE("angela.offline", "false"),
 
-  // ?
-  SKIP_KIT_INSTALL("angela.skipKitInstall", "false"),
-
-  // ?
-  SKIP_KIT_COPY_LOCALHOST("angela.skipKitCopyLocalhost", "true"),
-
-  // ?
   DISTRIBUTION("angela.distribution", null),
 
   // display Ignite logging (used to help debugging the behaviour of Angela)
@@ -57,7 +50,7 @@ public enum AngelaProperties {
   SKIP_UNINSTALL("angela.skipUninstall", "false"),
 
   // forces a kit copy instead of using a common kit install for multiple tests. useful for parallel execution of tests
-  //   that changes files in the kit install (e.g. tmc.properties)
+  // that changes files in the kit install (e.g. tmc.properties)
   KIT_COPY("angela.kitCopy", "false"),
 
   // ssh properties
@@ -71,6 +64,16 @@ public enum AngelaProperties {
   VOTER_FULL_LOGGING("angela.voter.fullLogging", "false"),
 
   // jdk properties to be used by Angela for running processes
+  /**
+   * {@code angela.java.resolver} determines how Angela computes the JAVA_HOME env variable that it will set for all its sub-processes.
+   * The default value is {@code toolchain}.
+   * <ul>
+   *   <li>{@code toolchain}: Angela will compute the JAVA_HOME by discovering paths in the Maven toolchain file, entries being filtered by {@code angela.java.vendor} and {@code angela.java.version}.</li>
+   *   <li>{@code user}: Angela will compute the JAVA_HOME by picking the value of {@code angela.java.home} which can be set by the user. If the user does not specify {@code angela.java.home}, then the {@code java.home} system property is used, which should be the JVM running the current code. {@code angela.java.vendor} and {@code angela.java.version} will not be used in this mode.</li>
+   * </ul>
+   */
+  JAVA_RESOLVER("angela.java.resolver", "toolchain"),
+  JAVA_HOME("angela.java.home", System.getProperty("java.home")),
   JAVA_VENDOR("angela.java.vendor", "zulu"),
   JAVA_VERSION("angela.java.version", "1.8"),
   JAVA_OPTS("angela.java.opts", "-Djdk.security.allowNonCaAnchor=false"),
