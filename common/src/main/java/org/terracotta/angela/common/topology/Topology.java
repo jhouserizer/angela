@@ -16,12 +16,14 @@
 package org.terracotta.angela.common.topology;
 
 import org.terracotta.angela.common.distribution.Distribution;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.provider.ConfigurationManager;
 import org.terracotta.angela.common.provider.TcConfigManager;
 import org.terracotta.angela.common.tcconfig.TcConfig;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.tcconfig.TsaConfig;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -35,7 +37,9 @@ import static org.terracotta.angela.common.provider.TcConfigManager.mergeTcConfi
  * - Version of the Terracotta installation
  */
 
-public class Topology {
+public class Topology implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final Distribution distribution;
   private final boolean netDisruptionEnabled;
   private final ConfigurationManager configurationManager;
@@ -127,6 +131,8 @@ public class Topology {
   public Collection<String> getServersHostnames() {
     return configurationManager.getServersHostnames();
   }
+
+  public void init(PortAllocator portAllocator) {configurationManager.init(portAllocator);}
 
   @Override
   public String toString() {

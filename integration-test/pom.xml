@@ -24,22 +24,21 @@
   <parent>
     <groupId>org.terracotta</groupId>
     <artifactId>angela-root</artifactId>
-    <version>3.1.25-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>integration-test</artifactId>
 
   <properties>
-    <!-- Terracotta dependencies -->
-    <ehcache.version>3.8.1</ehcache.version>
-    <ehcache-snapshot.version>3.8-SNAPSHOT</ehcache-snapshot.version>
+    <ehcache.version.xml>3.8.1</ehcache.version.xml>
+    <ehcache.version.dc>3.9.9</ehcache.version.dc>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.ehcache</groupId>
       <artifactId>ehcache-clustered</artifactId>
-      <version>${ehcache.version}</version>
+      <version>${ehcache.version.xml}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -66,33 +65,84 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.sshd</groupId>
+      <artifactId>sshd-sftp</artifactId>
+      <version>2.8.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.terracotta</groupId>
+      <artifactId>terracotta-utilities-test-tools</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <!-- This is required to pass the 'terracotta.version' from the pom, via the versions.properties resource -->
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <groupId>org.apache.maven.plugins</groupId>
+        <groupId>org.codehaus.gmavenplus</groupId>
+        <artifactId>gmavenplus-plugin</artifactId>
+        <version>1.13.0</version>
+        <executions>
+          <execution>
+            <id>fake-hosts</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
+          <scripts>
+            <!--
+                Create a custom /etc/hosts for our test to simulate a new hostname that angela will see as being a remote host.
+                Angela considers localhost, 127.0.0.1 and the LAN machine IP address to be the same "local" machine.
+                So to test SSH locally, we can simulate a new hostname.
+             -->
+            <script><![CDATA[
+new File(project.build.directory, "fake-hosts.txt").text = """${InetAddress.getLocalHost().getHostAddress()} ${InetAddress.getLocalHost().getHostName()}
+${InetAddress.getLocalHost().getHostAddress()} testhostname
+${InetAddress.getByName("oss.sonatype.org").getHostAddress()} oss.sonatype.org"""
+println(new File(project.build.directory, "fake-hosts.txt").text)
+          ]]></script>
+          </scripts>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>3.0.7</version>
+            <scope>runtime</scope>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <!-- Without this, IT tests do not run on Java 11. Why ?? -->
+          <useModulePath>false</useModulePath>
           <argLine>-Xmx1024m</argLine>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
-            <angela.java.vendor/> <!-- use any vendor for the tests -->
-            <angela.igniteLogging>true</angela.igniteLogging>
-            <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
+            <angela.skipUninstall>true</angela.skipUninstall>
             <angela.kitCopy>false</angela.kitCopy>
-            <angela.skipUninstall>false</angela.skipUninstall>
+            <angela.tsa.fullLogging>true</angela.tsa.fullLogging>
+            <angela.java.resolver>user</angela.java.resolver>
+            <angela.igniteLogging>false</angela.igniteLogging>
+            <angela.agent.debug>falsetrue</angela.agent.debug>
+            <angela.java.opts>-Djdk.security.allowNonCaAnchor=false -Djdk.net.hosts.file=${project.build.directory}/fake-hosts.txt -Dangela.agent.debug=false -DIGNITE_UPDATE_NOTIFIER=false</angela.java.opts>
+            <jdk.security.allowNonCaAnchor>true</jdk.security.allowNonCaAnchor>
+            <!-- tells the JDK to use this file instead of /etc/hosts -->
+            <jdk.net.hosts.file>${project.build.directory}/fake-hosts.txt</jdk.net.hosts.file>
+            <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
+            <ehcache.version.xml>${ehcache.version.xml}</ehcache.version.xml>
+            <ehcache.version.dc>${ehcache.version.dc}</ehcache.version.dc>
           </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>
-
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <filtering>true</filtering>
-      </testResource>
-    </testResources>
   </build>
 </project>

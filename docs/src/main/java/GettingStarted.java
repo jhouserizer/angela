@@ -16,14 +16,15 @@
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.awaitility.Awaitility;
+import org.junit.Rule;
 import org.junit.Test;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClientArrayFuture;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ConfigTool;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.support.junit.AngelaOrchestratorRule;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.ClientArrayTopology;
@@ -56,9 +57,12 @@ public class GettingStarted {
   private static final String EHCACHE_OS_VERSION = "3.8.1";
   private static final String EHCACHE_VERSION = "3.9-SNAPSHOT";
 
+  // tag::configureCluster[]
+  @Rule
+  public AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule(); // <6>
+
   @Test
   public void configureCluster() throws Exception {
-    // tag::configureCluster[]
     ConfigurationContext configContext = customConfigurationContext() // <1>
         .tsa(tsa -> tsa // <2>
             .topology(new Topology( // <3>
@@ -66,15 +70,13 @@ public class GettingStarted {
                 tcConfig(version(EHCACHE_OS_VERSION), getClass().getResource("/tc-config-a.xml")))) // <5>
         );
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {  // <6>
-      ClusterFactory factory = new ClusterFactory(agent, "GettingStarted::configureCluster", configContext); // <6>
-      Tsa tsa = factory.tsa() // <7>
+    ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::configureCluster", configContext); // <6>
+    Tsa tsa = factory.tsa() // <7>
         .startAll(); // <8>
 
-      factory.close(); // <9>
-    }
-    // end::configureCluster[]
+    factory.close(); // <9>
   }
+  // end::configureCluster[]
 
   @Test
   public void showTsaApi() throws Exception {
@@ -84,30 +86,28 @@ public class GettingStarted {
     );
     ConfigurationContext configContext = customConfigurationContext().tsa(tsa -> tsa.topology(topology));
 
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "GettingStarted::showTsaApi", configContext)) {
-        // tag::showTsaApi[]
-        Tsa tsa = factory.tsa() // <1>
-            .startAll(); // <2>
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::showTsaApi", configContext)) {
+      // tag::showTsaApi[]
+      Tsa tsa = factory.tsa() // <1>
+          .startAll(); // <2>
 
-        TerracottaServer active = tsa.getActive(); // <3>
-        Collection<TerracottaServer> actives = tsa.getActives(); // <4>
-        TerracottaServer passive = tsa.getPassive(); // <5>
-        Collection<TerracottaServer> passives = tsa.getPassives(); // <6>
+      TerracottaServer active = tsa.getActive(); // <3>
+      Collection<TerracottaServer> actives = tsa.getActives(); // <4>
+      TerracottaServer passive = tsa.getPassive(); // <5>
+      Collection<TerracottaServer> passives = tsa.getPassives(); // <6>
 
-        tsa.stopAll(); // <7>
+      tsa.stopAll(); // <7>
 
-        tsa.start(active); // <8>
-        tsa.start(passive);
+      tsa.start(active); // <8>
+      tsa.start(passive);
 
-        tsa.stop(active); // <9>
-        Callable<TerracottaServerState> serverState = () -> tsa.getState(passive); // <10>
-        Awaitility.await()
-            .pollInterval(1, SECONDS)
-            .atMost(15, SECONDS)
-            .until(serverState, is(TerracottaServerState.STARTED_AS_ACTIVE));
-        // end::showTsaApi[]
-      }
+      tsa.stop(active); // <9>
+      Callable<TerracottaServerState> serverState = () -> tsa.getState(passive); // <10>
+      Awaitility.await()
+          .pollInterval(1, SECONDS)
+          .atMost(15, SECONDS)
+          .until(serverState, is(TerracottaServerState.STARTED_AS_ACTIVE));
+      // end::showTsaApi[]
     }
   }
 
@@ -121,42 +121,40 @@ public class GettingStarted {
                     distribution(version(EHCACHE_VERSION), KIT, TERRACOTTA_OS),
                     dynamicCluster( // <1>
                         stripe(
-                            server("server-1", "localhost")
+                            server("server-1")
                                 .tsaPort(9410)
                                 .tsaGroupPort(9411)
                                 .configRepo("terracotta1/repository")
                                 .logs("terracotta1/logs")
                                 .metaData("terracotta1/metadata")
                                 .failoverPriority("availability"),
-                            server("server-2", "localhost")
+                            server("server-2")
                                 .tsaPort(9510)
                                 .tsaGroupPort(9511)
                                 .configRepo("terracotta2/repository")
                                 .logs("terracotta2/logs")
                                 .metaData("terracotta2/metadata")
                                 .failoverPriority("availability"))))))
-        .configTool(context -> context.configTool(configTool("configTool", "localhost")));
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      try (ClusterFactory factory = new ClusterFactory(agent, "DynamicClusterTest::testSingleStripeFormation", configContext)) {
-        Tsa tsa = factory.tsa();
-        tsa.startAll(); // <2>
-        ConfigTool configTool = factory.configTool();
-        configTool.attachAll(); // <3>
+        .configTool(context -> context.configTool(configTool("configTool")));
+    try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
+      Tsa tsa = factory.tsa();
+      tsa.startAll(); // <2>
+      ConfigTool configTool = factory.configTool();
+      configTool.attachAll(); // <3>
 
-        configTool.attachStripe(server("server-3", "localhost") // <4>
-            .tsaPort(9610)
-            .tsaGroupPort(9611)
-            .configRepo("terracotta3/repository")
-            .logs("terracotta3/logs")
-            .metaData("terracotta3/metadata")
-            .failoverPriority("availability"));
+      configTool.attachStripe(server("server-3") // <4>
+          .tsaPort(9610)
+          .tsaGroupPort(9611)
+          .configRepo("terracotta3/repository")
+          .logs("terracotta3/logs")
+          .metaData("terracotta3/metadata")
+          .failoverPriority("availability"));
 
-        TerracottaServer toDetach = tsa.getServer(0, 1);
-        configTool.detachNode(0, 1); // <5>
-        tsa.stop(toDetach); // <6>
+      TerracottaServer toDetach = tsa.getServer(0, 1);
+      configTool.detachNode(0, 1); // <5>
+      tsa.stop(toDetach); // <6>
 
-        configTool.activate(); // <7>
-      }
+      configTool.activate(); // <7>
     }
     // end::showDynamicTsaApi[]
   }
@@ -168,17 +166,15 @@ public class GettingStarted {
         .clientArray(clientArray -> clientArray // <1>
             .clientArrayTopology(new ClientArrayTopology( // <2>
                 distribution(version(EHCACHE_OS_VERSION), PackageType.KIT, LicenseType.TERRACOTTA_OS), // <3>
-                newClientArrayConfig().host("localhost-1", "localhost").host("localhost-2", "localhost")) // <4>
+                newClientArrayConfig().named("localhost-1").named("localhost-2")) // <4>
             )
         );
-    try (ClusterAgent agent = new ClusterAgent(false)) {
-      ClusterFactory factory = new ClusterFactory(agent, "GettingStarted::runClient", configContext);
-      ClientArray clientArray = factory.clientArray(); // <5>
-      ClientArrayFuture f = clientArray.executeOnAll((context) -> System.out.println("Hello")); // <6>
-      f.get(); // <7>
+    ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::runClient", configContext);
+    ClientArray clientArray = factory.clientArray(0); // <5>
+    ClientArrayFuture f = clientArray.executeOnAll((context) -> System.out.println("Hello")); // <6>
+    f.get(); // <7>
 
-      factory.close();
-    }
+    factory.close();
     // end::runClient[]
   }
 }

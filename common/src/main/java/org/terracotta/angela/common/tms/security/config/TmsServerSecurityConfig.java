@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.tms.security.config;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -48,7 +49,8 @@ import java.util.function.Consumer;
  *
  */
 
-public class TmsServerSecurityConfig {
+public class TmsServerSecurityConfig implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   public static final String NOT_SET_VALUE = "was not set";
 

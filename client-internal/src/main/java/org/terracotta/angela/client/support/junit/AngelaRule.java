@@ -16,9 +16,9 @@
 package org.terracotta.angela.client.support.junit;
 
 import org.junit.runner.Description;
-import org.junit.runners.model.MultipleFailureException;
+import org.terracotta.angela.agent.cluster.Cluster;
+import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
-import org.terracotta.angela.client.ClusterAgent;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
 import org.terracotta.angela.client.ClusterTool;
@@ -27,15 +27,13 @@ import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
-import org.terracotta.angela.common.cluster.Cluster;
-import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
-import java.util.ArrayList;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 import static java.util.stream.IntStream.rangeClosed;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
@@ -44,9 +42,9 @@ import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASS
 /**
  * @author Mathieu Carbou
  */
-public class AngelaRule extends ExtendedTestRule {
+public class AngelaRule extends ExtendedTestRule implements Closeable {
 
-  private final ClusterAgent localAgent;
+  private final Supplier<AngelaOrchestrator> angelaOrchestratorSupplier;
   private ConfigurationContext configuration;
   private final boolean autoStart;
   private final boolean autoActivate;
@@ -61,12 +59,16 @@ public class AngelaRule extends ExtendedTestRule {
   private Supplier<ConfigTool> configTool;
   private Supplier<ClusterTool> clusterTool;
 
-  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration) {
-    this(localAgent, configuration, false, false);
+  public AngelaRule(AngelaOrchestrator angelaOrchestrator, ConfigurationContext configuration) {
+    this(angelaOrchestrator, configuration, false, false);
   }
 
-  public AngelaRule(ClusterAgent localAgent, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
-    this.localAgent = localAgent;
+  public AngelaRule(AngelaOrchestrator angelaOrchestrator, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+    this(() -> angelaOrchestrator, configuration, autoStart, autoActivate);
+  }
+
+  public AngelaRule(Supplier<AngelaOrchestrator> angelaOrchestratorSupplier, ConfigurationContext configuration, boolean autoStart, boolean autoActivate) {
+    this.angelaOrchestratorSupplier = angelaOrchestratorSupplier;
     this.configuration = configuration;
     this.autoStart = autoStart;
     this.autoActivate = autoActivate;
@@ -84,31 +86,18 @@ public class AngelaRule extends ExtendedTestRule {
 
   @Override
   protected void before(Description description) throws Throwable {
-    final int nodePortCount = computeNodePortCount();
-
-    PortAllocator.PortReservation nodePortReservation = localAgent.getPortAllocator().reserve(nodePortCount);
-
-    // assign generated ports to nodes
-    for (TerracottaServer node : configuration.tsa().getTopology().getServers()) {
-      if (node.getTsaPort() <= 0) {
-        node.tsaPort(nodePortReservation.next());
-      }
-      if (node.getTsaGroupPort() <= 0) {
-        node.tsaGroupPort(nodePortReservation.next());
-      }
-    }
-
     String id = description.getTestClass().getSimpleName();
     if (description.getMethodName() != null) {
       id += "." + description.getMethodName();
     }
 
-    this.clusterFactory = new ClusterFactory(localAgent, id, configuration);
+    AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
+    this.clusterFactory = angelaOrchestrator.newClusterFactory(id, configuration);
 
     tsa = memoize(clusterFactory::tsa);
     cluster = memoize(clusterFactory::cluster);
     tms = memoize(clusterFactory::tms);
-    clientArray = memoize(clusterFactory::clientArray);
+    clientArray = memoize(clusterFactory::firstClientArray);
     clusterMonitor = memoize(clusterFactory::monitor);
     voter = memoize(clusterFactory::voter);
     configTool = memoize(clusterFactory::configTool);
@@ -125,16 +114,15 @@ public class AngelaRule extends ExtendedTestRule {
 
   @Override
   protected void after(Description description) throws Throwable {
-    List<Throwable> errs = new ArrayList<>(0);
-    try {
-      if (clusterFactory != null) {
-        clusterFactory.close();
-        clusterFactory = null;
-      }
-    } catch (Throwable e) {
-      errs.add(e);
+    close();
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (clusterFactory != null) {
+      clusterFactory.close();
+      clusterFactory = null;
     }
-    MultipleFailureException.assertEmpty(errs);
   }
 
   // =========================================
@@ -270,16 +258,6 @@ public class AngelaRule extends ExtendedTestRule {
   // =========================================
   // utils
   // =========================================
-
-  protected int computeNodePortCount() {
-    // compute the number of port to reserve for the nodes
-    // not having any assigned port and group port
-    List<TerracottaServer> nodes = configuration.tsa().getTopology().getServers();
-    return (int) IntStream.concat(
-        nodes.stream().mapToInt(TerracottaServer::getTsaPort),
-        nodes.stream().mapToInt(TerracottaServer::getTsaGroupPort)
-    ).filter(port -> port <= 0).count();
-  }
 
   private static <T> Supplier<T> memoize(Supplier<T> supplier) {
     return new Supplier<T>() {

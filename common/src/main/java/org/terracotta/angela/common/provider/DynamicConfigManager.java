@@ -22,6 +22,7 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,8 +30,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
-public class DynamicConfigManager implements ConfigurationManager {
+public class DynamicConfigManager implements ConfigurationManager, Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final List<Stripe> stripes;
 
   private DynamicConfigManager(Stripe... stripes) {
@@ -146,6 +150,33 @@ public class DynamicConfigManager implements ConfigurationManager {
       }
     }
     return hostnames;
+  }
+
+  @Override
+  public void init(PortAllocator portAllocator) {
+    final int nodePortCount = computeNodePortCount();
+
+    PortAllocator.PortReservation nodePortReservation = portAllocator.reserve(nodePortCount);
+
+    // assign generated ports to nodes
+    for (TerracottaServer node : getServers()) {
+      if (node.getTsaPort() <= 0) {
+        node.tsaPort(nodePortReservation.next());
+      }
+      if (node.getTsaGroupPort() <= 0) {
+        node.tsaGroupPort(nodePortReservation.next());
+      }
+    }
+  }
+
+  protected int computeNodePortCount() {
+    // compute the number of port to reserve for the nodes
+    // not having any assigned port and group port
+    List<TerracottaServer> nodes = getServers();
+    return (int) IntStream.concat(
+        nodes.stream().mapToInt(TerracottaServer::getTsaPort),
+        nodes.stream().mapToInt(TerracottaServer::getTsaGroupPort)
+    ).filter(port -> port <= 0).count();
   }
 
   @Override

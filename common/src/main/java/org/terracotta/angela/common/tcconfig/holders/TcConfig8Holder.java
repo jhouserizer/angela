@@ -38,6 +38,7 @@ import java.util.Map;
  * @author Aurelien Broszniowski
  */
 public class TcConfig8Holder extends TcConfigHolder {
+  private static final long serialVersionUID = 1L;
 
   public TcConfig8Holder(final TcConfig8Holder tcConfig8Holder) {
     super(tcConfig8Holder);

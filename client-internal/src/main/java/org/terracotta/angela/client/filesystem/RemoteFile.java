@@ -15,25 +15,21 @@
  */
 package org.terracotta.angela.client.filesystem;
 
-import org.apache.ignite.Ignite;
-import org.terracotta.angela.agent.Agent;
-import org.terracotta.angela.client.util.IgniteClientHelper;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class RemoteFile {
-  protected final Ignite ignite;
-  protected final String hostname;
-  private final int ignitePort;
+  protected final transient AgentExecutor agentExecutor;
   protected final String parentName;
   protected final String name;
 
-  public RemoteFile(Ignite ignite, String hostname, int ignitePort, String parentName, String name) {
-    this.ignite = ignite;
-    this.hostname = hostname;
-    this.ignitePort = ignitePort;
+  public RemoteFile(AgentExecutor agentExecutor, String parentName, String name) {
+    this.agentExecutor = agentExecutor;
     this.parentName = parentName;
     this.name = name;
   }
@@ -54,15 +50,16 @@ public class RemoteFile {
   }
 
   public void downloadTo(File path) throws IOException {
-    byte[] bytes = downloadContents();
-    try (FileOutputStream fos = new FileOutputStream(path)) {
-      fos.write(bytes);
-    }
+    downloadTo(path.toPath());
+  }
+
+  public void downloadTo(Path path) throws IOException {
+    Files.write(path, downloadContents());
   }
 
   private byte[] downloadContents() {
     String filename = getAbsoluteName();
-    return IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.downloadFile(filename));
+    return agentExecutor.execute(() -> AgentController.getInstance().downloadFile(filename));
   }
 
   public TransportableFile toTransportableFile() {
@@ -71,6 +68,6 @@ public class RemoteFile {
 
   @Override
   public String toString() {
-    return "[" + hostname + "]:" + name;
+    return "[" + agentExecutor.getTarget() + "]:" + name;
   }
 }

@@ -243,6 +243,8 @@ public class Distribution107Controller extends DistributionController {
     for (Number pid : terracottaServerInstanceProcess.getPids()) {
       try {
         ProcessUtil.destroyGracefullyOrForcefullyAndWait(pid.intValue());
+        // TMS does not close correctly in 30 sec, so process is killed. The state is not correctly set to STOPEPD after.
+        terracottaServerInstanceProcess.setState(TerracottaManagementServerState.STOPPED);
       } catch (Exception e) {
         LOGGER.error("Could not destroy TMS process {}", pid, e);
       }
@@ -383,7 +385,7 @@ public class Distribution107Controller extends DistributionController {
       }
     }
 
-    LOGGER.info("Create TSA command: {}", command);
+    LOGGER.debug("Create TSA command: {}", command);
     return command;
   }
 
@@ -524,7 +526,7 @@ public class Distribution107Controller extends DistributionController {
   private ToolExecutionResult executeCommand(List<String> command, TerracottaCommandLineEnvironment env,
                                              File workingDir, Map<String, String> envOverrides) {
     try {
-      LOGGER.info("Config tool command: {}", command);
+      LOGGER.debug("Config tool command: {}", command);
       ProcessResult processResult = new ProcessExecutor(command)
           .directory(workingDir)
           .environment(env.buildEnv(envOverrides))
@@ -571,7 +573,7 @@ public class Distribution107Controller extends DistributionController {
       command.add(securityDirPath.toString());
     }
     command.addAll(Arrays.asList(arguments));
-    LOGGER.info("Cluster tool command: {}", command);
+    LOGGER.debug("Cluster tool command: {}", command);
     return command;
   }
 
@@ -600,7 +602,7 @@ public class Distribution107Controller extends DistributionController {
   List<String> startTmsCommand(File installLocation) {
     List<String> command = new ArrayList<>();
     command.add(getStartTmsExecutable(installLocation));
-    LOGGER.info("Start TMS command: {}", command);
+    LOGGER.debug("Start TMS command: {}", command);
     return command;
   }
 
@@ -625,7 +627,7 @@ public class Distribution107Controller extends DistributionController {
     }
     command.add("-s");
     command.add(join(",", terracottaVoter.getHostPorts()));
-    LOGGER.info("Start voter command: {}", command);
+    LOGGER.debug("Start voter command: {}", command);
     return command;
   }
 

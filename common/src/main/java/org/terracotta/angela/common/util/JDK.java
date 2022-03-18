@@ -17,19 +17,17 @@ package org.terracotta.angela.common.util;
 
 public class JDK {
 
-  private final String home;
+  private final UniversalPath home;
   private final String version;
   private final String vendor;
-  private final boolean valid;
 
-  public JDK(String home, String version, String vendor, boolean valid) {
+  public JDK(UniversalPath home, String version, String vendor) {
     this.home = home;
     this.version = version;
     this.vendor = vendor;
-    this.valid = valid;
   }
 
-  public String getHome() {
+  public UniversalPath getHome() {
     return home;
   }
 
@@ -41,17 +39,12 @@ public class JDK {
     return vendor;
   }
 
-  public boolean isValid() {
-    return valid;
-  }
-
   @Override
   public String toString() {
     return "JDK{" +
         "home='" + home + '\'' +
         ", version='" + version + '\'' +
         ", vendor='" + vendor + '\'' +
-        ", valid=" + valid +
         '}';
   }
 }

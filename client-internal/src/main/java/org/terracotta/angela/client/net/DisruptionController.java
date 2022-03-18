@@ -15,9 +15,9 @@
  */
 package org.terracotta.angela.client.net;
 
-import org.apache.ignite.Ignite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.common.net.DisruptionProvider;
 import org.terracotta.angela.common.net.DisruptionProviderFactory;
 import org.terracotta.angela.common.net.Disruptor;
@@ -44,18 +44,16 @@ import java.util.Set;
 public class DisruptionController implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(DisruptionController.class);
   private static final DisruptionProvider DISRUPTION_PROVIDER = DisruptionProviderFactory.getDefault();
-  private final Ignite ignite;
+  private final Executor executor;
   private final InstanceId instanceId;
-  private final int ignitePort;
   private final Topology topology;
   private final Collection<Disruptor> existingDisruptors = new ArrayList<>();
   private final Map<ServerSymbolicName, Integer> proxyTsaPorts = new HashMap<>();
   private volatile boolean closed;
 
-  public DisruptionController(Ignite ignite, InstanceId instanceId, int ignitePort, Topology topology) {
-    this.ignite = ignite;
+  public DisruptionController(Executor executor, InstanceId instanceId, Topology topology) {
+    this.executor = executor;
     this.instanceId = instanceId;
-    this.ignitePort = ignitePort;
     this.topology = topology;
   }
 
@@ -152,7 +150,7 @@ public class DisruptionController implements AutoCloseable {
     }
 
 
-    ServerToServerDisruptor disruption = new ServerToServerDisruptor(ignite, ignitePort, instanceId, topology, linkedServers, existingDisruptors::remove);
+    ServerToServerDisruptor disruption = new ServerToServerDisruptor(executor, instanceId, topology, linkedServers, existingDisruptors::remove);
     existingDisruptors.add(disruption);
     LOGGER.debug("created disruptor {}", disruption);
     return disruption;
@@ -208,7 +206,7 @@ public class DisruptionController implements AutoCloseable {
           TcConfigManager tcConfigProvider = (TcConfigManager) configurationProvider;
           List<TcConfig> configs = tcConfigProvider.getTcConfigs();
           for (TcConfig config : configs) {
-            TcConfig copy = TcConfig.copy(config);
+            TcConfig copy = config.copy();
             proxyTsaPorts.putAll(copy.retrieveTsaPorts(true, portAllocator));
             proxyMap.putAll(proxyTsaPorts);
           }

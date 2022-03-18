@@ -18,7 +18,6 @@ package org.terracotta.angela.common;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.common.util.IpUtils;
 
 import java.nio.file.Paths;
 
@@ -46,6 +45,10 @@ public enum AngelaProperties {
   // display Ignite logging (used to help debugging the behaviour of Angela)
   IGNITE_LOGGING("angela.igniteLogging", "false"),
 
+  // Define additional hostnames or ip addresses to be considered as local, separated by comma.
+  // For some testing, it is possible ot fake some local hostnames.
+  ADDED_LOCAL_HOSTNAMES("angela.additionalLocalHostnames", ""),
+
   // do not clean work directory (used to have access to logs after end of test for debugging test issues)
   SKIP_UNINSTALL("angela.skipUninstall", "false"),
 
@@ -57,11 +60,14 @@ public enum AngelaProperties {
   SSH_USERNAME("angela.ssh.userName", System.getProperty("user.name")),
   SSH_USERNAME_KEY_PATH("angela.ssh.userName.keyPath", null),
   SSH_STRICT_HOST_CHECKING("angela.ssh.strictHostKeyChecking", "true"),
+  SSH_PORT("angela.ssh.port", "22"),
 
   // logging properties
   TMS_FULL_LOGGING("angela.tms.fullLogging", "false"),
   TSA_FULL_LOGGING("angela.tsa.fullLogging", "false"),
   VOTER_FULL_LOGGING("angela.voter.fullLogging", "false"),
+  // put a remote agent in debug mode
+  AGENT_DEBUG("angela.agent.debug", "false"),
 
   // jdk properties to be used by Angela for running processes
   /**
@@ -77,10 +83,6 @@ public enum AngelaProperties {
   JAVA_VENDOR("angela.java.vendor", "zulu"),
   JAVA_VERSION("angela.java.version", "1.8"),
   JAVA_OPTS("angela.java.opts", "-Djdk.security.allowNonCaAnchor=false"),
-
-  // internal properties
-  DIRECT_JOIN("angela.directJoin", ""),
-  NODE_NAME("angela.nodeName", IpUtils.getHostName()),
   ;
 
   private static final Logger logger = LoggerFactory.getLogger(AngelaProperties.class);

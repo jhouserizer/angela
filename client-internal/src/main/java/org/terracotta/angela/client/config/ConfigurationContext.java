@@ -15,17 +15,26 @@
  */
 package org.terracotta.angela.client.config;
 
+import java.util.List;
 import java.util.Set;
 
 public interface ConfigurationContext {
 
-  RemotingConfigurationContext remoting();
+  void visit(ConfigurationContextVisitor visitor);
 
   TsaConfigurationContext tsa();
 
   TmsConfigurationContext tms();
 
-  ClientArrayConfigurationContext clientArray();
+  default ClientArrayConfigurationContext firstClientArray() {
+    return clientArray().iterator().next();
+  }
+
+  default ClientArrayConfigurationContext clientArray(int idx) {
+    return clientArray().get(idx);
+  }
+
+  List<? extends ClientArrayConfigurationContext> clientArray();
 
   Set<String> allHostnames();
 

@@ -25,6 +25,7 @@ import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.common.util.Jcmd;
 
 import java.io.Closeable;
 import java.io.File;
@@ -50,7 +51,7 @@ public class TerracottaServerInstance implements Closeable {
   private final File workingDir;
   private final Distribution distribution;
   private final PortAllocator portAllocator;
-  private final File licenseFileLocation;
+  private final String licenseFilename;
   private volatile TerracottaServerHandle serverInstance;
   private final boolean netDisruptionEnabled;
   private final Topology topology;
@@ -64,7 +65,7 @@ public class TerracottaServerInstance implements Closeable {
     this.workingDir = workingDir;
     this.distribution = distribution;
     this.portAllocator = portAllocator;
-    this.licenseFileLocation = license == null ? null : new File(workingDir, license.getFilename());
+    this.licenseFilename = license == null ? null : license.getFilename();
     this.netDisruptionEnabled = topology.isNetDisruptionEnabled();
     this.topology = topology;
     constructLinks();
@@ -125,7 +126,7 @@ public class TerracottaServerInstance implements Closeable {
   }
 
   public ToolExecutionResult jcmd(TerracottaCommandLineEnvironment env, String... arguments) {
-    return DistributionController.invokeJcmd(getServerHandle(), env, arguments);
+    return Jcmd.jcmd(getServerHandle().getJavaPid(), env, arguments);
   }
 
   public void waitForState(Set<TerracottaServerState> terracottaServerStates) {
@@ -173,7 +174,17 @@ public class TerracottaServerInstance implements Closeable {
   }
 
   public File getLicenseFileLocation() {
-    return licenseFileLocation;
+    // now workingDir == server folder
+    File f = new File(workingDir, licenseFilename);
+    if (f.exists()) {
+      return f;
+    }
+    // check in temporary angela work dir (this one will work now)
+    f = new File(workingDir.getParentFile(), licenseFilename);
+    if (f.exists()) {
+      return f;
+    }
+    return null;
   }
 
   private void removeDisruptionLinks() {

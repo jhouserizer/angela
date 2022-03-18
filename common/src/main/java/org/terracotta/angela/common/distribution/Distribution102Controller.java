@@ -326,7 +326,7 @@ public class Distribution102Controller extends DistributionController {
     List<TcConfig> tcConfigs = tcConfigProvider.getTcConfigs();
     List<TcConfig> modifiedConfigs = new ArrayList<>();
     for (TcConfig tcConfig : tcConfigs) {
-      TcConfig modifiedConfig = TcConfig.copy(tcConfig);
+      TcConfig modifiedConfig = tcConfig.copy();
       if (topology.isNetDisruptionEnabled()) {
         modifiedConfig.updateServerTsaPort(proxiedTsaPorts);
       }
@@ -343,7 +343,7 @@ public class Distribution102Controller extends DistributionController {
   private ToolExecutionResult executeCommand(List<String> command, TerracottaCommandLineEnvironment env,
                                              File workingDir, Map<String, String> envOverrides) {
     try {
-      logger.info("Cluster tool command: {}", command);
+      logger.debug("Cluster tool command: {}", command);
       ProcessResult processResult = new ProcessExecutor(command)
           .directory(workingDir)
           .environment(env.buildEnv(envOverrides))
@@ -413,7 +413,7 @@ public class Distribution102Controller extends DistributionController {
       SecureTcConfig secureTcConfig = (SecureTcConfig) tcConfig;
       securityRootDirectory = secureTcConfig.securityRootDirectoryFor(serverSymbolicName);
     }
-    TcConfig modifiedConfig = TcConfig.copy(configurationProvider.findTcConfig(serverId));
+    TcConfig modifiedConfig = configurationProvider.findTcConfig(serverId).copy();
     configurationProvider.setUpInstallation(modifiedConfig, serverSymbolicName, serverId, proxiedPorts, installLocation, securityRootDirectory);
 
     // add -f if applicable

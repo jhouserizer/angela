@@ -124,7 +124,7 @@ We expect the TSA to contain one Terracotta server running on localhost, and thi
             )
         );
     ClusterFactory factory = new ClusterFactory("GettingStarted::runClient", configContext);
-    ClientArray clientArray = factory.clientArray(); (5)
+    ClientArray clientArray = factory.clientArray(0); (5)
     ClientArrayFuture f = clientArray.executeOnAll((context) -> System.out.println("Hello")); (6)
     f.get(); (7)
 
@@ -157,18 +157,6 @@ Full example : See class [EhcacheTest](integration-test/src/test/java/org/terrac
 
 Be careful not to cd directly into the module, you would not use the right kit version !
 
-## Use specific location for Angela kits
-
-    -Dangela.rootDir=/Users/adah/kits/
-
-## Do not delete after run
-
-    -Dangela.skipUninstall=true
-
-## Specify JVM vendor
-
-    -Dangela.java.vendor=zulu
-
 ## Things to know
 
  * Angela is looking for JDK's in `$HOME/.m2/toolchains.xml`, the standard Maven toolchains file.
@@ -179,3 +167,156 @@ Be careful not to cd directly into the module, you would not use the right kit v
  random ports. In a nutshell, this means that testing across WANs or firewalls just doesn't work. 
  * Angela expects a writeable `/data` folder (or at least a pre-created, writeable `/data/angela` folder) on every
  machine she runs on, i.e.: the one running the test as well as all the remote hosts.
+
+## Updates Feb. 2022
+
+### Angela system properties
+
+Corresponding class: `AngelaProperties`
+
+| **System Property**                  |           **Default value**            | **Description**                                                                                                                                                                |
+|--------------------------------------|:--------------------------------------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **angela.rootDir**                   |              /data/angela              | root dir where Angela puts installation, work directories and any file that is needed                                                                                          |
+| **angela.kitInstallationDir**        |                                        | use this property to use a local build instead of downloading a kit build                                                                                                      |
+| **angela.kitCopy**                   |                 false                  | forces a kit copy instead of using a common kit install for multiple tests. useful for parallel execution of tests that changes files in the kit install (e.g. tmc.properties) |
+| **angela.skipUninstall**             |                 false                  | do not clean work directory (used to have access to logs after end of test for debugging test issues)                                                                          |
+| **angela.distribution**              |                                        |                                                                                                                                                                                |
+| **angela.additionalLocalHostnames**  |                   ""                   | Define additional hostnames or ip addresses to be considered as local, separated by comma. Used in case the test is faking some local hostnames                                |
+| **angela.igniteLogging**             |                 false                  | display Ignite logging (used to help debugging the behaviour of Angela)                                                                                                        |
+| **angela.agent.debug**               |                 false                  | put a remote agent in debug mode                                                                                                                                               |
+| **angela.tms.fullLogging**           |                 false                  |                                                                                                                                                                                |
+| **angela.tsa.fullLogging**           |                 false                  |                                                                                                                                                                                |
+| **angela.voter.fullLogging**         |                 false                  |                                                                                                                                                                                |
+| **angela.ssh.userName**              |    System.getProperty("user.name")     |                                                                                                                                                                                |
+| **angela.ssh.userName.keyPath**      |                                        |                                                                                                                                                                                |
+| **angela.ssh.strictHostKeyChecking** |                  true                  |                                                                                                                                                                                |
+| **angela.ssh.port**                  |                   22                   |                                                                                                                                                                                |
+| **angela.java.resolver**             |               toolchain                | can be set to "user"                                                                                                                                                           |
+| **angela.java.home**                 |    System.getProperty("java.home")     |                                                                                                                                                                                |
+| **angela.java.version**              |                  1.8                   |                                                                                                                                                                                |
+| **angela.java.vendor**               |                  zulu                  |                                                                                                                                                                                |
+| **angela.java.opts**                 | -Djdk.security.allowNonCaAnchor=false  |                                                                                                                                                                                |
+
+
+### Concepts
+
+1. `GroupId`: a UUID determined at the `AngelaOrchestrator` level. All Ignite agents will be part of the same group.
+2. `AgentGroup`: a class representing the cluster of all Ignite nodes
+3. `AgentID`: identifies an Ignite agent on the cluster in the form: `name#pid@hostname#port`
+4. Agent `types`: there can be 3 types of agents:
+    - `orchestrator-agent`: the agent started in the test JVM locally to control the other ones
+    - `remote-agent`: the agent started via SSH on a remote host
+    - others: agents spawned from another agent (orchestrator or remote) to execute jobs for a client Id either locally or on a remote host
+5. `AgentControler`: the agent controller has been cleared from any Ignite related code. It now ONLY contains the methods called statically from Ignite closures. This class is installed statically.
+6. `Executors`: these` are the main refactoring. All the com layer has been refactored in these implementations:
+    - `IgniteFreeExecutor`: a local implementation bypassing any Ignite launching
+    - `IgniteLocalExecutor`: an implementation using Ignite but only locally. it won't spawn remote agents through SSH. All angela configs specifying a remote host will be executed on the local machine. New Ignite agents can still be spawned to execute client jobs.
+    - `IgniteSshRemoteExecutor`: this is the default implementation which will spawn agents remotely if a non-local hostname is specified in a configuration
+7. `Agent`: an agent now decides its own port to start with (thanks to the port mapper) and exposes its agentId. It also registers 3 attributes: `angela.version`, `angela.nodeName` and `angela.group` and needs to be started with `angela.instanceName` (agent name or type) and `angela.group` (the group he will be part of).
+8. **Closing**: closing an executor will communicate to all spawned Ignite agents to also close themselves. Angela was  not relying on Ignite to communicate closure, but was relying on killing spawned clients through SSH with their PID. `Executor.shutdown(agentId)` can now close any spawned agent.
+
+### Angela API Usage
+
+|  | **Spawned servers** | **Inline servers** |
+|---|:---:|:---:|
+| **Ignite-free mode** | X | X |
+| **Ignite-local mode** | X | X |
+| **Ingite-remote mode (default)** | X | X |
+
+First create an `AngelaOrchestrator` through Junit rule or the AngelaOrchestrator builder API.
+
+**If you are not using Junit, use the `AngelaOrchestrator.buidler()` API instead**. 
+There are several examples in this project in the test module. 
+
+```java
+@Rule public transient AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule();
+```
+
+Then derive the cluster factories:
+
+```java
+try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
+    // [...]
+}
+```
+
+**Ignite-free mode:**
+
+```java
+@Rule public transient AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule().igniteFree();
+```
+
+Can be used in conjunction with `RuntimeOption.INLINE_SERVERS` to use inline mode for servers
+
+**Ignite local only mode:**
+
+```java
+@Rule public transient AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule().igniteLocal();
+```
+
+Only one local Ignite controler, and other local Ignite spawned to execute client jobs.
+
+Can be used in conjunction with `RuntimeOption.INLINE_SERVERS` to use inline mode for servers
+
+**Ignite with remote support (default)**
+
+```java
+@Rule public transient AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule().igniteRemote();
+
+// or
+
+@Rule public transient AngelaOrchestratorRule angelaOrchestratorRule = new AngelaOrchestratorRule().igniteRemote(executor -> {
+  executor.setStrictHostKeyChecking(false);
+  executor.setPort(2222);
+  executor.setRemoteUserName("testusername");
+  executor.setTcEnv(...)
+});
+```
+
+Can be used in conjunction with `RuntimeOption.INLINE_SERVERS` to use inline mode for servers
+
+### What about Inline mode ?
+
+Inline mode will spawn tc nodes within the test JVM. It can be activated with:
+
+```java
+distribution(version(Versions.EHCACHE_VERSION), KIT, TERRACOTTA_OS, RuntimeOption.INLINE_SERVERS)
+```
+
+### Programmatic SPI
+
+An executor can be obtained from an orchestrator:
+
+```java
+Executor executor = angelaOrchestratorRule.getExecutor();
+```
+
+Getting an executor Ignite-free
+
+```java
+  UUID group = UUID.randomUUID();
+  Agent agent = Agent.local(group);
+  Executor executor = new IgniteFreeExecutor(agent);
+```
+
+Getting a local Ignite executor:
+
+```java
+  UUID group = UUID.randomUUID();
+  PortAllocator portAllocator = new DefaultPortAllocator();
+  Agent agent = Agent.igniteOrchestrator(group, portAllocator);
+  AgentID agentID = agent.getAgentID();
+  Executor executor = new IgniteLocalExecutor(agent);
+```
+
+Getting a standard Ignite executor supporting SSH agent install:
+
+```java
+  PortAllocator portAllocator = new DefaultPortAllocator();
+  UUID group = UUID.randomUUID();
+  Agent agent = Agent.igniteOrchestrator(group, portAllocator);
+  AgentID agentID = agent.getAgentID();
+  Executor executor = new IgniteSshRemoteExecutor(agent)
+      .setStrictHostKeyChecking(false)
+      .setPort(...);
+```

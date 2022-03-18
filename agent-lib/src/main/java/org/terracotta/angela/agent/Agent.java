@@ -15,7 +15,6 @@
  */
 package org.terracotta.angela.agent;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
@@ -27,43 +26,45 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.util.AngelaVersion;
-import org.terracotta.angela.common.util.IgniteCommonHelper;
+import org.terracotta.angela.common.util.IpUtils;
+import org.zeroturnaround.process.PidUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.UUID;
 
-import static org.terracotta.angela.common.AngelaProperties.DIRECT_JOIN;
 import static org.terracotta.angela.common.AngelaProperties.IGNITE_LOGGING;
-import static org.terracotta.angela.common.AngelaProperties.NODE_NAME;
 import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 import static org.terracotta.angela.common.util.FileUtils.createAndValidateDir;
 
 /**
  * @author Ludovic Orban
  */
-public class Agent {
-  public static final String AGENT_IS_READY_MARKER_LOG = "Agent is ready";
-  private final static Logger logger;
-  private Ignite ignite;
+public class Agent implements AutoCloseable {
 
+  public static final String AGENT_TYPE_ORCHESTRATOR = "orchestrator-agent";
+  public static final String AGENT_TYPE_REMOTE = "remote-agent";
+  public static final String AGENT_IS_READY_MARKER_LOG = "Agent is ready";
   public static final Path ROOT_DIR;
   public static final Path WORK_DIR;
   public static final Path IGNITE_DIR;
-  //  should this really be static?
-  public static volatile AgentController controller;
+
+  private static final Logger logger;
 
   static {
     // the angela-agent jar may end up on the classpath, so its logback config cannot have the default filename
     // this must happen before any Logger instance gets created
-    System.setProperty("logback.configurationFile", "angela-logback.xml");
+    System.setProperty("logback.configurationFile", Boolean.getBoolean("angela.agent.debug") ? "angela-logback-debug.xml" : "angela-logback.xml");
     logger = LoggerFactory.getLogger(Agent.class);
 
     ROOT_DIR = Paths.get(getEitherOf(AngelaProperties.ROOT_DIR, AngelaProperties.KITS_DIR));
@@ -74,92 +75,148 @@ public class Agent {
     IGNITE_DIR = ROOT_DIR.resolve("ignite");
   }
 
-  public static void main(String[] args) {
-    final Agent agent = new Agent();
-    int igniteDiscoveryPort = Integer.parseInt(System.getProperty("ignite.discovery.port"));
-    int igniteComPort = Integer.parseInt(System.getProperty("ignite.com.port"));
-    agent.startCluster(Arrays.asList(DIRECT_JOIN.getValue().split(",")), NODE_NAME.getValue(), igniteDiscoveryPort, igniteComPort);
-    Runtime.getRuntime().addShutdownHook(new Thread(agent::close));
+  private final UUID group;
+  private final AgentID agentID;
+  private final Ignite ignite;
+
+  public Agent(UUID group, AgentID agentID, Ignite ignite) {
+    this.group = group;
+    this.agentID = agentID;
+    this.ignite = ignite;
   }
 
-  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-  public void startLocalCluster() {
-    if (!Objects.isNull(controller)) {
-      throw new IllegalStateException("controller already initiated");
+  public UUID getGroupId() {
+    return group;
+  }
+
+  public AgentID getAgentID() {
+    return agentID;
+  }
+
+  public Ignite getIgnite() {
+    return ignite;
+  }
+
+  @Override
+  public String toString() {
+    return agentID.toString();
+  }
+
+  @Override
+  public void close() {
+    logger.info("Shutting down agent: {}", agentID);
+    if (ignite != null) {
+      try {
+        ignite.close();
+      } catch (Exception ignored) {
+      }
+    }
+  }
+
+  /**
+   * main method used when starting a new ignite agent locally or remotely
+   */
+  public static void main(String[] args) {
+    final String instanceName = System.getProperty("angela.instanceName");
+    if (instanceName == null) {
+      throw new AssertionError("angela.instanceName is missing");
     }
 
-    logger.info("Root directory is: {}", ROOT_DIR);
-    logger.info("Starting local only cluster");
-    createAndValidateDir(ROOT_DIR);
-    createAndValidateDir(WORK_DIR);
-    
-    controller = new LocalAgentController(new DefaultPortAllocator());
+    final String group = System.getProperty("angela.group");
+    if (group == null) {
+      throw new AssertionError("angela.group is missing");
+    }
+
+    DefaultPortAllocator portAllocator = new DefaultPortAllocator();
+    Agent agent = ignite(UUID.fromString(group), instanceName, portAllocator, Arrays.asList(System.getProperty("angela.directJoin", "").split(",")));
+    AgentID localAgentID = agent.getAgentID();
+
+    logger.info("Agent: {} Root directory: {}", localAgentID, ROOT_DIR);
+    logger.info("Agent: {} Work directory: {}", localAgentID, WORK_DIR);
+    logger.info("Agent: {} Ignite directory: {}", localAgentID, IGNITE_DIR);
+
+    AgentController agentController = new AgentController(localAgentID, portAllocator);
+
+    // move the agent controller statically so that it can be accessed when ignite remote closures sent to this node are executed
+    AgentController.setUniqueInstance(agentController);
+
+    // cleanup ignite agent and reserved ports
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      agent.close();
+      try {
+        portAllocator.close();
+      } catch (Exception ignored) {
+      } finally {
+        AgentController.removeUniqueInstance(agentController);
+      }
+    }));
+
     // Do not use logger here as the marker is being grep'ed at and we do not want to depend upon the logger config
-    System.out.println(AGENT_IS_READY_MARKER_LOG);
+    System.out.println(AGENT_IS_READY_MARKER_LOG + ": " + localAgentID);
     System.out.flush();
   }
 
-  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-  public void startCluster(Collection<String> peers, String nodeName, int igniteDiscoveryPort, int igniteComPort) {
-    if (!Objects.isNull(controller)) {
-      throw new IllegalStateException("controller already initiated");
-    }
-    logger.info("Root directory is: {}", ROOT_DIR);
-    logger.info("Nodename: {} added to cluster", nodeName);
-    createAndValidateDir(ROOT_DIR);
-    createAndValidateDir(WORK_DIR);
-    createAndValidateDir(IGNITE_DIR);
+  public static Agent local(UUID group) {
+    return new Agent(group, AgentID.local(), null);
+  }
+
+  public static Agent igniteOrchestrator(UUID group, PortAllocator portAllocator) {
+    return ignite(group, AGENT_TYPE_ORCHESTRATOR, portAllocator, Collections.emptyList());
+  }
+
+  public static Agent ignite(UUID group, String instanceName, PortAllocator portAllocator, Collection<String> peers) {
+    System.setProperty("IGNITE_UPDATE_NOTIFIER", "false");
+
+    createAndValidateDir(Agent.ROOT_DIR);
+    createAndValidateDir(Agent.WORK_DIR);
+    createAndValidateDir(Agent.IGNITE_DIR);
+
+    PortAllocator.PortReservation portReservation = portAllocator.reserve(2);
+    int igniteDiscoveryPort = portReservation.next();
+    int igniteComPort = portReservation.next();
+    String hostname = IpUtils.getHostName();
+
+    AgentID agentID = new AgentID(instanceName, hostname, igniteDiscoveryPort, PidUtil.getMyPid());
+
+    logger.info("Starting Ignite agent: {} with com port: {}...", agentID, igniteComPort);
 
     IgniteConfiguration cfg = new IgniteConfiguration();
     Map<String, String> userAttributes = new HashMap<>();
     userAttributes.put("angela.version", AngelaVersion.getAngelaVersion());
-    userAttributes.put("nodename", nodeName);
+    userAttributes.put("angela.nodeName", agentID.toString());
+    userAttributes.put("angela.group", group.toString());
+    // set how the agent was started: inline == embedded in jvm, spawned == agent has its own JVM
+    userAttributes.put("angela.process", System.getProperty("angela.process", "inline"));
     cfg.setUserAttributes(userAttributes);
 
     boolean enableLogging = Boolean.getBoolean(IGNITE_LOGGING.getValue());
     cfg.setGridLogger(enableLogging ? new Slf4jLogger() : new NullLogger());
     cfg.setPeerClassLoadingEnabled(true);
     cfg.setMetricsLogFrequency(0);
-    cfg.setIgniteInstanceName("ignite-" + igniteDiscoveryPort);
+    cfg.setIgniteInstanceName(agentID.getNodeName());
     cfg.setIgniteHome(IGNITE_DIR.resolve(System.getProperty("user.name")).toString());
-
-    logger.info("Connecting to peers (size = {}): {}", peers.size(), peers);
 
     cfg.setDiscoverySpi(new TcpDiscoverySpi()
         .setLocalPort(igniteDiscoveryPort)
         .setLocalPortRange(0) // we must not use the range otherwise Ignite might bind to a port not reserved
-        .setJoinTimeout(10000)
         .setIpFinder(new TcpDiscoveryVmIpFinder(true).setAddresses(peers)));
 
     cfg.setCommunicationSpi(new TcpCommunicationSpi()
         .setLocalPort(igniteComPort)
         .setLocalPortRange(0)); // we must not use the range otherwise Ignite might bind to a port not reserved
 
+    logger.info("Connecting agent: {} to peers: {}", agentID, peers);
+
+    Ignite ignite;
     try {
-      logger.info("Starting ignite on {}", nodeName);
       ignite = Ignition.start(cfg);
-      IgniteCommonHelper.displayCluster(ignite);
-
     } catch (IgniteException e) {
-      throw new RuntimeException("Error starting node " + nodeName, e);
+      throw new RuntimeException("Error starting node " + agentID, e);
     }
-    controller = new AgentController(ignite, peers, igniteDiscoveryPort, new DefaultPortAllocator());
 
-    // Do not use logger here as the marker is being grep'ed at and we do not want to depend upon the logger config
-    System.out.println(AGENT_IS_READY_MARKER_LOG);
-    System.out.flush();
-  }
+    Agent agent = new Agent(group, agentID, ignite);
+    logger.info("Started agent: {} in group: {}", agentID, agent.getGroupId());
 
-  @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-  public void close() {
-    if (ignite != null) {
-      ignite.close();
-      ignite = null;
-    }
-    controller = null;
-  }
-
-  public Ignite getIgnite() {
-    return this.ignite;
+    return agent;
   }
 }

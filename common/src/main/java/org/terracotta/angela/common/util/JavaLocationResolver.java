@@ -28,6 +28,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,7 +63,7 @@ public class JavaLocationResolver {
 
   public List<JDK> resolveJavaLocations(String version, Set<String> vendors, boolean checkValidity) {
     List<JDK> list = jdks.stream()
-        .filter(jdk -> !checkValidity || jdk.isValid())
+        .filter(jdk -> !checkValidity || Files.isDirectory(jdk.getHome().toLocalPath()))
         .filter(jdk -> version.isEmpty() || version.equals(jdk.getVersion()))
         .filter(jdk -> vendors.isEmpty() || vendors.stream().anyMatch(v -> v.equalsIgnoreCase(jdk.getVendor())))
         .collect(Collectors.toList());
@@ -107,13 +110,12 @@ public class JavaLocationResolver {
       Element providesElement = (Element) toolchainElement.getElementsByTagName("provides").item(0);
       Element configurationElement = (Element) toolchainElement.getElementsByTagName("configuration").item(0);
 
-      String home = configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent();
-      boolean valid = new File(home).isDirectory();
+      Path home = Paths.get(configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent());
 
       String version = textContentOf(providesElement, "version");
       String vendor = textContentOf(providesElement, "vendor");
 
-      jdks.add(new JDK(home, version, vendor, valid));
+      jdks.add(new JDK(UniversalPath.fromLocalPath(home), version, vendor));
     }
 
     return jdks;

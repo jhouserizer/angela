@@ -15,11 +15,10 @@
  */
 package org.terracotta.angela.client;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.lang.IgniteCallable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
+import org.terracotta.angela.agent.com.AgentID;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.kit.LocalKitManager;
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
@@ -27,8 +26,8 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.clientconfig.ClientId;
 import org.terracotta.angela.common.topology.InstanceId;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,35 +37,25 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
-import static org.terracotta.angela.client.util.IgniteClientHelper.executeRemotely;
-import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
-import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
-import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
 import static org.terracotta.angela.common.AngelaProperties.SKIP_UNINSTALL;
-import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 
 /**
  * @author Aurelien Broszniowski
  */
 public class ClientArray implements AutoCloseable {
 
-  private final static Logger logger = LoggerFactory.getLogger(ClientArray.class);
-
-  private final Ignite ignite;
-  private final Supplier<InstanceId> instanceIdSupplier;
-  private final LocalKitManager localKitManager;
-  private final Map<ClientId, Client> clients = new HashMap<>();
-  private final int ignitePort;
-  private final ClientArrayConfigurationContext clientArrayConfigurationContext;
+  private final transient Executor executor;
+  private final transient Supplier<InstanceId> clientInstanceIdSupplier;
+  private final transient LocalKitManager localKitManager;
+  private final transient Map<ClientId, Client> clients = new HashMap<>();
+  private final transient ClientArrayConfigurationContext clientArrayConfigurationContext;
   private boolean closed = false;
 
-  ClientArray(Ignite ignite, int ignitePort, Supplier<InstanceId> instanceIdSupplier, ClientArrayConfigurationContext clientArrayConfigurationContext) {
-    this.ignitePort = ignitePort;
+  ClientArray(Executor executor, Supplier<InstanceId> clientInstanceIdSupplier, ClientArrayConfigurationContext clientArrayConfigurationContext) {
     this.clientArrayConfigurationContext = clientArrayConfigurationContext;
-    this.instanceIdSupplier = instanceIdSupplier;
-    this.ignite = ignite;
-    this.localKitManager = new LocalKitManager(clientArrayConfigurationContext.getClientArrayTopology()
-        .getDistribution());
+    this.clientInstanceIdSupplier = clientInstanceIdSupplier;
+    this.executor = executor;
+    this.localKitManager = new LocalKitManager(clientArrayConfigurationContext.getClientArrayTopology().getDistribution());
     installAll();
   }
 
@@ -74,23 +63,12 @@ public class ClientArray implements AutoCloseable {
     clientArrayConfigurationContext.getClientArrayTopology().getClientIds().forEach(this::install);
   }
 
-  private void install(ClientId clientId) {
-    logger.info("Setting up locally the extracted install to be deployed remotely");
-    String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(clientArrayConfigurationContext.getLicense(), kitInstallationPath, OFFLINE.getBooleanValue());
-
-    try {
-      logger.info("installing the client jars to {}", clientId);
-// TODO : refactor Client to extract the uploading step and the execution step
-//     uploadClientJars(ignite, terracottaClient.getClientHostname(), instanceId, );
-
-      Client client = new Client(ignite, ignitePort, instanceIdSupplier.get(), clientId,
-          clientArrayConfigurationContext.getTerracottaCommandLineEnvironment(), localKitManager);
-      clients.put(clientId, client);
-    } catch (Exception e) {
-      logger.error("Cannot upload client jars to {}: {}", clientId, e.getMessage(), e);
-      throw new RuntimeException(e);
-    }
+  private Client install(ClientId clientId) {
+    final InstanceId clientInstanceId = clientInstanceIdSupplier.get();
+    final TerracottaCommandLineEnvironment environment = clientArrayConfigurationContext.getTerracottaCommandLineEnvironment();
+    Client client = Client.spawn(executor, clientInstanceId, clientId, clientArrayConfigurationContext, localKitManager, environment);
+    clients.put(clientId, client);
+    return client;
   }
 
   private void uninstallAll() {
@@ -112,7 +90,6 @@ public class ClientArray implements AutoCloseable {
   }
 
   private void uninstall(ClientId clientId) {
-    logger.info("uninstalling {}", clientId);
     Client client = clients.get(clientId);
     try {
       if (client != null) {
@@ -123,9 +100,13 @@ public class ClientArray implements AutoCloseable {
     }
   }
 
+  public Jcmd jcmd(ClientId clientId) {
+    return jcmd(clients.get(clientId));
+  }
+
   public Jcmd jcmd(Client client) {
     TerracottaCommandLineEnvironment tcEnv = clientArrayConfigurationContext.getTerracottaCommandLineEnvironment();
-    return new Jcmd(ignite, instanceIdSupplier.get(), client, ignitePort, tcEnv);
+    return new Jcmd(executor, client, tcEnv);
   }
 
   public void stopAll() throws IOException {
@@ -147,7 +128,6 @@ public class ClientArray implements AutoCloseable {
   }
 
   public void stop(ClientId clientId) {
-    logger.info("stopping {}", clientId);
     Client client = clients.get(clientId);
     if (client != null) {
       client.stop();
@@ -177,16 +157,18 @@ public class ClientArray implements AutoCloseable {
   }
 
   public RemoteFolder browse(Client client, String remoteLocation) {
-    IgniteCallable<String> callable = () -> Agent.controller.instanceWorkDir(client.getInstanceId());
-    String clientWorkDir = executeRemotely(ignite, client.getHostname(), ignitePort, callable);
-    return new RemoteFolder(ignite, client.getHostname(), ignitePort, clientWorkDir, remoteLocation);
+    final InstanceId instanceId = client.getInstanceId();
+    final AgentID agentID = executor.getAgentID(client.getHostName());
+    final AgentExecutor agentExecutor = executor.forAgent(agentID);
+    String clientWorkDir = agentExecutor.execute(() -> AgentController.getInstance().instanceWorkDir(instanceId));
+    return new RemoteFolder(agentExecutor, clientWorkDir, remoteLocation);
   }
 
-  public void download(String remoteLocation, File localRootPath) {
+  public void download(String remoteLocation, Path localRootPath) {
     List<Exception> exceptions = new ArrayList<>();
     for (Client client : clients.values()) {
       try {
-        browse(client, remoteLocation).downloadTo(new File(localRootPath, client.getSymbolicName()));
+        browse(client, remoteLocation).downloadTo(localRootPath.resolve(client.getSymbolicName()));
       } catch (IOException e) {
         exceptions.add(e);
       }

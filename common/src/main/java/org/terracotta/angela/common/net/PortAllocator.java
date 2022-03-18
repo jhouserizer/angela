@@ -17,6 +17,11 @@ package org.terracotta.angela.common.net;
 
 import java.io.Closeable;
 import java.util.Iterator;
+import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
+
+import static java.util.Spliterator.ORDERED;
+import static java.util.Spliterators.spliteratorUnknownSize;
 
 /**
  * @author Mathieu Carbou
@@ -26,12 +31,14 @@ public interface PortAllocator extends Closeable {
   PortReservation reserve(int portCounts);
 
   @Override
-  default void close() {
-  }
+  void close();
 
   interface PortReservation extends AutoCloseable, Iterator<Integer> {
     @Override
     void close();
-  }
 
+    default IntStream stream() {
+      return StreamSupport.stream(spliteratorUnknownSize(this, ORDERED), false).mapToInt(Integer::intValue);
+    }
+  }
 }

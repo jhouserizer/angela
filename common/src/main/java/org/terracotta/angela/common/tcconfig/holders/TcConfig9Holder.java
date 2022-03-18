@@ -40,6 +40,7 @@ import java.util.Map;
  * @author Aurelien Broszniowski
  */
 public class TcConfig9Holder extends TcConfigHolder {
+  private static final long serialVersionUID = 1L;
 
   public TcConfig9Holder(TcConfig9Holder tcConfig9Holder) {
     super(tcConfig9Holder);

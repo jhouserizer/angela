@@ -15,11 +15,14 @@
  */
 package org.terracotta.angela.common.topology;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-public class Version implements Comparable<Version> {
+public class Version implements Comparable<Version>, Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final int major;
   private final int minor;
   private final int revision;

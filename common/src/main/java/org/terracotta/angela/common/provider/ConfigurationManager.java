@@ -21,12 +21,15 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public interface ConfigurationManager {
+public interface ConfigurationManager extends Serializable {
+  long serialVersionUID = 1L;
+
   void addStripe(TerracottaServer... newServers);
 
   void removeStripe(int stripeIndex);
@@ -46,6 +49,8 @@ public interface ConfigurationManager {
   List<TerracottaServer> getServers();
 
   Collection<String> getServersHostnames();
+
+  default void init(PortAllocator portAllocator) {}
 
   void createDisruptionLinks(TerracottaServer terracottaServer, DisruptionProvider disruptionProvider,
                              Map<ServerSymbolicName, Disruptor> disruptionLinks, Map<ServerSymbolicName, Integer> proxiedPorts,

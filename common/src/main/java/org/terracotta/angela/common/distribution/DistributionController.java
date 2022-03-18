@@ -15,8 +15,6 @@
  */
 package org.terracotta.angela.common.distribution;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaManagementServerInstance;
 import org.terracotta.angela.common.TerracottaServerHandle;
@@ -28,16 +26,10 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.Topology;
-import org.terracotta.angela.common.util.OS;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -46,40 +38,10 @@ import java.util.Map;
  */
 public abstract class DistributionController {
 
-  private final static Logger LOGGER = LoggerFactory.getLogger(DistributionController.class);
-
   protected final Distribution distribution;
 
   DistributionController(Distribution distribution) {
     this.distribution = distribution;
-  }
-
-  public static ToolExecutionResult invokeJcmd(TerracottaServerHandle terracottaServerInstanceProcess, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
-    Number javaPid = terracottaServerInstanceProcess.getJavaPid();
-    if (javaPid == null) {
-      return new ToolExecutionResult(-1, Collections.singletonList("PID of java process could not be figured out"));
-    }
-
-    String javaHome = tcEnv.getJavaHome();
-
-    List<String> cmdLine = new ArrayList<>();
-    if (OS.INSTANCE.isWindows()) {
-      cmdLine.add(javaHome + "\\bin\\jcmd.exe");
-    } else {
-      cmdLine.add(javaHome + "/bin/jcmd");
-    }
-    cmdLine.add(javaPid.toString());
-    cmdLine.addAll(Arrays.asList(arguments));
-
-    try {
-      ProcessResult processResult = new ProcessExecutor(cmdLine)
-          .redirectErrorStream(true)
-          .readOutput(true)
-          .execute();
-      return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public abstract TerracottaServerHandle createTsa(TerracottaServer terracottaServer, File kitDir, File workingDir, Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts, TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs);

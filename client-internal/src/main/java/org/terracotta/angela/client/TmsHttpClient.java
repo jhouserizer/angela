@@ -75,7 +75,7 @@ public class TmsHttpClient {
    */
   public String createConnectionToCluster(URI uri) {
     String connectionName;
-    LOGGER.info("connecting TMS to {}", uri.toString());
+    LOGGER.debug("connecting TMS to {}", uri.toString());
     // probe
     String response;
     try {
@@ -87,7 +87,7 @@ public class TmsHttpClient {
 
     // create connection
     response = sendPostRequest("/api/connections", response);
-    LOGGER.info("tms connect result :" + response);
+    LOGGER.debug("tms connect result :" + response);
 
     connectionName = JsonPath.from(response).get("config.connectionName");
 
@@ -106,7 +106,7 @@ public class TmsHttpClient {
     try {
       String response = sendGetRequest(probeEndpoint +
           URLEncoder.encode(uri.toString(), String.valueOf(UTF_8)));
-      LOGGER.info("tms probe result :" + response);
+      LOGGER.debug("tms probe result :" + response);
       return response;
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("Could not encode terracotta connection url", e);

@@ -55,11 +55,12 @@ public class Distribution107InlineController extends Distribution107Controller {
                                                    Topology topology, Map<ServerSymbolicName, Integer> proxiedPorts,
                                                    TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides, List<String> startUpArgs) {
     List<String> options = startUpArgs != null && !startUpArgs.isEmpty() ? addServerHome(startUpArgs, workingDir) : addOptions(terracottaServer, workingDir);
-    
+
     return createServer(kitDir.toPath(), terracottaServer.getServerSymbolicName().getSymbolicName(), workingDir.toPath(), options);
   }
 
   private TerracottaServerHandle createServer(Path kitDir, String serverName, Path serverWorking, List<String> cmd) {
+    LOGGER.debug("Creating TSA server: {} at: {} from: {} with CLI: {}", serverName, serverWorking, kitDir, String.join(" ", cmd));
     AtomicReference<Object> ref = new AtomicReference<>(startIsolatedServer(kitDir, serverName, serverWorking, cmd));
     AtomicBoolean isAlive = new AtomicBoolean(true);
     Thread t = new Thread(()->{
@@ -75,7 +76,7 @@ public class Distribution107InlineController extends Distribution107Controller {
     });
     t.setDaemon(true);
     t.start();
-    
+
     return new TerracottaServerHandle() {
 
       @Override
@@ -173,7 +174,7 @@ public class Distribution107InlineController extends Distribution107Controller {
       return "ERROR";
     }
   }
-  
+
   private synchronized Object startIsolatedServer(Path kitDir, String serverName, Path serverWorking, List<String> cmd) {
     Path tc = kitDir.resolve(Paths.get("server", "lib", "tc.jar"));
     ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();

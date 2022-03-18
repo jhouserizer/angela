@@ -23,13 +23,12 @@ import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.StartedProcess;
 import org.zeroturnaround.process.PidUtil;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,44 +42,49 @@ public class HardwareMetricsCollector {
   private final static Logger LOGGER = LoggerFactory.getLogger(HardwareMetricsCollector.class);
   public final static String METRICS_DIRECTORY = "metrics";
 
-  private FileOutputStream outputStream;
+  private OutputStream outputStream;
   private final Map<HardwareMetric, StartedProcess> processes = new HashMap<>();
 
-  @SuppressWarnings("ResultOfMethodCallIgnored")
   @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
-  public void startMonitoring(final File installLocation, final Map<HardwareMetric, MonitoringCommand> commands) {
-    if (commands != null && commands.size() != 0) {
-      File statsDirectory = new File(installLocation, METRICS_DIRECTORY);
-      statsDirectory.mkdirs();
-
-      commands.forEach((hardwareMetric, command) -> {
-        File statsFile = new File(statsDirectory, hardwareMetric.name().toLowerCase() + "-stats.log");
-        LOGGER.debug("HardwareMetric log file: {}", statsFile.getAbsolutePath());
-        try {
-          outputStream = new FileOutputStream(statsFile);
-        } catch (FileNotFoundException e) {
-          throw new RuntimeException(e);
-        }
-
-        ProcessExecutor pe = new ProcessExecutor()
-            .environment(System.getenv())
-            .command(command.getCommand())
-            .directory(installLocation)
-            .redirectErrorStream(true)
-            .redirectOutput(outputStream);
-
-        try {
-          LOGGER.debug("Starting process with env: {}", pe.getEnvironment());
-          processes.put(hardwareMetric, pe.start());
-        } catch (IOException e) {
-          try {
-            Files.write(statsFile.toPath(), ("Error executing command '" + command.getCommandName() + "': " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
-          } catch (IOException ioe) {
-            throw new UncheckedIOException(ioe);
-          }
-        }
-      });
+  public void startMonitoring(final Path installLocation, final Map<HardwareMetric, MonitoringCommand> commands) {
+    LOGGER.info("Starting monitoring: {} into: {}", commands.keySet(), installLocation);
+    Path statsDirectory = installLocation.resolve(METRICS_DIRECTORY);
+    try {
+      Files.createDirectories(statsDirectory);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
+
+    commands.forEach((hardwareMetric, command) -> {
+      Path statsFile = statsDirectory.resolve(hardwareMetric.name().toLowerCase() + "-stats.log");
+      LOGGER.debug("HardwareMetric log file: {}", statsFile.toAbsolutePath());
+      try {
+        outputStream = Files.newOutputStream(statsFile);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+
+      ProcessExecutor pe = new ProcessExecutor()
+          .environment(System.getenv())
+          .command(command.getCommand())
+          .directory(installLocation.toFile())
+          .redirectErrorStream(true)
+          .redirectOutput(outputStream);
+
+      try {
+        LOGGER.debug("Starting process: {} with env: {}", command.getCommand(), pe.getEnvironment());
+        processes.put(hardwareMetric, pe.start());
+      } catch (IOException e) {
+        String msg = "Error executing command '" + command.getCommandName() + "': " + e.getMessage();
+        LOGGER.error(msg, e);
+        try {
+          Files.write(statsFile, msg.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException ioe) {
+          // do not fail the loop!
+          LOGGER.warn(msg, ioe);
+        }
+      }
+    });
   }
 
   public boolean isMonitoringRunning(HardwareMetric hardwareMetric) {

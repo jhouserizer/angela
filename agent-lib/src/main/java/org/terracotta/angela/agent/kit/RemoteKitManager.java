@@ -48,7 +48,7 @@ public class RemoteKitManager extends KitManager {
     super(distribution);
     this.kitInstallationPath = rootInstallationPath.resolve(kitInstallationName);
     Path workingPath = Agent.WORK_DIR.resolve(instanceId.toString());
-    logger.info("Working directory is: {}", workingPath);
+    logger.debug("Working directory is: {}", workingPath);
     this.kitPath = workingPath;
   }
 
@@ -58,15 +58,15 @@ public class RemoteKitManager extends KitManager {
     try {
       Files.createDirectories(kitPath);
 
-      logger.info("should copy a separate kit install ? {}", KIT_COPY.getBooleanValue());
+      logger.debug("should copy a separate kit install ? {}", KIT_COPY.getBooleanValue());
       if (areAllLocal(serversHostnames) && !KIT_COPY.getBooleanValue()) {
-        logger.info("Skipped copying kit from {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
+        logger.debug("Skipped copying kit from {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
         if (license != null) {
           license.writeToFile(kitPath.toFile());
         }
         return kitInstallationPath.toFile();
       } else {
-        logger.info("Copying {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
+        logger.debug("Copying {} to {}", kitInstallationPath.toAbsolutePath(), kitPath);
         FileUtils.copy(kitInstallationPath, kitPath, REPLACE_EXISTING, RECURSIVE);
         if (license != null) {
           license.writeToFile(kitPath.toFile());
@@ -76,10 +76,6 @@ public class RemoteKitManager extends KitManager {
     } catch (IOException e) {
       throw new RuntimeException("Can not create working install", e);
     }
-  }
-
-  public Path getKitDir() {
-    return kitPath;
   }
 
   public boolean isKitAvailable() {
@@ -92,7 +88,7 @@ public class RemoteKitManager extends KitManager {
   }
 
   public void deleteInstall(File installLocation) {
-    logger.info("Deleting installation in {}", installLocation.getAbsolutePath());
+    logger.debug("Deleting installation in {}", installLocation.getAbsolutePath());
     FileUtils.deleteQuietly(installLocation.toPath());
   }
 }

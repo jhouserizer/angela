@@ -22,6 +22,7 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.ServerSymbolicName;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.tcconfig.TsaStripeConfig;
+import org.terracotta.angela.common.util.IpUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -46,11 +47,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -60,14 +63,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  *
  * @author Aurelien Broszniowski
  */
-public abstract class TcConfigHolder {
+public abstract class TcConfigHolder implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final static Logger logger = LoggerFactory.getLogger(TcConfigHolder.class);
 
   protected volatile String tcConfigContent;        // tc config content
   private volatile String installedTcConfigPath;
   private final List<String> logsPathList = new ArrayList<String>();
-  private List<TerracottaServer> servers = new ArrayList<>();
+  private final List<TerracottaServer> servers = new ArrayList<>();
 
   public TcConfigHolder() {
   }
@@ -97,7 +101,7 @@ public abstract class TcConfigHolder {
         fos.write(this.tcConfigContent.getBytes(Charset.defaultCharset()));
       }
       this.installedTcConfigPath = tempConfigFile.getAbsolutePath();
-      logger.info("Installed Tc Config path: {}", installedTcConfigPath);
+      logger.debug("Installed Tc Config path: {}", installedTcConfigPath);
     } catch (IOException e) {
       throw new RuntimeException("Cannot write tc-config xml to kitDir location: " + kitDir.getAbsolutePath(), e);
     }
@@ -106,76 +110,79 @@ public abstract class TcConfigHolder {
   protected abstract NodeList getServersList(Document tcConfigXml, XPath xPath) throws XPathExpressionException;
 
   @SuppressFBWarnings("REC_CATCH_EXCEPTION")
-  public List<TerracottaServer> getServers() {
-    if (this.servers.size() == 0) {
-      List<TerracottaServer> servers = new ArrayList<>();
+  public void initialize(PortAllocator portAllocator, Function<String, Boolean> support) {
+    if (!this.servers.isEmpty()) {
+      // Already initialized
+      return;
+    }
 
-      // read servers list from XML
-      try {
-        XPath xPath = XPathFactory.newInstance().newXPath();
-        DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        Document tcConfigXml = builder.parse(new ByteArrayInputStream(this.tcConfigContent.getBytes(Charset.forName("UTF-8"))));
+    List<TerracottaServer> servers = new ArrayList<>();
 
-        NodeList serversList = getServersList(tcConfigXml, xPath);
-        for (int i = 0; i < serversList.getLength(); i++) {
-          Node server = serversList.item(i);
+    // read servers list from XML
+    try {
+      XPath xPath = XPathFactory.newInstance().newXPath();
+      DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      Document tcConfigXml = builder.parse(new ByteArrayInputStream(this.tcConfigContent.getBytes(UTF_8)));
 
-          Node hostNode = (Node) xPath.evaluate("@host", server, XPathConstants.NODE);
-          String hostname =
-              hostNode == null || hostNode.getTextContent().equals("%i") || hostNode.getTextContent()
-                  .equals("%h") ? "localhost" : hostNode.getTextContent();
+      NodeList serversList = getServersList(tcConfigXml, xPath);
+      for (int i = 0; i < serversList.getLength(); i++) {
+        Node server = serversList.item(i);
 
-          Node nameNode = (Node) xPath.evaluate("@name", server, XPathConstants.NODE);
+        Node hostNode = (Node) xPath.evaluate("@host", server, XPathConstants.NODE);
+        String hostname =
+            hostNode == null || hostNode.getTextContent().equals("%i") || hostNode.getTextContent()
+                .equals("%h") ? IpUtils.getHostName() : hostNode.getTextContent();
 
-          //TODO : create client and send command to get free port -> can't connect ? agent exception!
-          // add into xml the port!!
-          // log it!!!
-          // remove below updatePorts method
+        Node nameNode = (Node) xPath.evaluate("@name", server, XPathConstants.NODE);
 
-          Node tsaPortNode = (Node) xPath.evaluate("*[name()='tsa-port']", server, XPathConstants.NODE);
-          int tsaPort = tsaPortNode == null ? defaultTsaPort() : Integer.parseInt(tsaPortNode.getTextContent());
+        //TODO : create client and send command to get free port -> can't connect ? agent exception!
+        // add into xml the port!!
+        // log it!!!
+        // remove below updatePorts method
 
-          Node jmxPortNode = (Node) xPath.evaluate("*[name()='jmx-port']", server, XPathConstants.NODE);
-          int jmxPort = jmxPortNode == null ? defaultJmxPort() : Integer.parseInt(jmxPortNode.getTextContent());
+        int tsaPort = getOrAllocate("tsa-port", server, i, xPath, portAllocator);
+        int jmxPort = support.apply("jmx-port") ? getOrAllocate("jmx-port", server, i, xPath, portAllocator) : 0;
+        int tsaGroupPort = getOrAllocate("tsa-group-port", server, i, xPath, portAllocator);
+        int managementPort = support.apply("management-port") ? getOrAllocate("management-port", server, i, xPath, portAllocator) : 0;
 
-          Node tsaGroupPortNode = (Node) xPath.evaluate("*[name()='tsa-group-port']", server, XPathConstants.NODE);
-          int tsaGroupPort = tsaGroupPortNode == null ? defaultTsaGroupPort() : Integer.parseInt(tsaGroupPortNode.getTextContent());
+        String symbolicName = nameNode == null ? hostname + ":" + tsaPort : nameNode.getTextContent();
 
-          Node managementPortNode = (Node) xPath.evaluate("*[name()='management-port']", server, XPathConstants.NODE);
-          int managementPort = managementPortNode == null ? defaultManagementPort() : Integer.parseInt(managementPortNode.getTextContent());
+        Node logNode = (Node) xPath.evaluate("*[name()='logs']", server, XPathConstants.NODE);
 
-          String symbolicName = nameNode == null ? hostname + ":" + tsaPort : nameNode.getTextContent();
-
-          TerracottaServer terracottaServer = TerracottaServer
-              .server(symbolicName, hostname)
-              .tsaPort(tsaPort)
-              .tsaGroupPort(tsaGroupPort)
-              .managementPort(managementPort)
-              .jmxPort(jmxPort);
-          servers.add(terracottaServer);
-        }
-      } catch (Exception e) {
-        throw new RuntimeException("Cannot parse tc-config xml", e);
+        TerracottaServer terracottaServer = TerracottaServer
+            .server(symbolicName, hostname)
+            .tsaPort(tsaPort)
+            .tsaGroupPort(tsaGroupPort)
+            .managementPort(managementPort)
+            .logs(logNode == null ? null : logNode.getTextContent())
+            .jmxPort(jmxPort);
+        servers.add(terracottaServer);
       }
-      this.servers.addAll(servers);
+    } catch (Exception e) {
+      throw new RuntimeException("Cannot parse tc-config xml", e);
+    }
+    this.servers.addAll(servers);
+  }
+
+  protected int getOrAllocate(String portName, Node serverNode, int idx, XPath xPath, PortAllocator portAllocator) throws XPathExpressionException {
+    Node node = (Node) xPath.evaluate("*[name()='" + portName + "']", serverNode, XPathConstants.NODE);
+    if (node != null) {
+      final int port = Integer.parseInt(node.getTextContent());
+      logger.debug("Port: node[" + idx + "] " + portName + "=" + port + " (user-set)");
+      return port;
+    } else {
+      int port = portAllocator.reserve(1).next();
+      logger.debug("Port: node[" + idx + "] " + portName + "=" + port + " (random)");
+      updateServerPort(idx, portName, port);
+      return port;
+    }
+  }
+
+  public List<TerracottaServer> getServers() {
+    if (this.servers.isEmpty()) {
+      throw new IllegalStateException("Not initialized");
     }
     return servers;
-  }
-
-  protected int defaultManagementPort() {
-    return 9540;
-  }
-
-  protected int defaultTsaGroupPort() {
-    return 9530;
-  }
-
-  protected int defaultJmxPort() {
-    return 9520;
-  }
-
-  protected int defaultTsaPort() {
-    return 9510;
   }
 
   public String getTcConfigContent() {
@@ -193,16 +200,16 @@ public abstract class TcConfigHolder {
       for (int i = 0; i < serversList.getLength(); i++) {
         Node server = serversList.item(i);
         Node logsNode = (Node) xPath.evaluate("*[name()='logs']", server, XPathConstants.NODE);
-
-        String logsPath = kitDir.getAbsolutePath() + File.separatorChar + "logs-" + stripeId + "-" + cnt;
-        logsPathList.add(logsPath);
+        String logsPath;
         if (logsNode != null) {
-          logsNode.setTextContent(logsPath);
+          logsPath = kitDir.getAbsolutePath() + File.separatorChar + logsNode.getTextContent();
         } else {
+          logsPath = kitDir.getAbsolutePath() + File.separatorChar + "logs-" + stripeId + "-" + cnt;
           Element newElement = tcConfigXml.createElement("logs");
           newElement.setTextContent(logsPath);
           server.appendChild(newElement);
         }
+        logsPathList.add(logsPath);
         cnt++;
       }
     });
@@ -211,7 +218,7 @@ public abstract class TcConfigHolder {
   public void updateServerHost(int serverIndex, String newServerHost) {
     modifyXml((tcConfigXml, xPath) -> {
       NodeList serversList = getServersList(tcConfigXml, xPath);
-      if (serverIndex > serversList.getLength()) {
+      if (serverIndex >= serversList.getLength()) {
         throw new ArrayIndexOutOfBoundsException("Server index " + serverIndex + " out of bounds: " + serversList.getLength());
       }
       Node server = serversList.item(serverIndex);
@@ -225,7 +232,7 @@ public abstract class TcConfigHolder {
   public void updateServerName(int serverIndex, String newServerName) {
     modifyXml((tcConfigXml, xPath) -> {
       NodeList serversList = getServersList(tcConfigXml, xPath);
-      if (serverIndex > serversList.getLength()) {
+      if (serverIndex >= serversList.getLength()) {
         throw new ArrayIndexOutOfBoundsException("Server index " + serverIndex + " out of bounds: " + serversList.getLength());
       }
       Node server = serversList.item(serverIndex);
@@ -239,7 +246,7 @@ public abstract class TcConfigHolder {
   public void updateServerPort(int serverIndex, String portName, int port) {
     modifyXml((tcConfigXml, xPath) -> {
       NodeList serversList = getServersList(tcConfigXml, xPath);
-      if (serverIndex > serversList.getLength()) {
+      if (serverIndex >= serversList.getLength()) {
         throw new ArrayIndexOutOfBoundsException("Server index " + serverIndex + " out of bounds: " + serversList.getLength());
       }
       Node server = serversList.item(serverIndex);
@@ -268,14 +275,6 @@ public abstract class TcConfigHolder {
       Element node = tcConfigXml.createElement("server");
       node.setAttribute("host", hostname);
       node.setAttribute("name", "Server" + stripeIndex + "-" + serverIndex);
-
-      Element node3 = tcConfigXml.createElement("tsa-port");
-      node3.appendChild(tcConfigXml.createTextNode("" + (90 + stripeIndex) + "1" + serverIndex));
-      node.appendChild(node3);
-
-      Element node4 = tcConfigXml.createElement("tsa-group-port");
-      node4.appendChild(tcConfigXml.createTextNode("" + (90 + stripeIndex) + "3" + serverIndex));
-      node.appendChild(node4);
 
       serverElt.appendChild(node);
     });

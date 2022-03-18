@@ -15,13 +15,15 @@
  */
 package org.terracotta.angela.common.clientconfig;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * @author Aurelien Broszniowski
  */
 
-public class ClientSymbolicName {
+public class ClientSymbolicName implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final String symbolicName;
 

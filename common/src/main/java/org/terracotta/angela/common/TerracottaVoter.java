@@ -15,23 +15,44 @@
  */
 package org.terracotta.angela.common;
 
+import org.terracotta.angela.common.util.IpUtils;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TerracottaVoter {
+import static java.util.Collections.emptyList;
+
+public class TerracottaVoter implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final String id;
   private final String hostName;
   private final List<String> hostPorts = new ArrayList<>();
+  private final List<String> serverNames = new ArrayList<>();
 
-  private TerracottaVoter(String id, String hostName, List<String> hostPorts) {
+  private TerracottaVoter(String id, String hostName, List<String> hostPorts, List<String> serverNames) {
     this.id = id;
     this.hostName = hostName;
     this.hostPorts.addAll(hostPorts);
+    this.serverNames.addAll(serverNames);
   }
 
   public static TerracottaVoter voter(String id, String hostName, String... hostPorts) {
-    return new TerracottaVoter(id, hostName, Arrays.asList(hostPorts));
+    return new TerracottaVoter(id, hostName, Arrays.asList(hostPorts), emptyList());
+  }
+
+  public static TerracottaVoter dcVoter(String id, String hostName, String... serverNames) {
+    return new TerracottaVoter(id, hostName, emptyList(), Arrays.asList(serverNames));
+  }
+
+  public static TerracottaVoter localVoter(String id, String... hostPorts) {
+    return new TerracottaVoter(id, IpUtils.getHostName(), Arrays.asList(hostPorts), emptyList());
+  }
+
+  public static TerracottaVoter localDCVoter(String id, String... serverNames) {
+    return new TerracottaVoter(id, IpUtils.getHostName(), emptyList(), Arrays.asList(serverNames));
   }
 
   public String getId() {
@@ -46,4 +67,7 @@ public class TerracottaVoter {
     return hostPorts;
   }
 
+  public List<String> getServerNames() {
+    return serverNames;
+  }
 }

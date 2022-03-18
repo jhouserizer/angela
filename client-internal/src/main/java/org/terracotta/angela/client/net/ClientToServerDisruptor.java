@@ -76,7 +76,7 @@ public class ClientToServerDisruptor implements Disruptor {
       throw new IllegalStateException("Illegal state before disrupt: " + state);
     }
 
-    LOGGER.debug("disrupting client to servers");
+    LOGGER.info("disrupting client to servers");
     for (ServerSymbolicName server : servers) {
       links.get(server).disrupt();
     }
@@ -84,7 +84,7 @@ public class ClientToServerDisruptor implements Disruptor {
   }
 
   @Override
-  public void disrupt(){
+  public void disrupt() {
     disrupt(links.keySet());
   }
 
@@ -94,7 +94,7 @@ public class ClientToServerDisruptor implements Disruptor {
       throw new IllegalStateException("Illegal state before undisrupt: " + state);
     }
 
-    LOGGER.debug("undisrupting client to servers");
+    LOGGER.info("undisrupting client to servers");
     undisrupt(links.keySet());
     state = DisruptorState.UNDISRUPTED;
   }
@@ -105,7 +105,7 @@ public class ClientToServerDisruptor implements Disruptor {
     }
     state = DisruptorState.UNDISRUPTED;
   }
-  
+
   @Override
   public void close() {
     if (state == DisruptorState.DISRUPTED) {

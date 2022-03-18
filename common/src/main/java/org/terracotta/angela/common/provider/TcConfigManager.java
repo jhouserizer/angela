@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TcConfigManager implements ConfigurationManager {
+  private static final long serialVersionUID = 1L;
+
   private final List<TcConfig> tcConfigs;
 
   private TcConfigManager(List<TcConfig> tcConfigs) {
@@ -152,6 +154,13 @@ public class TcConfigManager implements ConfigurationManager {
     return getServers().stream().map(TerracottaServer::getHostname).collect(Collectors.toList());
   }
 
+  @Override
+  public void init(PortAllocator portAllocator) {
+    for (TcConfig tcConfig : tcConfigs) {
+      tcConfig.initialize(portAllocator);
+    }
+  }
+
   public void setUpInstallation(TcConfig tcConfig,
                                 ServerSymbolicName serverSymbolicName,
                                 UUID serverId,
@@ -206,7 +215,7 @@ public class TcConfigManager implements ConfigurationManager {
                                     Map<ServerSymbolicName, Integer> proxiedPorts,
                                     PortAllocator portAllocator) {
     TcConfig tcConfig = findTcConfig(terracottaServer.getId());
-    TcConfig modifiedConfig = TcConfig.copy(tcConfig);
+    TcConfig modifiedConfig = tcConfig.copy();
     List<TerracottaServer> members = modifiedConfig.retrieveGroupMembers(terracottaServer.getServerSymbolicName().getSymbolicName(), disruptionProvider.isProxyBased(), portAllocator);
     TerracottaServer thisMember = members.get(0);
     for (int i = 1; i < members.size(); ++i) {

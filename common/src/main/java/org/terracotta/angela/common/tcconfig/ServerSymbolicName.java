@@ -15,12 +15,14 @@
  */
 package org.terracotta.angela.common.tcconfig;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * @author Ludovic Orban
  */
-public final class ServerSymbolicName {
+public final class ServerSymbolicName implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final String symbolicName;
 

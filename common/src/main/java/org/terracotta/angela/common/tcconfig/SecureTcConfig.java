@@ -15,15 +15,18 @@
  */
 package org.terracotta.angela.common.tcconfig;
 
+import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.Version;
 
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SecureTcConfig extends TcConfig {
+public class SecureTcConfig extends EnterpriseTcConfig {
+  private static final long serialVersionUID = 1L;
 
-  private final Map<ServerSymbolicName, SecurityRootDirectory> SecurityRootDirectoryMap = new HashMap<>();
+  private final Map<ServerSymbolicName, SecurityRootDirectory> securityRootDirectoryMap = new HashMap<>();
+  private final boolean validateConfig;
 
   public static SecureTcConfig secureTcConfig(Version version,
                                               URL tcConfigPath,
@@ -38,36 +41,52 @@ public class SecureTcConfig extends TcConfig {
     return new SecureTcConfig(version, tcConfigPath, validateConfig, namedSecurityRootDirectories);
   }
 
-  private SecureTcConfig(Version version, URL tcConfigPath, boolean validateConfig, NamedSecurityRootDirectory... namedSecurityRootDirectories) {
+  SecureTcConfig(Version version, URL tcConfigPath, boolean validateConfig, NamedSecurityRootDirectory... namedSecurityRootDirectories) {
     super(version, tcConfigPath);
+    this.validateConfig = validateConfig;
     for (NamedSecurityRootDirectory namedSecurityRootDirectory : namedSecurityRootDirectories) {
-      SecurityRootDirectoryMap.put(namedSecurityRootDirectory.getServerSymbolicName(),
-                            namedSecurityRootDirectory.getSecurityRootDirectory());
+      securityRootDirectoryMap.put(namedSecurityRootDirectory.getServerSymbolicName(),
+          namedSecurityRootDirectory.getSecurityRootDirectory());
     }
+  }
+
+  SecureTcConfig(SecureTcConfig tcConfig, Map<ServerSymbolicName, SecurityRootDirectory> securityRootDirectoryMap) {
+    super(tcConfig);
+    this.securityRootDirectoryMap.putAll(securityRootDirectoryMap);
+    this.validateConfig = tcConfig.validateConfig;
+  }
+
+  @Override
+  public void initialize(PortAllocator portAllocator) {
+    super.initialize(portAllocator);
     if (validateConfig) {
       validateConfig();
     }
+  }
 
+  @Override
+  public SecureTcConfig copy() {
+    return new SecureTcConfig(this, securityRootDirectoryMap);
   }
 
   private void validateConfig() {
     getServers().forEach(terracottaServer -> {
       ServerSymbolicName serverSymbolicName = terracottaServer.getServerSymbolicName();
-      if (!SecurityRootDirectoryMap.containsKey(serverSymbolicName)) {
+      if (!securityRootDirectoryMap.containsKey(serverSymbolicName)) {
         throw new IllegalArgumentException("NamedSecurityRootDirectory is not provided for server " +
             serverSymbolicName.getSymbolicName());
       }
     });
 
-    if (SecurityRootDirectoryMap.size() != getServers().size()) {
+    if (securityRootDirectoryMap.size() != getServers().size()) {
       throw new IllegalArgumentException("Given NamedSecurityRootDirectory(s) contains extra servers " +
-                                         "which are not present in tc-config, perhaps some server configurations " +
-                                         "are missing from tc-config?");
+          "which are not present in tc-config, perhaps some server configurations " +
+          "are missing from tc-config?");
     }
   }
 
   public SecurityRootDirectory securityRootDirectoryFor(ServerSymbolicName serverSymbolicName) {
-    return SecurityRootDirectoryMap.get(serverSymbolicName);
+    return securityRootDirectoryMap.get(serverSymbolicName);
   }
 
 }

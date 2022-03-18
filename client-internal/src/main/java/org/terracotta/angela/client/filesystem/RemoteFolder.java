@@ -17,75 +17,80 @@ package org.terracotta.angela.client.filesystem;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.IOUtils;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.lang.IgniteCallable;
-import org.terracotta.angela.agent.Agent;
-import org.terracotta.angela.client.util.IgniteClientHelper;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static java.util.stream.Collectors.toList;
 
 public class RemoteFolder extends RemoteFile {
-  private final int ignitePort;
 
-  public RemoteFolder(Ignite ignite, String hostname, int ignitePort, String parentName, String name) {
-    super(ignite, hostname, ignitePort, parentName, name);
-    this.ignitePort = ignitePort;
+  public RemoteFolder(AgentExecutor agentExecutor, String parentName, String name) {
+    super(agentExecutor, parentName, name);
   }
 
   public List<RemoteFile> list() {
     String absoluteName = getAbsoluteName();
-    IgniteCallable<List<String>> filesCallable = () -> Agent.controller.listFiles(absoluteName);
-    List<String> remoteFiles = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, filesCallable);
-
-    IgniteCallable<List<String>> foldersCallable = () -> Agent.controller.listFolders(absoluteName);
-    List<String> remoteFolders = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, foldersCallable);
+    List<String> remoteFiles = agentExecutor.execute(() -> AgentController.getInstance().listFiles(absoluteName));
+    List<String> remoteFolders = agentExecutor.execute(() -> AgentController.getInstance().listFolders(absoluteName));
 
     List<RemoteFile> result = new ArrayList<>();
     result.addAll(remoteFiles.stream()
-        .map(s -> new RemoteFile(ignite, hostname, ignitePort, getAbsoluteName(), s))
+        .map(s -> new RemoteFile(agentExecutor, getAbsoluteName(), s))
         .collect(toList()));
     result.addAll(remoteFolders.stream()
-        .map(s -> new RemoteFolder(ignite, hostname, ignitePort, getAbsoluteName(), s))
+        .map(s -> new RemoteFolder(agentExecutor, getAbsoluteName(), s))
         .collect(toList()));
     return result;
   }
 
   public void upload(File localFile) throws IOException {
-    if (localFile.isDirectory()) {
+    upload(localFile.toPath());
+  }
+
+  @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
+  public void upload(Path localFile) throws IOException {
+    if (Files.isDirectory(localFile)) {
       uploadFolder(".", localFile);
     } else {
-      try (FileInputStream fis = new FileInputStream(localFile)) {
-        upload(localFile.getName(), fis);
+      try (InputStream fis = Files.newInputStream(localFile)) {
+        upload(localFile.getFileName().toString(), fis);
       }
     }
   }
 
-  @SuppressWarnings("ConstantConditions")
   @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
-  private void uploadFolder(String parentName, File folder) throws IOException {
-    File[] files = folder.listFiles();
-    for (File f : files) {
-      String currentName = parentName + "/" + f.getName();
-      if (f.isDirectory()) {
-        uploadFolder(currentName, f);
-      } else {
-        try (FileInputStream fis = new FileInputStream(f)) {
-          upload(currentName, fis);
+  private void uploadFolder(String parentName, Path folder) throws IOException {
+    try (Stream<Path> stream = Files.list(folder)) {
+      stream.forEach(f -> {
+        try {
+          String currentName = parentName + "/" + f.getFileName();
+          if (Files.isDirectory(f)) {
+            uploadFolder(currentName, f);
+          } else {
+            try (InputStream fis = Files.newInputStream(f)) {
+              upload(currentName, fis);
+            }
+          }
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
         }
-      }
+      });
     }
   }
 
@@ -98,25 +103,21 @@ public class RemoteFolder extends RemoteFile {
   public void upload(String remoteFilename, InputStream localStream) throws IOException {
     byte[] data = IOUtils.toByteArray(localStream);
     String filename = getAbsoluteName() + "/" + remoteFilename;
-    IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.uploadFile(filename, data));
+    agentExecutor.execute(() -> AgentController.getInstance().uploadFile(filename, data));
   }
 
-  @SuppressWarnings("ResultOfMethodCallIgnored")
-  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
+  @SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"})
   @Override
-  public void downloadTo(File localPath) throws IOException {
+  public void downloadTo(Path localPath) throws IOException {
     String foldername = getAbsoluteName();
     byte[] bytes;
     try {
-      bytes = IgniteClientHelper.executeRemotely(ignite, hostname, ignitePort, () -> Agent.controller.downloadFolder(foldername));
+      bytes = agentExecutor.execute(() -> AgentController.getInstance().downloadFolder(foldername));
     } catch (IgniteException ie) {
       throw new IOException("Error downloading remote folder '" + foldername + "' into local folder '" + localPath + "'", ie);
     }
 
-    localPath.mkdirs();
-    if (!localPath.isDirectory()) {
-      throw new IllegalArgumentException("Destination path '" + localPath + "' is not a folder or could not be created");
-    }
+    Files.createDirectories(localPath);
 
     try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bytes))) {
       while (true) {
@@ -125,9 +126,9 @@ public class RemoteFolder extends RemoteFile {
           break;
         }
         String name = nextEntry.getName();
-        File file = new File(localPath, name);
-        file.getParentFile().mkdirs();
-        try (FileOutputStream fos = new FileOutputStream(file)) {
+        Path file = localPath.resolve(name);
+        Files.createDirectories(file.getParent());
+        try (OutputStream fos = Files.newOutputStream(file)) {
           IOUtils.copy(zis, fos);
         }
       }

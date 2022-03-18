@@ -100,7 +100,7 @@ public class NetCrusherProvider implements DisruptionProvider {
       if (state != DisruptorState.UNDISRUPTED) {
         throw new IllegalStateException("illegal state " + state);
       }
-      LOGGER.debug("blocking {} ", this);
+      LOGGER.info("disrupting {} ", this);
       crusher.freeze();
       state = DisruptorState.DISRUPTED;
     }
@@ -111,6 +111,7 @@ public class NetCrusherProvider implements DisruptionProvider {
       if (state != DisruptorState.DISRUPTED) {
         throw new IllegalStateException("illegal state " + state);
       }
+      LOGGER.info("undisrupting {} ", this);
       crusher.unfreeze();
       state = DisruptorState.UNDISRUPTED;
     }

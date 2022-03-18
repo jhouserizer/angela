@@ -77,7 +77,7 @@ public class LocalKitManager extends KitManager {
 
   public void setupLocalInstall(License license, String kitInstallationPath, boolean offline) {
     if (kitInstallationPath != null) {
-      logger.info("Using kitInstallationPath: {}", kitInstallationPath);
+      logger.debug("Using kitInstallationPath: {}", kitInstallationPath);
       Path path = Paths.get(kitInstallationPath);
       if (!Files.isDirectory(path)) {
         throw new IllegalArgumentException("kitInstallationPath: " + kitInstallationPath + " isn't a directory");
@@ -86,19 +86,19 @@ public class LocalKitManager extends KitManager {
     } else if (rootInstallationPath != null) {
       Path localInstallerPath = rootInstallationPath.resolve(
           kitResolver.resolveLocalInstallerPath(distribution.getVersion(), distribution.getLicenseType(), distribution.getPackageType()));
-      logger.info("Checking if local kit is available at: {}", localInstallerPath);
+      logger.debug("Checking if local kit is available at: {}", localInstallerPath);
 
       try {
         lockConcurrentInstall(localInstallerPath);
         if (!isValidLocalInstallerFilePath(offline, localInstallerPath)) {
-          logger.info("Local kit at: {} invalid or absent. Downloading a fresh installer", localInstallerPath);
+          logger.debug("Local kit at: {} invalid or absent. Downloading a fresh installer", localInstallerPath);
           kitResolver.downloadLocalInstaller(distribution.getVersion(), distribution.getLicenseType(), distribution.getPackageType(), localInstallerPath);
         }
 
         this.kitInstallationPath = kitResolver.resolveKitInstallationPath(distribution.getVersion(), distribution.getPackageType(), localInstallerPath, rootInstallationPath);
 
         if (!Files.isDirectory(this.kitInstallationPath)) {
-          logger.info("Local install not available at: {}", this.kitInstallationPath);
+          logger.debug("Local install not available at: {}", this.kitInstallationPath);
           if (offline) {
             throw new IllegalArgumentException("Can not install the kit version " + distribution + " in offline mode because" +
                 " the kit compressed package is not available. Please run in online mode with an internet connection.");
@@ -111,19 +111,20 @@ public class LocalKitManager extends KitManager {
     }
     if (this.kitInstallationPath != null) {
       initClientJarsMap();
-      logger.info("Local distribution is located in {}", this.kitInstallationPath);
+      logger.debug("Local distribution is located in {}", this.kitInstallationPath);
     }
   }
 
   @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
   void unlockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} unlock", Thread.currentThread().getId());
-    File file = localInstallerPath.getParent().resolve(INSTALLATION_LOCK_FILE_NAME).toFile();
+    File parent = localInstallerPath.toFile().getAbsoluteFile().getParentFile();
+    File file = new File(parent, INSTALLATION_LOCK_FILE_NAME);
     final boolean deleted = file.delete();
     if (!deleted) {
       logger.error("Installer lock file {} could not be deleted", file.getAbsolutePath());
     } else {
-      logger.info("Deleted installer lock file {}", file);
+      logger.debug("Deleted installer lock file {}", file);
     }
   }
 
@@ -132,9 +133,10 @@ public class LocalKitManager extends KitManager {
   void lockConcurrentInstall(Path localInstallerPath) {
     logger.debug("Thread {} lock", Thread.currentThread().getId());
 
-    localInstallerPath.toFile().getParentFile().mkdirs();
-    File file = new File(localInstallerPath.toFile().getParentFile(), INSTALLATION_LOCK_FILE_NAME);
-    logger.info("Creating Installer lock file at: {}", file);
+    File parent = localInstallerPath.toFile().getAbsoluteFile().getParentFile();
+    parent.mkdirs();
+    File file = new File(parent, INSTALLATION_LOCK_FILE_NAME);
+    logger.debug("Creating Installer lock file at: {}", file);
     try {
       if (!file.createNewFile()) {
         long diff = new Date().getTime() - file.lastModified();

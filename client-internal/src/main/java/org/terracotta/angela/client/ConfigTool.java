@@ -15,16 +15,15 @@
  */
 package org.terracotta.angela.client;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.agent.AgentController;
+import org.terracotta.angela.agent.com.AgentExecutor;
+import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.kit.LocalKitManager;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
-import org.terracotta.angela.client.util.IgniteClientHelper;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.ToolException;
 import org.terracotta.angela.common.ToolExecutionResult;
@@ -52,17 +51,15 @@ import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 public class ConfigTool implements AutoCloseable {
   private final static Logger logger = LoggerFactory.getLogger(ConfigTool.class);
 
-  private final int ignitePort;
-  private final ToolConfigurationContext configContext;
-  private final Ignite ignite;
+  private final transient ToolConfigurationContext configContext;
+  private final transient AgentExecutor executor;
   private final InstanceId instanceId;
-  private final LocalKitManager localKitManager;
-  private final Tsa tsa;
+  private final transient LocalKitManager localKitManager;
+  private final transient Tsa tsa;
 
-  ConfigTool(Ignite ignite, InstanceId instanceId, int ignitePort, ToolConfigurationContext configContext, Tsa tsa) {
-    this.ignite = ignite;
+  ConfigTool(Executor executor, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
     this.instanceId = instanceId;
-    this.ignitePort = ignitePort;
+    this.executor = executor.forAgent(executor.getAgentID(configContext.getHostName()));
     this.configContext = configContext;
     this.localKitManager = new LocalKitManager(configContext.getDistribution());
     this.tsa = tsa;
@@ -74,8 +71,8 @@ public class ConfigTool implements AutoCloseable {
   }
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... arguments) {
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.configTool(instanceId, env, arguments);
-    return IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+    logger.debug("Executing config-tool: {} on: {}", instanceId, executor.getTarget());
+    return executor.execute(() -> AgentController.getInstance().configTool(instanceId, env, arguments));
   }
 
   public ConfigTool attachStripe(TerracottaServer... newServers) {
@@ -84,11 +81,11 @@ public class ConfigTool implements AutoCloseable {
     }
 
     Topology topology = tsa.getTsaConfigurationContext().getTopology();
+    topology.addStripe(newServers);
     for (TerracottaServer server : newServers) {
       tsa.install(server, topology);
       tsa.start(server);
     }
-    topology.addStripe(newServers);
 
     if (newServers.length > 1) {
       List<String> command = new ArrayList<>();
@@ -168,14 +165,13 @@ public class ConfigTool implements AutoCloseable {
     if (stripeIndex < -1 || stripeIndex >= stripes.size()) {
       throw new IllegalArgumentException("stripeIndex should be a non-negative integer less than stripe count");
     }
-
     if (newServer == null) {
       throw new IllegalArgumentException("Server should be non-null");
     }
 
+    topology.addServer(stripeIndex, newServer);
     tsa.install(newServer, topology);
     tsa.start(newServer);
-    topology.addServer(stripeIndex, newServer);
 
     List<String> command = new ArrayList<>();
     command.add("attach");
@@ -310,10 +306,10 @@ public class ConfigTool implements AutoCloseable {
       clusterName = instanceId.toString();
     }
     List<String> args = new ArrayList<>(Arrays.asList("activate", "-n", clusterName, "-s", terracottaServer.getHostPort()));
-    IgniteCallable<ToolExecutionResult> callable = () -> Agent.controller.activate(instanceId, license, securityRootDirectory, tcEnv, env, args);
-    ToolExecutionResult result = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
-    if(result.getExitStatus() != 0) {
-      throw new IllegalStateException("Failed to execute config-tool activate:\n" + result.toString());
+    logger.debug("Executing config-tool activate: {} on: {}", instanceId, executor.getTarget());
+    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().activate(instanceId, license, securityRootDirectory, tcEnv, env, args));
+    if (result.getExitStatus() != 0) {
+      throw new IllegalStateException("Failed to execute config-tool activate:\n" + result);
     }
     return this;
   }
@@ -331,25 +327,28 @@ public class ConfigTool implements AutoCloseable {
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
 
-    IgniteCallable<Boolean> callable = () -> Agent.controller.installConfigTool(instanceId, configContext.getHostName(),
-        distribution, license, localKitManager.getKitInstallationName(), securityRootDirectory, tcEnv, kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+    logger.info("Installing config-tool: {} on: {}", instanceId, executor.getTarget());
+    final String hostName = configContext.getHostName();
+    final String kitInstallationName = localKitManager.getKitInstallationName();
+    final IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installConfigTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
-        IgniteClientHelper.uploadKit(ignite, configContext.getHostName(), ignitePort, instanceId, distribution,
-            localKitManager.getKitInstallationName(), localKitManager.getKitInstallationPath().toFile());
-        IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, callable);
+        executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+        executor.execute(callable);
       } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + configContext.getHostName(), e);
+        throw new RuntimeException("Cannot upload kit to " + hostName, e);
       }
     }
     return this;
   }
 
   public ConfigTool uninstall() {
-    IgniteRunnable uninstaller = () -> Agent.controller.uninstallConfigTool(instanceId, configContext.getDistribution(), configContext
-        .getHostName(), localKitManager.getKitInstallationName());
-    IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort, uninstaller);
+    logger.info("Uninstalling config-tool: {} from: {}", instanceId, executor.getTarget());
+    final Distribution distribution = configContext.getDistribution();
+    final String hostName = configContext.getHostName();
+    final String kitInstallationName = localKitManager.getKitInstallationName();
+    executor.execute(() -> AgentController.getInstance().uninstallConfigTool(instanceId, distribution, hostName, kitInstallationName));
     return this;
   }
 
@@ -423,9 +422,9 @@ public class ConfigTool implements AutoCloseable {
   }
 
   public RemoteFolder browse(String root) {
-    String path = IgniteClientHelper.executeRemotely(ignite, configContext.getHostName(), ignitePort,
-        () -> Agent.controller.getConfigToolInstallPath(instanceId));
-    return new RemoteFolder(ignite, configContext.getHostName(), ignitePort, path, root);
+    logger.debug("Browsing config-tool: {} on: {}", instanceId, executor.getTarget());
+    String path = executor.execute(() -> AgentController.getInstance().getConfigToolInstallPath(instanceId));
+    return new RemoteFolder(executor, path, root);
   }
 
   @Override

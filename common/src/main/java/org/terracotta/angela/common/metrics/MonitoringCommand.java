@@ -15,12 +15,14 @@
  */
 package org.terracotta.angela.common.metrics;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class MonitoringCommand {
+public class MonitoringCommand implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final List<String> command;
 
