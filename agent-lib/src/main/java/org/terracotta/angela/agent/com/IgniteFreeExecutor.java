@@ -24,10 +24,8 @@ import org.terracotta.angela.common.clientconfig.ClientId;
 import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.InstanceId;
-import org.terracotta.angela.common.util.AngelaVersion;
 
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +37,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 
 /**
  * Executor which is not using Ignite and directly execute closures
@@ -47,19 +44,17 @@ import static java.util.Collections.singletonMap;
 public class IgniteFreeExecutor implements Executor {
 
   private final transient Map<String, BlockingQueue<FileTransfer>> queues = new ConcurrentHashMap<>();
-  private final UUID group;
-  private final AgentID agentID;
+  private final AgentGroup agentGroup;
 
   public IgniteFreeExecutor(Agent agent) {
     this(agent.getGroupId(), agent.getAgentID());
   }
 
   public IgniteFreeExecutor(UUID group, AgentID agentID) {
-    if (!agentID.isIgniteFree()) {
+    if (!agentID.isLocal()) {
       throw new IllegalArgumentException("Wrong agentID: " + agentID);
     }
-    this.group = group;
-    this.agentID = agentID;
+    this.agentGroup = new LocalAgentGroup(group, agentID);
   }
 
   @Override
@@ -97,12 +92,13 @@ public class IgniteFreeExecutor implements Executor {
   }
 
   @Override
-  public void shutdown(AgentID agentID) {
+  public Optional<CompletableFuture<Void>> shutdown(AgentID agentID) {
+    return Optional.empty();
   }
 
   @Override
   public AgentID getLocalAgentID() {
-    return agentID;
+    return agentGroup.getLocalAgentID();
   }
 
   @Override
@@ -117,10 +113,7 @@ public class IgniteFreeExecutor implements Executor {
 
   @Override
   public AgentGroup getGroup() {
-    Map<String, String> attrs = new HashMap<>();
-    attrs.put("angela.group", group.toString());
-    attrs.put("angela.version", AngelaVersion.getAngelaVersion());
-    return new AgentGroup(group, singletonMap(getLocalAgentID(), attrs));
+    return agentGroup;
   }
 
   @Override

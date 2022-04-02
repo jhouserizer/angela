@@ -81,7 +81,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientArrayDownloadFiles() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final String cliSymbName = "foo";
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -109,7 +109,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testMultipleClientsSameHostArrayDownloadFiles() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     int clientsCount = 3;
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -147,7 +147,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testMultipleClientJobsSameHostDownloadFiles() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     int clientsCount = 3;
     int clientsPerMachine = 2;
@@ -198,7 +198,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testMultipleClientsOnSameHost() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     Distribution distribution = getOldDistribution();
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -217,7 +217,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testMultipleClientJobsOnSameMachine() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     int serieLength = 3;
     int clientsPerMachine = 2;
@@ -252,7 +252,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testRemoteClient() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     Distribution distribution = getOldDistribution();
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
@@ -275,7 +275,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientArrayNoDistribution() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("localhost", hostname))));
@@ -290,7 +290,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientArrayExceptionReported() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, hostname))));
@@ -323,7 +323,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientCpuMetricsLogs() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
@@ -362,7 +362,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientAllHardwareMetricsLogs() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
@@ -393,7 +393,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientDummyMemoryMetrics() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final Path resultPath = Paths.get("target", UUID.randomUUID().toString());
 
@@ -466,7 +466,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testBarrier() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final int clientCount = 2;
     final int loopCount = 20;
@@ -507,7 +507,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testUploadClientJars() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     Distribution distribution = getOldDistribution();
     ClientArrayConfig clientArrayConfig1 = newClientArrayConfig()
@@ -540,7 +540,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientArrayReferenceShared() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, hostname))));
@@ -568,7 +568,7 @@ public class ClientIT extends BaseIT {
 
   @Test
   public void testClientArrayHostNames() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     ClientArrayConfig hostSerie = newClientArrayConfig()
         .hostSerie(2, hostname);

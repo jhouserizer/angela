@@ -37,7 +37,6 @@ import org.terracotta.angela.common.util.IpUtils;
 import org.terracotta.angela.common.util.JDK;
 import org.terracotta.angela.common.util.JavaLocationResolver;
 import org.terracotta.angela.common.util.LogOutputStream;
-import org.terracotta.angela.common.util.UniversalPath;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -167,17 +166,13 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
   @Override
   public synchronized Optional<AgentID> startRemoteAgent(String hostname) {
     if (IpUtils.isLocal(hostname)) {
-      // if we detect we need an agent for a local hostname re-use the local one
-      agents.putIfAbsent(hostname, getLocalAgentID());
+      agentGroup.joined(getLocalAgentID(), hostname);
       return Optional.empty();
     }
 
-    if (clients.containsKey(hostname)) {
-      throw new IllegalArgumentException("Already have an SSH session opened for: " + hostname);
-    }
-
-    if (agents.containsKey(hostname)) {
-      throw new IllegalArgumentException("Already have an Angela agent opened for: " + hostname);
+    if (clients.containsKey(hostname) || agentGroup.findRemoteAgentID(hostname).isPresent()) {
+      // if we detect we need an agent for a local hostname, or an already spawned one, re-use the local one
+      return Optional.empty();
     }
 
     logger.info("Connecting via SSH to: {}", hostname);
@@ -193,7 +188,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       try {
         ssh.loadKnownHosts();
       } catch (IOException e) {
-        logger.warn("Unable to load SSH known hosts. Error: {}", e.getMessage(), e);
+        logger.warn("Unable to load SSH known hosts. Maybe the file does not exist ? Error: {}", e.getMessage());
       }
       ssh.connect(hostname, port);
 
@@ -215,13 +210,13 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       if (agentJarFile.getFileName().toString().endsWith("-SNAPSHOT.jar") || !exec(ssh, "[ -e " + dest + " ]").isPresent()) {
         // jar file is a snapshot or does not exist, upload it
         logger.debug("Uploading agent jar: {} to: {}...", agentJarFile, hostname);
-        ssh.newSCPFileTransfer().upload(agentJarFile.toString(), dest.toString());
+        ssh.newSCPFileTransfer().upload(agentJarFile.toString(), dest);
       }
 
       Session session = ssh.startSession();
       session.allocatePTY("vt100", 320, 96, 0, 0, Collections.<PTYMode, Integer>emptyMap());
 
-      UniversalPath remoteJavaHome = findJavaHomeFromRemoteToolchains(ssh);
+      String remoteJavaHome = findJavaHomeFromRemoteToolchains(ssh);
       String command = remoteJavaHome + "/bin/java " +
           String.join(" ", tcEnv.getJavaOpts()) + " " +
           // angela.java.resolver=user will ensure that any usage of TerracottaCommandLineEnvironment
@@ -255,11 +250,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
 
       // "hostname" is the hostname used here in the angela test to reach the remote host
       // agentID.getHostName() is the hostname read by IpUtil when starting the agent remotely
-      final String remoteHostname = agentID.getHostName();
-
-      // we register both hostnames just in case on has a dns suffix
-      agents.put(hostname, agentID);
-      agents.putIfAbsent(remoteHostname, agentID);
+      agentGroup.joined(agentID, hostname);
 
       return Optional.of(agentID);
     } catch (IOException | InterruptedException e) {
@@ -339,7 +330,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
     }
   }
 
-  private UniversalPath findJavaHomeFromRemoteToolchains(SSHClient ssh) throws IOException {
+  private String findJavaHomeFromRemoteToolchains(SSHClient ssh) throws IOException {
     if (!tcEnv.isToolchainBased()) {
       // The current env is not toolchain based: we are using the current java home.
       // Since we do not have any indication regarding the version and vendor, we
@@ -348,7 +339,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       final Path javaHome = tcEnv.getJavaHome();
       logger.warn("Toolchain not used: will re-use the same current JVM path remotely on: {}: {}", ssh.getRemoteHostname(), javaHome);
       // This will only work if OS are the same.
-      return UniversalPath.fromLocalPath(javaHome);
+      return javaHome.toString();
 
     } else {
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -385,7 +376,7 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       }
       // check JDK validity remotely
       for (JDK jdk : jdks) {
-        UniversalPath remoteHome = jdk.getHome();
+        String remoteHome = jdk.getHome();
         if (exec(ssh, "[ -d \"" + remoteHome + "\" ]").isPresent()) {
           logger.info("Selected remote JDK on: {}: {}", ssh.getRemoteHostname(), jdk);
           return remoteHome;

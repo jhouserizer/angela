@@ -47,7 +47,7 @@ public class AgentIT {
     try (Agent agent = Agent.local(group);
          Executor executor = new IgniteFreeExecutor(agent)) {
       final AgentID agentID = agent.getAgentID();
-      assertTrue(agentID.isIgniteFree());
+      assertTrue(agentID.isLocal());
       assertEquals("local#" + PidUtil.getMyPid() + "@" + IpUtils.getHostName() + "#0", agentID.toString());
       assertEquals(1, executor.getGroup().size());
     }
@@ -66,8 +66,8 @@ public class AgentIT {
       final AgentID agentID2 = agent2.getAgentID();
       int port2 = agentID2.getPort();
 
-      assertFalse(agentID1.isIgniteFree());
-      assertFalse(agentID2.isIgniteFree());
+      assertFalse(agentID1.isLocal());
+      assertFalse(agentID2.isLocal());
 
       assertEquals(Agent.AGENT_TYPE_ORCHESTRATOR + "#" + PidUtil.getMyPid() + "@" + IpUtils.getHostName() + "#" + port1, agentID1.toString());
       assertEquals("client-job#" + PidUtil.getMyPid() + "@" + IpUtils.getHostName() + "#" + port2, agentID2.toString());

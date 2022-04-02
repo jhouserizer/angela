@@ -58,7 +58,7 @@ public class BrowseIT extends BaseIT {
 
   @Test
   public void testClient() throws Exception {
-    assumeFalse("Cannot run without Ignite", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite", agentID.isLocal());
 
     ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
         .clientArray(clientArray -> clientArray

@@ -23,6 +23,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
+import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.util.SshServer;
 
 import java.io.IOException;
@@ -33,6 +34,7 @@ import java.util.Collection;
 import java.util.UUID;
 
 import static java.util.function.Predicate.isEqual;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -55,9 +57,7 @@ public class AgentGroupIT {
   Agent agent = Agent.igniteOrchestrator(group, portAllocator);
   AgentID agentID = agent.getAgentID();
 
-  Executor executor = new IgniteSshRemoteExecutor(agent)
-      .setStrictHostKeyChecking(false)
-      .setPort(sshServer.getPort());
+  Executor executor = new IgniteSshRemoteExecutor(agent).setPort(sshServer.getPort());
 
   @After
   public void tearDown() {
@@ -87,12 +87,14 @@ public class AgentGroupIT {
         "tests requiring the use of a fake DNS hostname (-Djdk.net.hosts.file=...) cannot run on 1.8",
         System.getProperty("java.version"), not(startsWith("1.8")));
 
-    assertEquals(0, executor.getGroup().remoteAgentIDs().count());
+    assumeThat("SSH tests can only be run on Linux", OS.INSTANCE.isWindows(), is(false));
+
+    assertEquals(0, executor.getGroup().getRemoteAgentIDs().size());
 
     AgentID remoteAgent = executor.startRemoteAgent("testhostname").get();
 
-    assertEquals(1, executor.getGroup().remoteAgentIDs().count());
-    assertEquals(remoteAgent, executor.getGroup().remoteAgentIDs().findFirst().get());
+    assertEquals(1, executor.getGroup().getRemoteAgentIDs().size());
+    assertEquals(remoteAgent, executor.getGroup().getRemoteAgentIDs().iterator().next());
   }
 
   @Test
@@ -101,14 +103,16 @@ public class AgentGroupIT {
         "tests requiring the use of a fake DNS hostname (-Djdk.net.hosts.file=...) cannot run on 1.8",
         System.getProperty("java.version"), not(startsWith("1.8")));
 
-    assertEquals(0, executor.getGroup().spawnedAgentIDs().count());
+    assumeThat("SSH tests can only be run on Linux", OS.INSTANCE.isWindows(), is(false));
+
+    assertEquals(0, executor.getGroup().getSpawnedAgents().size());
 
     AgentID client = spawnClient();
     AgentID remoteAgent = executor.startRemoteAgent("testhostname").get();
 
-    assertEquals(2, executor.getGroup().spawnedAgentIDs().count());
-    assertTrue(executor.getGroup().spawnedAgentIDs().anyMatch(isEqual(client)));
-    assertTrue(executor.getGroup().spawnedAgentIDs().anyMatch(isEqual(remoteAgent)));
+    assertEquals(2, executor.getGroup().getSpawnedAgents().size());
+    assertTrue(executor.getGroup().getSpawnedAgents().stream().anyMatch(isEqual(client)));
+    assertTrue(executor.getGroup().getSpawnedAgents().stream().anyMatch(isEqual(remoteAgent)));
   }
 
   @Test

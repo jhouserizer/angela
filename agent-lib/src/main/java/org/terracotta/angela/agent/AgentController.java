@@ -561,7 +561,7 @@ public class AgentController {
   public void stopClient(InstanceId instanceId, int pid) {
     try {
       logger.info("[{}] killing client '{}' with PID {}", localAgentID, instanceId, pid);
-      if (!localAgentID.isIgniteFree()) {
+      if (!localAgentID.isLocal()) {
         ProcessUtil.destroyGracefullyOrForcefullyAndWait(pid);
       }
     } catch (Exception e) {
@@ -580,7 +580,7 @@ public class AgentController {
   }
 
   public AgentID spawnClient(InstanceId instanceId, TerracottaCommandLineEnvironment tcEnv, AgentGroup group) {
-    if (localAgentID.isIgniteFree()) {
+    if (localAgentID.isLocal()) {
       return localAgentID;
     }
     RemoteClientManager remoteClientManager = new RemoteClientManager(instanceId);

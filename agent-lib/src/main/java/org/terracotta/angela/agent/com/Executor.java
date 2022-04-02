@@ -33,9 +33,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 /**
@@ -76,7 +76,7 @@ public interface Executor extends AutoCloseable {
 
   void uploadKit(AgentID agentID, InstanceId instanceId, Distribution distribution, String kitInstallationName, Path kitInstallationPath);
 
-  void shutdown(AgentID agentID) throws TimeoutException;
+  Optional<CompletableFuture<Void>> shutdown(AgentID agentID);
 
   // defaults
 
@@ -131,7 +131,7 @@ public interface Executor extends AutoCloseable {
       BlockingQueue<FileTransfer> queue = getFileTransferQueue(instanceId);
       try {
         for (Path root : locations) {
-          if(Files.exists(root)) {
+          if (Files.exists(root)) {
             logger.debug("Uploading files from: {}", root);
             try (Stream<Path> stream = Files.walk(root).filter(Files::isRegularFile)) {
               stream.map(path -> FileTransfer.from(root, path)).forEach(fileTransfer -> {

@@ -88,7 +88,7 @@ public class IgniteFreeExecutorIT {
     AgentGroup group = executor.getGroup();
     assertEquals(this.group, group.getId());
     assertEquals(1, group.size());
-    assertEquals(AgentID.local(), group.getPeers().iterator().next());
+    assertEquals(AgentID.local(), group.getAllAgents().iterator().next());
   }
 
   @Test(expected = UnsupportedOperationException.class)

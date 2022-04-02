@@ -38,6 +38,10 @@ public class Cluster implements Serializable {
     this.clientId = clientId;
   }
 
+  public Ignite getIgnite() {
+    return ignite;
+  }
+
   public Barrier barrier(String name, int count) {
     return new Barrier(ignite, count, name);
   }

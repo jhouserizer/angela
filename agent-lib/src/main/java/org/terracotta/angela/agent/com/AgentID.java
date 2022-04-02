@@ -70,7 +70,7 @@ public class AgentID implements Serializable {
     return InetSocketAddress.createUnresolved(hostname, port);
   }
 
-  public boolean isIgniteFree() {
+  public boolean isLocal() {
     return port == 0 && name.equals("local");
   }
 

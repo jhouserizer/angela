@@ -17,17 +17,17 @@ package org.terracotta.angela.common.util;
 
 public class JDK {
 
-  private final UniversalPath home;
+  private final String home;
   private final String version;
   private final String vendor;
 
-  public JDK(UniversalPath home, String version, String vendor) {
+  public JDK(String home, String version, String vendor) {
     this.home = home;
     this.version = version;
     this.vendor = vendor;
   }
 
-  public UniversalPath getHome() {
+  public String getHome() {
     return home;
   }
 

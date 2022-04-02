@@ -16,12 +16,9 @@
 package org.terracotta.angela.agent.com;
 
 import org.terracotta.angela.agent.Agent;
-import org.terracotta.angela.common.util.AngelaVersion;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -32,74 +29,88 @@ import static java.util.stream.Collectors.toList;
 /**
  * @author Mathieu Carbou
  */
-public class AgentGroup implements Serializable {
+public abstract class AgentGroup implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private final UUID id;
-  private final Map<AgentID, Map<String, String>> peers = new LinkedHashMap<>();
+  private final AgentID agentID;
 
-  public AgentGroup(UUID id, Map<AgentID, Map<String, String>> peers) {
+  public AgentGroup(UUID id, AgentID agentID) {
     this.id = id;
-    this.peers.putAll(peers);
-
-    // sanity checks
-    for (Map.Entry<AgentID, Map<String, String>> entry : peers.entrySet()) {
-      final AgentID agentID = entry.getKey();
-      final Map<String, String> attrs = entry.getValue();
-      if (!attrs.containsKey("angela.group") || !Objects.equals(attrs.get("angela.group"), id.toString())) {
-        throw new IllegalStateException("Agent: " + agentID + " in group: " + attrs.get("angela.group") + " is not part of group: " + id);
-      }
-      if (!attrs.containsKey("angela.version") || !Objects.equals(attrs.get("angela.version"), AngelaVersion.getAngelaVersion())) {
-        throw new IllegalStateException("Agent: " + agentID + " is running version [" + attrs.get("angela.version") + "] but the expected version is [" + AngelaVersion.getAngelaVersion() + "]");
-      }
-    }
+    this.agentID = agentID;
   }
 
-  public UUID getId() {
+  public final UUID getId() {
     return id;
   }
 
-  /**
-   * A combination of all Ignite agent launched for both remoting (remote agent) or for running client jobs
-   */
-  public Collection<AgentID> getPeers() {
-    return peers.keySet();
+  public final AgentID getLocalAgentID() {
+    return agentID;
   }
 
   /**
-   * Only the Ignite nodes started remotely, once per hostname.
+   * A combination of all Ignite agent launched for both remoting (remote agent)
+   * or for running client jobs, plus the orchestrator
    */
-  public Stream<AgentID> remoteAgentIDs() {
-    return getPeers().stream().filter(agentID -> agentID.getName().equals(Agent.AGENT_TYPE_REMOTE));
+  public abstract Collection<AgentID> getAllAgents();
+
+  /**
+   * @return all Ignite agent spawned to run client code
+   */
+  public final Collection<AgentID> getClientAgents() {
+    return getAllAgents().stream()
+        .filter(agentID -> !agentID.isLocal())
+        .filter(agentID -> !agentID.getName().equals(Agent.AGENT_TYPE_ORCHESTRATOR) && !agentID.getName().equals(Agent.AGENT_TYPE_REMOTE))
+        .collect(toList());
   }
 
   /**
-   * Only the Ignite nodes spawned
+   * @return all Ignite agent spawned that must be closed at the end
    */
-  public Stream<AgentID> spawnedAgentIDs() {
-    return peers.entrySet().stream()
-        .filter(e -> Objects.equals("spawned", e.getValue().get("angela.process")))
-        .map(Map.Entry::getKey);
+  public final Collection<AgentID> getSpawnedAgents() {
+    return getAllAgents().stream()
+        .filter(agentID -> !agentID.isLocal())
+        .filter(agentID -> !agentID.getName().equals(Agent.AGENT_TYPE_ORCHESTRATOR))
+        .collect(toList());
   }
 
-  public Collection<String> getPeerAddresses() {
-    return getPeers().stream().map(AgentID::getAddress).map(Objects::toString).collect(toList());
+  /**
+   * Only the Ignite nodes started remotely to control process launching, once per hostname.
+   * These are not the client agents.
+   */
+  public final Collection<AgentID> getRemoteAgentIDs() {
+    return getAllAgents().stream()
+        .filter(agentID -> !agentID.isLocal())
+        .filter(agentID -> agentID.getName().equals(Agent.AGENT_TYPE_REMOTE))
+        .collect(toList());
+  }
+
+  public final Collection<String> getPeerAddresses() {
+    return getAllAgents().stream().map(AgentID::getAddress).map(Objects::toString).collect(toList());
   }
 
   @Override
-  public String toString() {
-    return getId() + "=" + getPeers();
+  public final String toString() {
+    return getId() + "=" + getAllAgents();
   }
 
-  public int size() {
-    return peers.size();
+  public final int size() {
+    return getAllAgents().size();
   }
 
-  public boolean isEmpty() {return peers.isEmpty();}
+  public final boolean isEmpty() {
+    return getAllAgents().isEmpty();
+  }
 
-  public boolean contains(AgentID agentID) {return peers.containsKey(agentID);}
+  public final boolean contains(AgentID agentID) {
+    return getAllAgents().contains(agentID);
+  }
 
-  public Stream<AgentID> stream() {return peers.keySet().stream();}
+  public final Stream<AgentID> stream() {
+    return getAllAgents().stream();
+  }
 
-  public void forEach(Consumer<? super AgentID> action) {peers.keySet().forEach(action);}
+  public final void forEach(Consumer<? super AgentID> action) {
+    getAllAgents().forEach(action);
+  }
 }
