@@ -17,6 +17,8 @@ package org.terracotta.angela;
 
 import net.schmizz.sshj.common.IOUtils;
 import org.junit.After;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.terracotta.angela.agent.com.AgentID;
@@ -27,6 +29,7 @@ import org.terracotta.angela.common.distribution.RuntimeOption;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.util.IpUtils;
+import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.util.SshServer;
 import org.terracotta.angela.util.Versions;
 
@@ -34,6 +37,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 import static org.junit.runners.Parameterized.Parameters;
@@ -47,7 +51,6 @@ import static org.terracotta.angela.common.topology.Version.version;
  */
 @RunWith(Parameterized.class)
 public abstract class BaseIT {
-
   @Parameters(name = "{index}: mode={0} hostname={1} inline={2} ssh={3}")
   public static Iterable<Object[]> data() {
     List<Object[]> cases = new ArrayList<>(6);
@@ -57,7 +60,7 @@ public abstract class BaseIT {
     cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), true, false});
     cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), false, false});
 
-    if (!System.getProperty("java.version").startsWith("1.8")) {
+    if (!System.getProperty("java.version").startsWith("1.8") && !OS.INSTANCE.isWindows()) {
       // ssh tests only on 1.11 since they require the usage of -Djdk.net.hosts.file
       cases.add(new Object[]{"igniteRemote()", "testhostname", true, true});
       cases.add(new Object[]{"igniteRemote()", "testhostname", false, true});
@@ -65,6 +68,9 @@ public abstract class BaseIT {
 
     return cases;
   }
+
+  @Rule
+  public Timeout timeout = Timeout.builder().withTimeout(4, TimeUnit.MINUTES).build();
 
   protected final transient PortAllocator portAllocator = new DefaultPortAllocator();
   protected final transient SshServer sshServer;
@@ -99,10 +105,7 @@ public abstract class BaseIT {
       case "igniteRemote()":
         this.angelaOrchestrator = AngelaOrchestrator.builder()
             .withPortAllocator(portAllocator)
-            .igniteRemote(igniteSshRemoteExecutor -> {
-              igniteSshRemoteExecutor.setPort(requireNonNull(sshServer).getPort());
-              igniteSshRemoteExecutor.setStrictHostKeyChecking(false);
-            })
+            .igniteRemote(igniteSshRemoteExecutor -> igniteSshRemoteExecutor.setPort(requireNonNull(sshServer).getPort()))
             .build();
         break;
       default:

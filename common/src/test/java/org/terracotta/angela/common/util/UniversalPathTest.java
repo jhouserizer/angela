@@ -17,8 +17,8 @@ package org.terracotta.angela.common.util;
 
 import org.junit.Test;
 
+import java.nio.file.FileSystems;
 import java.nio.file.Paths;
-import java.util.Locale;
 
 import static org.junit.Assert.assertEquals;
 
@@ -37,15 +37,16 @@ public class UniversalPathTest {
 
     assertEquals("a", UniversalPath.fromLocalPath(Paths.get("a")).toLocalPath().toString());
 
-    if (System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")) {
+    if (OS.INSTANCE.isWindows()) {
+      String root = FileSystems.getDefault().getRootDirectories().iterator().next().toString();
       assertEquals("a/a", UniversalPath.fromLocalPath(Paths.get("a\\a")).toString());
       assertEquals("a\\a", UniversalPath.fromLocalPath(Paths.get("a\\a")).toLocalPath().toString());
 
       assertEquals("/", UniversalPath.fromLocalPath(Paths.get("c:\\")).toString());
-      assertEquals("C:\\", UniversalPath.fromLocalPath(Paths.get("c:\\")).toLocalPath().toString());
+      assertEquals(root, UniversalPath.fromLocalPath(Paths.get("c:\\")).toLocalPath().toString());
 
       assertEquals("/a/a", UniversalPath.fromLocalPath(Paths.get("c:\\a\\a")).toString());
-      assertEquals("C:\\a\\a", UniversalPath.fromLocalPath(Paths.get("c:\\a\\a")).toLocalPath().toString());
+      assertEquals(root + "a\\a", UniversalPath.fromLocalPath(Paths.get("c:\\a\\a")).toLocalPath().toString());
 
     } else {
       assertEquals("a/a", UniversalPath.fromLocalPath(Paths.get("a/a")).toLocalPath().toString());

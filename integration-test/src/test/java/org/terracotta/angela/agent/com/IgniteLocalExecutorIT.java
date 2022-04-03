@@ -106,7 +106,7 @@ public class IgniteLocalExecutorIT {
     System.out.println(group);
     assertEquals(this.group, group.getId());
     assertEquals(1, group.size());
-    assertEquals(agentID, group.getPeers().iterator().next());
+    assertEquals(agentID, group.getAllAgents().iterator().next());
 
     // simulate another agent (for a client job)
     try (Agent client = Agent.ignite(agent.getGroupId(), "client-1", portAllocator, group.getPeerAddresses())) {

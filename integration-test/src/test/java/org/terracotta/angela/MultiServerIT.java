@@ -19,6 +19,8 @@ import com.terracotta.connection.api.DiagnosticConnectionService;
 import com.terracotta.diagnostic.Diagnostics;
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
@@ -46,6 +48,8 @@ import static org.terracotta.angela.common.topology.Version.version;
 import static org.terracotta.angela.util.Versions.EHCACHE_VERSION_XML;
 
 public class MultiServerIT extends BaseIT {
+  private static final Logger logger = LoggerFactory.getLogger(MultiServerIT.class);
+
   private static final int STATE_TIMEOUT = 60_000;
   private static final int STATE_POLL_INTERVAL = 1_000;
 
@@ -72,6 +76,12 @@ public class MultiServerIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
       try (Tsa tsa = factory.tsa().startAll()) {
+        System.out.println(tcConfig.toXml());
+        System.out.println(tcConfig.getServers());
+
+        tsa.waitForActive();
+        tsa.waitForPassives(2);
+
         TerracottaServer active = tsa.getActive();
         Collection<TerracottaServer> passives = tsa.getPassives();
         Iterator<TerracottaServer> iterator = passives.iterator();
@@ -88,8 +98,8 @@ public class MultiServerIT extends BaseIT {
           //start partition
           disruptor.disrupt();
           //verify active gets into blocked state and one of passives gets promoted to active
-          assertTrue(waitForServerBlocked(active));
           assertTrue(waitForActive(tsa, passive1, passive2));
+          assertTrue(waitForServerBlocked(active));
 
           //stop partition
           disruptor.undisrupt();
@@ -116,6 +126,7 @@ public class MultiServerIT extends BaseIT {
     try {
       return Boolean.parseBoolean(getServerBlockedState(server));
     } catch (Exception e) {
+      logger.warn("isServerBlocked({}): {}", server, e.getMessage(), e);
       return false;
     }
   }

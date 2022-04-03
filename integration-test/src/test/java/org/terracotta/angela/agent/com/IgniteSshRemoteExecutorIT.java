@@ -22,13 +22,15 @@ import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
+import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.util.SshServer;
 
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -58,6 +60,8 @@ public class IgniteSshRemoteExecutorIT {
     assumeThat(
         "tests requiring the use of a fake DNS hostname (-Djdk.net.hosts.file=...) cannot run on 1.8",
         System.getProperty("java.version"), not(startsWith("1.8")));
+
+    assumeThat("SSH tests can only be run on Linux", OS.INSTANCE.isWindows(), is(false));
   }
 
   @After
@@ -69,9 +73,7 @@ public class IgniteSshRemoteExecutorIT {
 
   @Test
   public void testStartRemoteAgentWithoutToolchain() {
-    try (Executor executor = new IgniteSshRemoteExecutor(agent)
-        .setStrictHostKeyChecking(false)
-        .setPort(sshServer.getPort())) {
+    try (Executor executor = new IgniteSshRemoteExecutor(agent).setPort(sshServer.getPort())) {
 
       assertEquals(1, executor.getGroup().size());
       assertFalse(executor.findAgentID("testhostname").isPresent());
@@ -87,7 +89,6 @@ public class IgniteSshRemoteExecutorIT {
   public void testStartRemoteAgentWithToolchain() {
     try (Executor executor = new IgniteSshRemoteExecutor(agent)
         .setTcEnv(TerracottaCommandLineEnvironment.DEFAULT.withJavaVersion("1.11")) // will spawn a child agent with java 11
-        .setStrictHostKeyChecking(false)
         .setPort(sshServer.getPort())) {
 
       assertEquals(1, executor.getGroup().size());
@@ -101,20 +102,18 @@ public class IgniteSshRemoteExecutorIT {
   }
 
   @Test
-  public void testShutdown() throws TimeoutException {
-    try (Executor executor = new IgniteSshRemoteExecutor(agent)
-        .setStrictHostKeyChecking(false)
-        .setPort(sshServer.getPort())) {
+  public void testShutdown() throws ExecutionException, InterruptedException {
+    try (Executor executor = new IgniteSshRemoteExecutor(agent).setPort(sshServer.getPort())) {
 
       try {
-        executor.shutdown(agentID);
+        executor.shutdown(agentID).get().get();
         fail();
       } catch (IllegalArgumentException e) {
         assertTrue(e.getMessage().startsWith("Cannot kill myself"));
       }
 
       AgentID agentID = executor.startRemoteAgent("testhostname").get();
-      executor.shutdown(agentID);
+      executor.shutdown(agentID).get().get();
 
       assertEquals(1, executor.getGroup().size());
       assertFalse(executor.getGroup().contains(agentID));
@@ -123,9 +122,7 @@ public class IgniteSshRemoteExecutorIT {
 
   @Test
   public void testShutdownAtClose() {
-    try (Executor executor = new IgniteSshRemoteExecutor(agent)
-        .setStrictHostKeyChecking(false)
-        .setPort(sshServer.getPort())) {
+    try (Executor executor = new IgniteSshRemoteExecutor(agent).setPort(sshServer.getPort())) {
       executor.startRemoteAgent("testhostname").get();
     }
     // executor.close() will execute teh shutdown

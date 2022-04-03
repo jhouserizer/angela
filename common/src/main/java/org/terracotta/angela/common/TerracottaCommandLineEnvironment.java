@@ -59,18 +59,19 @@ public class TerracottaCommandLineEnvironment implements Serializable {
   public static final TerracottaCommandLineEnvironment DEFAULT;
 
   static {
+    Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(JAVA_OPTS.getValue().split("\\s")));
+    opts.removeIf(s -> s.trim().isEmpty());
+
     switch (JAVA_RESOLVER.getValue()) {
       case "toolchain": {
         String version = JAVA_VERSION.getValue();
         // Important - Use a LinkedHashSet to preserve the order of preferred Java vendor
         Set<String> vendors = JAVA_VENDOR.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_VENDOR.getValue());
         // Important - Use a LinkedHashSet to preserve the order of opts, as some opts are position-sensitive
-        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(JAVA_OPTS.getValue().split(" ")));
         DEFAULT = new TerracottaCommandLineEnvironment(false, version, vendors, opts);
         break;
       }
       case "user": {
-        Set<String> opts = JAVA_OPTS.getValue().equals("") ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(JAVA_OPTS.getValue().split(" ")));
         DEFAULT = new TerracottaCommandLineEnvironment(true, "", emptySet(), opts);
         break;
       }
@@ -150,7 +151,8 @@ public class TerracottaCommandLineEnvironment implements Serializable {
       if (jdks.size() > 1) {
         LOGGER.warn("Multiple matching java versions found: {} - using the 1st one", jdks);
       }
-      return jdks.get(0).getHome().toLocalPath();
+      // we can interpret the path since we are loading the toolchain file locally and accessing the jvm home locally (same machine)
+      return Paths.get(jdks.get(0).getHome());
     }
   }
 

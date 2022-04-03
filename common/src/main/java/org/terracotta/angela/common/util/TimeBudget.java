@@ -30,6 +30,10 @@ public class TimeBudget {
     return remaining(timeUnit);
   }
 
+  public boolean isDepleted() {
+    return remaining() <= 0;
+  }
+
   public long remaining(TimeUnit timeUnit) {
     long now = System.nanoTime();
     long remaining = budgetExpiry - now;

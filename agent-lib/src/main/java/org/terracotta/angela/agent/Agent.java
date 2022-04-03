@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.agent;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
@@ -164,6 +165,7 @@ public class Agent implements AutoCloseable {
     return ignite(group, AGENT_TYPE_ORCHESTRATOR, portAllocator, Collections.emptyList());
   }
 
+  @SuppressWarnings("SwitchStatementWithTooFewBranches")
   public static Agent ignite(UUID group, String instanceName, PortAllocator portAllocator, Collection<String> peers) {
     System.setProperty("IGNITE_UPDATE_NOTIFIER", "false");
 
@@ -213,6 +215,32 @@ public class Agent implements AutoCloseable {
     } catch (IgniteException e) {
       throw new RuntimeException("Error starting node " + agentID, e);
     }
+
+    ignite.message(ignite.cluster().forRemotes()).localListen("SYSTEM", (uuid, msg) -> {
+      switch (String.valueOf(msg)) {
+        case "close": {
+          new Thread() {
+            {
+              setDaemon(true);
+            }
+
+            @SuppressFBWarnings("DM_EXIT")
+            @Override
+            public void run() {
+              logger.info("Agent: {} received a shutdown request. Exiting...", agentID);
+              try {
+                Thread.sleep(1_000);
+              } catch (InterruptedException ignored) {
+              }
+              System.exit(0);
+            }
+          }.start();
+          return false;
+        }
+        default:
+          return true;
+      }
+    });
 
     Agent agent = new Agent(group, agentID, ignite);
     logger.info("Started agent: {} in group: {}", agentID, agent.getGroupId());

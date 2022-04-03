@@ -72,7 +72,7 @@ public class EhcacheIT extends BaseIT {
 
   @Test
   public void testClusteredEhcacheOperations() throws Exception {
-    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isIgniteFree());
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
     assumeTrue("Cannot run through local SSH using a fake host file", sshServer == null);
 
     TcConfig tcConfig = tcConfig(version(EHCACHE_VERSION_XML), TestUtils.TC_CONFIG_A);

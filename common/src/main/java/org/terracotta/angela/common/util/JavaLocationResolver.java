@@ -29,7 +29,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,9 +60,9 @@ public class JavaLocationResolver {
     }
   }
 
-  public List<JDK> resolveJavaLocations(String version, Set<String> vendors, boolean checkValidity) {
+  public List<JDK> resolveJavaLocations(String version, Set<String> vendors, boolean checkLocalValidity) {
     List<JDK> list = jdks.stream()
-        .filter(jdk -> !checkValidity || Files.isDirectory(jdk.getHome().toLocalPath()))
+        .filter(jdk -> !checkLocalValidity || Files.isDirectory(Paths.get(jdk.getHome()))) // only verify that the JDK is at a real location if on the same machine
         .filter(jdk -> version.isEmpty() || version.equals(jdk.getVersion()))
         .filter(jdk -> vendors.isEmpty() || vendors.stream().anyMatch(v -> v.equalsIgnoreCase(jdk.getVendor())))
         .collect(Collectors.toList());
@@ -110,12 +109,14 @@ public class JavaLocationResolver {
       Element providesElement = (Element) toolchainElement.getElementsByTagName("provides").item(0);
       Element configurationElement = (Element) toolchainElement.getElementsByTagName("configuration").item(0);
 
-      Path home = Paths.get(configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent());
+      // WARNING: this code can load a toolchain file coming from win or lin while we are on lin or win.
+      // We should NEVER interpret paths here
+      String home = configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent();
 
       String version = textContentOf(providesElement, "version");
       String vendor = textContentOf(providesElement, "vendor");
 
-      jdks.add(new JDK(UniversalPath.fromLocalPath(home), version, vendor));
+      jdks.add(new JDK(home, version, vendor));
     }
 
     return jdks;
