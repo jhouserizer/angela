@@ -28,14 +28,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Find current java location
@@ -52,7 +51,7 @@ public class JavaLocationResolver {
   }
 
   public JavaLocationResolver(InputStream inputStream) {
-    Objects.requireNonNull(inputStream);
+    requireNonNull(inputStream);
     try {
       jdks = findJDKs(inputStream);
     } catch (Exception e) {
@@ -61,14 +60,15 @@ public class JavaLocationResolver {
   }
 
   public List<JDK> resolveJavaLocations(String version, Set<String> vendors, boolean checkLocalValidity) {
+    requireNonNull(vendors);
+
     List<JDK> list = jdks.stream()
-        .filter(jdk -> !checkLocalValidity || Files.isDirectory(Paths.get(jdk.getHome()))) // only verify that the JDK is at a real location if on the same machine
-        .filter(jdk -> version.isEmpty() || version.equals(jdk.getVersion()))
-        .filter(jdk -> vendors.isEmpty() || vendors.stream().anyMatch(v -> v.equalsIgnoreCase(jdk.getVendor())))
+        .filter(jdk -> !checkLocalValidity || jdk.canBeLocated()) // only verify that the JDK is at a real location if on the same machine
+        .filter(jdk -> jdk.matches(version, vendors))
         .collect(Collectors.toList());
     if (list.isEmpty()) {
       String message = "Missing JDK with version [" + version + "]";
-      if (vendors != null) {
+      if (!vendors.isEmpty()) {
         message += " and one vendor in [" + vendors + "]";
       }
       message += " config in toolchains.xml. Available JDKs: " + jdks;
@@ -106,17 +106,29 @@ public class JavaLocationResolver {
     for (int i = 0; i < toolchainList.getLength(); i++) {
       Element toolchainElement = (Element) toolchainList.item(i);
 
-      Element providesElement = (Element) toolchainElement.getElementsByTagName("provides").item(0);
       Element configurationElement = (Element) toolchainElement.getElementsByTagName("configuration").item(0);
+      if (configurationElement == null) {
+        // no jdk home
+        continue;
+      }
 
       // WARNING: this code can load a toolchain file coming from win or lin while we are on lin or win.
       // We should NEVER interpret paths here
       String home = configurationElement.getElementsByTagName("jdkHome").item(0).getTextContent();
 
-      String version = textContentOf(providesElement, "version");
-      String vendor = textContentOf(providesElement, "vendor");
+      if (home.trim().isEmpty()) {
+        continue;
+      }
 
-      jdks.add(new JDK(home, version, vendor));
+      Element providesElement = (Element) toolchainElement.getElementsByTagName("provides").item(0);
+      if (providesElement == null) {
+        jdks.add(new JDK(home, null, null));
+      } else {
+        String version = textContentOf(providesElement, "version");
+        String vendor = textContentOf(providesElement, "vendor");
+        // totally possible that version and vendor are null...
+        jdks.add(new JDK(home, version, vendor));
+      }
     }
 
     return jdks;

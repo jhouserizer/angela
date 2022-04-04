@@ -15,28 +15,39 @@
  */
 package org.terracotta.angela.common.util;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.Set;
+
 public class JDK {
 
   private final String home;
   private final String version;
   private final String vendor;
 
-  public JDK(String home, String version, String vendor) {
+  // represent an entry in toolchain file.
+  // the entry might be incorrectly defined
+  JDK(String home, String version, String vendor) {
     this.home = home;
-    this.version = version;
-    this.vendor = vendor;
+    this.version = version; // null allowed
+    this.vendor = vendor; // null allowed
+
+    if (home.trim().isEmpty()) {
+      throw new IllegalArgumentException(home);
+    }
   }
 
   public String getHome() {
     return home;
   }
 
-  public String getVersion() {
-    return version;
+  public Optional<String> getVersion() {
+    return Optional.ofNullable(version);
   }
 
-  public String getVendor() {
-    return vendor;
+  public Optional<String> getVendor() {
+    return Optional.ofNullable(vendor);
   }
 
   @Override
@@ -46,5 +57,14 @@ public class JDK {
         ", version='" + version + '\'' +
         ", vendor='" + vendor + '\'' +
         '}';
+  }
+
+  public boolean canBeLocated() {
+    return Files.isDirectory(Paths.get(getHome()));
+  }
+
+  public boolean matches(String allowedVersion, Set<String> allowedVendors) {
+    return (allowedVersion == null || allowedVersion.equalsIgnoreCase(this.version))
+        && (allowedVendors.isEmpty() || allowedVendors.stream().anyMatch(allowed -> allowed.equalsIgnoreCase(this.vendor)));
   }
 }
