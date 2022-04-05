@@ -24,6 +24,7 @@ import java.io.Serializable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,7 +34,6 @@ import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 import static org.terracotta.angela.common.AngelaProperties.JAVA_HOME;
@@ -66,13 +66,13 @@ public class TerracottaCommandLineEnvironment implements Serializable {
       case "toolchain": {
         String version = JAVA_VERSION.getValue();
         // Important - Use a LinkedHashSet to preserve the order of preferred Java vendor
-        Set<String> vendors = JAVA_VENDOR.getValue().equals("") ? new LinkedHashSet<>() : singleton(JAVA_VENDOR.getValue());
+        Set<String> vendors = JAVA_VENDOR.getValue() == null ? Collections.emptySet() : new LinkedHashSet<>(Arrays.asList(JAVA_VENDOR.getValue().split("[,\\s]")));
         // Important - Use a LinkedHashSet to preserve the order of opts, as some opts are position-sensitive
         DEFAULT = new TerracottaCommandLineEnvironment(false, version, vendors, opts);
         break;
       }
       case "user": {
-        DEFAULT = new TerracottaCommandLineEnvironment(true, "", emptySet(), opts);
+        DEFAULT = new TerracottaCommandLineEnvironment(true, null, emptySet(), opts);
         break;
       }
       default:
@@ -94,24 +94,40 @@ public class TerracottaCommandLineEnvironment implements Serializable {
    *                    Can be empty if no JVM argument is needed.
    */
   private TerracottaCommandLineEnvironment(boolean useJavaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
-    validate(javaVersion, javaVendors, javaOpts);
+    validate(useJavaHome, javaVersion, javaVendors, javaOpts);
     this.useJavaHome = useJavaHome;
     this.javaVersion = javaVersion;
     this.javaVendors = unmodifiableSet(new LinkedHashSet<>(javaVendors));
     this.javaOpts = unmodifiableSet(new LinkedHashSet<>(javaOpts));
   }
 
-  private static void validate(String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
-    requireNonNull(javaVersion);
+  private static void validate(boolean useJavaHome, String javaVersion, Set<String> javaVendors, Set<String> javaOpts) {
     requireNonNull(javaVendors);
     requireNonNull(javaOpts);
 
-    if (javaVendors.stream().anyMatch(vendor -> vendor == null || vendor.isEmpty())) {
-      throw new IllegalArgumentException("None of the java vendors can be null or empty");
-    }
-
     if (javaOpts.stream().anyMatch(opt -> opt == null || opt.isEmpty())) {
       throw new IllegalArgumentException("None of the java opts can be null or empty");
+    }
+
+    if (useJavaHome) {
+      // user mode
+      if (javaVersion != null) {
+        throw new IllegalArgumentException("Java version must be null in user mode");
+      }
+      if (!javaVendors.isEmpty()) {
+        throw new IllegalArgumentException("Java vendors must be empty in user mode");
+      }
+    } else {
+      // toolchain mode
+      if (javaVersion == null || javaVersion.trim().isEmpty()) {
+        throw new IllegalArgumentException("Java version must be set");
+      }
+      if (javaVendors.isEmpty()) {
+        throw new IllegalArgumentException("Java vendor required");
+      }
+      if (javaVendors.stream().anyMatch(vendor -> vendor == null || vendor.trim().isEmpty())) {
+        throw new IllegalArgumentException("None of the java vendor can be null or empty");
+      }
     }
   }
 
@@ -120,10 +136,22 @@ public class TerracottaCommandLineEnvironment implements Serializable {
   }
 
   public TerracottaCommandLineEnvironment withJavaVersion(String javaVersion) {
-    return new TerracottaCommandLineEnvironment(false, javaVersion, javaVendors, javaOpts);
+    return useJavaHome ?
+        // resolver mode user => we do not have some vendors set, so use the default one
+        withJava(javaVersion, JAVA_VENDOR.getDefaultValue()) :
+        // resolver mode toolchain => we do have some vendors set => reuse them
+        withJava(javaVersion, javaVendors.toArray(new String[0]));
   }
 
   public TerracottaCommandLineEnvironment withJavaVendors(String... javaVendors) {
+    return useJavaHome ?
+        // resolver mode user => we do not have version set, so use the default one
+        withJava(JAVA_VERSION.getDefaultValue(), javaVendors) :
+        // resolver mode toolchain => we do have version set => reuse it
+        withJava(javaVersion, javaVendors);
+  }
+
+  public TerracottaCommandLineEnvironment withJava(String javaVersion, String... javaVendors) {
     return new TerracottaCommandLineEnvironment(false, javaVersion, new LinkedHashSet<>(asList(javaVendors)), javaOpts);
   }
 
@@ -132,15 +160,7 @@ public class TerracottaCommandLineEnvironment implements Serializable {
   }
 
   public TerracottaCommandLineEnvironment withCurrentJavaHome() {
-    return new TerracottaCommandLineEnvironment(true, "", emptySet(), javaOpts);
-  }
-
-  /**
-   * @deprecated Use {@link #withCurrentJavaHome()} instead.
-   */
-  @Deprecated
-  public TerracottaCommandLineEnvironment withJavaHome(Path home) {
-    return withCurrentJavaHome();
+    return new TerracottaCommandLineEnvironment(true, null, emptySet(), javaOpts);
   }
 
   public Path getJavaHome() {
