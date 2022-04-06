@@ -721,8 +721,8 @@ public class AgentController {
     if (AgentController.instance != null) {
       throw new IllegalStateException("AgentController already initialized to: " + AgentController.instance);
     }
-    logger.info("Installing AgentController: " + agentController);
     AgentController.instance = agentController;
+    logger.info("Installed AgentController: " + agentController);
   }
 
   public static void removeUniqueInstance(AgentController agentController) {
@@ -732,7 +732,7 @@ public class AgentController {
     if (AgentController.instance != agentController) {
       throw new IllegalStateException("Unable to remove installed AgentController: " + AgentController.instance + ": caller has another AgentController: " + agentController);
     }
-    logger.info("Uninstalling AgentController: " + agentController);
     AgentController.instance = null;
+    logger.info("Uninstalled AgentController: " + agentController);
   }
 }
