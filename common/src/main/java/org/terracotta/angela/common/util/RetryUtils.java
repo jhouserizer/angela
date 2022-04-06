@@ -22,7 +22,13 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class RetryUtils {
   public static boolean waitFor(Callable<Boolean> condition, long maxWaitTimeMillis) {
-    return waitFor(condition, maxWaitTimeMillis, MILLISECONDS);
+    return waitFor(condition, maxWaitTimeMillis, MILLISECONDS, () -> {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    });
   }
 
   /**
@@ -35,12 +41,15 @@ public class RetryUtils {
    * @param timeUnit        the unit of duration
    * @return {@code true} if the condition was evaluated to true within the given constraints, false otherwise
    */
-  public static boolean waitFor(Callable<Boolean> condition, long maxWaitDuration, TimeUnit timeUnit) {
+  public static boolean waitFor(Callable<Boolean> condition, long maxWaitDuration, TimeUnit timeUnit, Runnable failed) {
     TimeBudget timeBudget = new TimeBudget(maxWaitDuration, timeUnit);
-    boolean success = false;
+    boolean success;
     do {
       try {
         success = condition.call();
+        if (!success) {
+          failed.run();
+        }
       } catch (Exception e) {
         throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
       }
