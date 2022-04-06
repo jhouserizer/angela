@@ -16,11 +16,12 @@
 package org.terracotta.angela.common.distribution;
 
 import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
 import org.zeroturnaround.exec.StartedProcess;
+import org.zeroturnaround.exec.listener.ProcessListener;
 import org.zeroturnaround.process.PidUtil;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -30,24 +31,24 @@ class WatchedProcess<S extends Enum<S>> {
   private final int pid;
 
   public WatchedProcess(ProcessExecutor processExecutor, final AtomicReference<S> stateRef, final S deadState) {
+    processExecutor.addListener(new ProcessListener() {
+      @Override
+      public void afterFinish(Process process, ProcessResult result) {
+        stateRef.set(deadState);
+      }
+
+      @Override
+      public void afterStop(Process process) {
+        stateRef.set(deadState);
+      }
+    });
+
     try {
       this.startedProcess = processExecutor.start();
     } catch (IOException e) {
       throw new RuntimeException("Cannot start process " + processExecutor.getCommand(), e);
     }
     this.pid = PidUtil.getPid(startedProcess.getProcess());
-
-    Thread watcherThread = new Thread(() -> {
-      try {
-        startedProcess.getFuture().get();
-        stateRef.set(deadState);
-      } catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException(e);
-      }
-    });
-    watcherThread.setDaemon(true);
-    watcherThread.setName("ProcessWatcher on PID#" + pid);
-    watcherThread.start();
   }
 
   public boolean isAlive() {
