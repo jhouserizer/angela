@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.client.support.junit;
 
+import org.hamcrest.Matcher;
 import org.junit.runner.Description;
 import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
@@ -26,18 +27,35 @@ import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
 
 import static java.util.stream.IntStream.rangeClosed;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
+import static org.terracotta.angela.common.TerracottaServerState.STARTED_IN_DIAGNOSTIC_MODE;
+import static org.terracotta.angela.common.TerracottaServerState.STOPPED;
+import static org.terracotta.utilities.test.matchers.Eventually.within;
 
 /**
  * @author Mathieu Carbou
@@ -158,6 +176,15 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
 
   public void stopNode(int stripeId, int nodeId) {
     tsa().stop(getNode(stripeId, nodeId));
+    // waitForStopped is required because Ignite has a little cache
+    // and when the server is stopped, the angela server state read from the test jvm
+    // can still be an old state for some milliseconds.
+    // So this ensures the server has completed and also that this completion is seen on the test jvm
+    waitForStopped(stripeId, nodeId);
+  }
+
+  public final void startNode(TerracottaServer node, Map<String, String> env, String... cli) {
+    tsa().start(node, env, cli);
   }
 
   // =========================================
@@ -210,6 +237,10 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
     return getNode(stripeId, nodeId).getTsaGroupPort();
   }
 
+  public final InetSocketAddress getNodeAddress(int stripeId, int nodeId) {
+    return InetSocketAddress.createUnresolved(getNode(stripeId, nodeId).getHostName(), getNodePort(stripeId, nodeId));
+  }
+
   public OptionalInt findActive(int stripeId) {
     List<TerracottaServer> nodes = getStripe(stripeId);
     return rangeClosed(1, nodes.size())
@@ -222,6 +253,109 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
     return rangeClosed(1, nodes.size())
         .filter(nodeId -> tsa().getState(nodes.get(nodeId - 1)) == STARTED_AS_PASSIVE)
         .toArray();
+  }
+
+  public final Path getServerHome() {
+    return getServerHome(getNode(1, 1));
+  }
+
+  public final Path getServerHome(TerracottaServer server) {
+    return Paths.get(tsa().browse(server, "").getAbsoluteName());
+  }
+
+  // =========================================
+  // assertions
+  // =========================================
+
+  public final void waitUntil(ToolExecutionResult result, Matcher<ToolExecutionResult> matcher) {
+    waitUntil(() -> result, matcher);
+  }
+
+  public final void waitUntilServerStdOut(TerracottaServer server, String matcher) {
+    assertThat(() -> serverStdOut(server), within(Duration.ofDays(1)).matches(hasItem(containsString(matcher))));
+  }
+
+  public final void assertThatServerStdOut(TerracottaServer server, String matcher) {
+    assertThat(serverStdOut(server), hasItem(containsString(matcher)));
+  }
+
+  public final void assertThatServerStdOut(TerracottaServer server, Matcher<String> matcher) {
+    assertThat(serverStdOut(server), hasItem(matcher));
+  }
+
+  public List<String> serverStdOut(int stripeId, int nodeId) {
+    return serverStdOut(getNode(stripeId, nodeId));
+  }
+
+  public List<String> serverStdOut(TerracottaServer server) {
+    try {
+      return Files.readAllLines(getServerHome(server).resolve("stdout.txt"));
+    } catch (IOException io) {
+      return Collections.emptyList();
+    }
+  }
+
+  public final void waitUntilServerLogs(TerracottaServer server, String matcher) {
+    assertThat(() -> serverLogs(server), within(Duration.ofDays(1)).matches(hasItem(containsString(matcher))));
+  }
+
+  public final void assertThatServerLogs(TerracottaServer server, String matcher) {
+    assertThat(serverLogs(server), hasItem(containsString(matcher)));
+  }
+
+  public final void assertThatServerLogs(TerracottaServer server, Matcher<String> matcher) {
+    assertThat(serverLogs(server), hasItem(matcher));
+  }
+
+  public List<String> serverLogs(int stripeId, int nodeId) {
+    return serverLogs(getNode(stripeId, nodeId));
+  }
+
+  public List<String> serverLogs(TerracottaServer server) {
+    try {
+      return Files.readAllLines(getServerHome(server)
+          .resolve(server.getLogs())
+          .resolve(server.getServerSymbolicName().getSymbolicName())
+          .resolve("terracotta.server.log"));
+    } catch (IOException io) {
+      return Collections.emptyList();
+    }
+  }
+
+  public final <T> void waitUntil(Supplier<T> callable, Matcher<T> matcher) {
+    assertThat(callable, within(Duration.ofDays(1)).matches(matcher));
+  }
+
+  public final int waitForActive(int stripeId) {
+    waitUntil(() -> findActive(stripeId).isPresent(), is(true));
+    return findActive(stripeId).getAsInt();
+  }
+
+  public final void waitForActive(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_ACTIVE)));
+  }
+
+  public final void waitForPassive(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_PASSIVE)));
+  }
+
+  public final void waitForDiagnostic(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_IN_DIAGNOSTIC_MODE)));
+  }
+
+  public final void waitForStopped(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STOPPED)));
+  }
+
+  public final int[] waitForPassives(int stripeId) {
+    int expectedPassiveCount = getNodeCount(stripeId) - 1;
+    waitUntil(() -> findPassives(stripeId).length, is(equalTo(expectedPassiveCount)));
+    return findPassives(stripeId);
+  }
+
+  public final int[] waitForNPassives(int stripeId, int count) {
+    waitUntil(() -> findPassives(stripeId).length, is(greaterThanOrEqualTo(count)));
+    return findPassives(stripeId);
   }
 
   // =========================================
