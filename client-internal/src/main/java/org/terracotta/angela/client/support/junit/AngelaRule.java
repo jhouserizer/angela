@@ -86,10 +86,7 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
 
   @Override
   protected void before(Description description) throws Throwable {
-    String id = description.getTestClass().getSimpleName();
-    if (description.getMethodName() != null) {
-      id += "." + description.getMethodName();
-    }
+    String id = createTestId(description);
 
     AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
     this.clusterFactory = angelaOrchestrator.newClusterFactory(id, configuration);
@@ -110,6 +107,14 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
         configTool().activate();
       }
     }
+  }
+
+  protected String createTestId(Description description) {
+    String id = description.getTestClass().getSimpleName();
+    if (description.getMethodName() != null) {
+      id += "_" + description.getMethodName();
+    }
+    return id;
   }
 
   @Override
