@@ -67,6 +67,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.terracotta</groupId>
+      <artifactId>terracotta-utilities-test-tools</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
       <scope>provided</scope>
