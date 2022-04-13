@@ -119,7 +119,7 @@ public class VoterIT extends BaseIT {
         .configTool(context -> context.distribution(getDistribution()).configTool(configTool("config-tool", hostname)));
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("VoterTest::testVoterStartup", configContext)) {
-      factory.tsa().startAll();
+      factory.tsa().spawnAll();
       ConfigTool configTool = factory.configTool();
       configTool.attachAll();
       configTool.activate();

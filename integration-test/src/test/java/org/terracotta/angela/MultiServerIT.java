@@ -75,7 +75,7 @@ public class MultiServerIT extends BaseIT {
         );
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
-      try (Tsa tsa = factory.tsa().startAll()) {
+      try (Tsa tsa = factory.tsa().spawnAll()) {
         System.out.println(tcConfig.toXml());
         System.out.println(tcConfig.getServers());
 

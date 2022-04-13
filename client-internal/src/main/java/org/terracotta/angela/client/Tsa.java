@@ -261,11 +261,29 @@ public class Tsa implements AutoCloseable {
   }
 
   public Tsa start(TerracottaServer terracottaServer, Map<String, String> envOverrides, String... startUpArgs) {
-    create(terracottaServer, envOverrides, startUpArgs);
+    spawn(terracottaServer, envOverrides, startUpArgs);
     IgniteRunnable runnable = () -> AgentController.getInstance().waitForTsaInState(instanceId, terracottaServer, of(STARTED_AS_ACTIVE, STARTED_AS_PASSIVE, STARTED_IN_DIAGNOSTIC_MODE, START_SUSPENDED, STOPPED));
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     executor.execute(agentID, runnable);
     logger.info("TSA: {} started on: {}", instanceId, agentID);
+    return this;
+  }
+
+  public Tsa spawnAll(String... startUpArgs) {
+    tsaConfigurationContext.getTopology().getServers().stream()
+        .map(server -> CompletableFuture.runAsync(() -> spawn(server, startUpArgs)))
+        .reduce(CompletableFuture::allOf).ifPresent(CompletableFuture::join);
+    return this;
+  }
+
+  public Tsa spawn(TerracottaServer terracottaServer, String... startUpArgs) {
+    return spawn(terracottaServer, Collections.emptyMap(), startUpArgs);
+  }
+
+  public Tsa spawn(TerracottaServer terracottaServer, Map<String, String> envOverrides, String... startUpArgs) {
+    create(terracottaServer, envOverrides, startUpArgs);
+    final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
+    logger.info("TSA: {} starting on: {}", instanceId, agentID);
     return this;
   }
 

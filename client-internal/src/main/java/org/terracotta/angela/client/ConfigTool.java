@@ -85,7 +85,7 @@ public class ConfigTool implements AutoCloseable {
     topology.addStripe(newServers);
     for (TerracottaServer server : newServers) {
       tsa.install(server, topology);
-      tsa.start(server);
+      tsa.spawn(server);
     }
 
     if (newServers.length > 1) {
@@ -172,7 +172,7 @@ public class ConfigTool implements AutoCloseable {
 
     topology.addServer(stripeIndex, newServer);
     tsa.install(newServer, topology);
-    tsa.start(newServer);
+    tsa.spawn(newServer);
 
     List<String> command = new ArrayList<>();
     command.add("attach");

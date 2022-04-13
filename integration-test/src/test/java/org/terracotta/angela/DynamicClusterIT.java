@@ -71,7 +71,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testNodeStartup", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(2));
@@ -101,7 +101,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToSingleNodeStripe", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
@@ -144,7 +144,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicNodeAttachToMultiNodeStripe", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(2));
@@ -182,7 +182,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToSingleStripeCluster", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
@@ -228,7 +228,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeAttachToMultiStripeCluster", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(2));
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().get(0).size(), is(1));
@@ -274,7 +274,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       factory.configTool().attachAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(1));
@@ -321,7 +321,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testMultiStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       factory.configTool().attachAll();
 
       waitFor(() -> tsa.getTsaConfigurationContext().getTopology().getStripes().size(), is(2));
@@ -359,7 +359,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testDynamicStripeDetach", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       ConfigTool configTool = factory.configTool();
       configTool.attachAll();
 
@@ -407,7 +407,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testNodeActivation", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       ConfigTool configTool = factory.configTool();
       configTool.attachAll();
       configTool.activate();
@@ -449,7 +449,7 @@ public class DynamicClusterIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("DynamicClusterTest::testIpv6", configurationContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       waitFor(() -> tsa.getDiagnosticModeSevers().size(), is(2));
 
       ConfigTool configTool = factory.configTool();

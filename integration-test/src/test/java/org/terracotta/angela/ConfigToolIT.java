@@ -60,7 +60,7 @@ public class ConfigToolIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ConfigToolTest::testFailingClusterToolCommand", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       ConfigTool configTool = factory.configTool();
 
       ToolExecutionResult result = configTool.executeCommand("non-existent-command");
@@ -82,10 +82,11 @@ public class ConfigToolIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ConfigToolTest::testValidConfigToolCommand", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       ConfigTool configTool = factory.configTool();
 
-      ToolExecutionResult result = configTool.executeCommand("get", "-s", hostname + ":" + tsa.getStarted().iterator().next().getTsaPort(), "-c", "offheap-resources");
+      final int aServerPort = tsa.getTsaConfigurationContext().getTopology().getServers().iterator().next().getTsaPort();
+      ToolExecutionResult result = configTool.executeCommand("get", "-s", hostname + ":" + aServerPort, "-c", "offheap-resources");
       System.out.println(result);
     }
   }

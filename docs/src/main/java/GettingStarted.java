@@ -72,7 +72,7 @@ public class GettingStarted {
 
     ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::configureCluster", configContext); // <6>
     Tsa tsa = factory.tsa() // <7>
-        .startAll(); // <8>
+        .spawnAll(); // <8>
 
     factory.close(); // <9>
   }
@@ -89,7 +89,7 @@ public class GettingStarted {
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("GettingStarted::showTsaApi", configContext)) {
       // tag::showTsaApi[]
       Tsa tsa = factory.tsa() // <1>
-          .startAll(); // <2>
+          .spawnAll(); // <2>
 
       TerracottaServer active = tsa.getActive(); // <3>
       Collection<TerracottaServer> actives = tsa.getActives(); // <4>
@@ -98,8 +98,8 @@ public class GettingStarted {
 
       tsa.stopAll(); // <7>
 
-      tsa.start(active); // <8>
-      tsa.start(passive);
+      tsa.spawn(active); // <8>
+      tsa.spawn(passive);
 
       tsa.stop(active); // <9>
       Callable<TerracottaServerState> serverState = () -> tsa.getState(passive); // <10>
@@ -138,7 +138,7 @@ public class GettingStarted {
         .configTool(context -> context.configTool(configTool("configTool")));
     try (ClusterFactory factory = angelaOrchestratorRule.newClusterFactory("DynamicClusterTest::testSingleStripeFormation", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll(); // <2>
+      tsa.spawnAll(); // <2>
       ConfigTool configTool = factory.configTool();
       configTool.attachAll(); // <3>
 

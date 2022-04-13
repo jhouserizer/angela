@@ -182,7 +182,8 @@ public class InstallIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("InstallTest::testStopPassive", config)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
+      tsa.waitForPassive();
 
       TerracottaServer passive = tsa.getPassive();
       tsa.stop(passive);

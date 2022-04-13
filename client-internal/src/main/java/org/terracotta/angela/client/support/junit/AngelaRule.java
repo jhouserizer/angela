@@ -171,7 +171,7 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
   }
 
   public void startNode(TerracottaServer node, String... cli) {
-    tsa().start(node, cli);
+    tsa().spawn(node, cli);
   }
 
   public void stopNode(int stripeId, int nodeId) {
@@ -184,7 +184,7 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
   }
 
   public final void startNode(TerracottaServer node, Map<String, String> env, String... cli) {
-    tsa().start(node, env, cli);
+    tsa().spawn(node, env, cli);
   }
 
   // =========================================
