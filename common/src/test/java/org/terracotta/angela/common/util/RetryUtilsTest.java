@@ -39,7 +39,7 @@ public class RetryUtilsTest {
   @Test
   public void testConditionTrue_afterFixedTime() {
     Callable<Boolean> callable = () -> {
-      Thread.sleep(500);
+      Thread.sleep(200);
       return true;
     };
     assertTrue(waitFor(callable, 5000));
@@ -66,7 +66,7 @@ public class RetryUtilsTest {
   @Test
   public void testConditionFalse_afterFixedTime() {
     Callable<Boolean> callable = () -> {
-      Thread.sleep(500);
+      Thread.sleep(200);
       return false;
     };
     assertFalse(waitFor(callable, 5000));

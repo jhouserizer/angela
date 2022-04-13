@@ -154,7 +154,7 @@ public class LocalKitManager extends KitManager {
         }
         logger.debug("Thread {} wait", Thread.currentThread().getId());
         for (int i = 0; i < 20; i++) {
-          Thread.sleep(6000);
+          Thread.sleep(1000);
           if (file.createNewFile()) {
             logger.debug("Thread {} pass", Thread.currentThread().getId());
             break;

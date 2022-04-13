@@ -366,7 +366,7 @@ public class Tsa implements AutoCloseable {
   public Collection<TerracottaServer> waitForPassives(int count) throws InterruptedException {
     Collection<TerracottaServer> terracottaServers;
     while ((terracottaServers = getPassives()).size() < count) {
-      Thread.sleep(500);
+      Thread.sleep(200);
     }
     return terracottaServers;
   }
@@ -387,7 +387,7 @@ public class Tsa implements AutoCloseable {
   public TerracottaServer waitForPassive() throws InterruptedException {
     TerracottaServer terracottaServer;
     while ((terracottaServer = getPassive()) == null) {
-      Thread.sleep(500);
+      Thread.sleep(200);
     }
     return terracottaServer;
   }
@@ -427,7 +427,7 @@ public class Tsa implements AutoCloseable {
   public TerracottaServer waitForActive() throws InterruptedException {
     TerracottaServer terracottaServer;
     while ((terracottaServer = getActive()) == null) {
-      Thread.sleep(500);
+      Thread.sleep(200);
     }
     return terracottaServer;
   }

@@ -228,10 +228,6 @@ public class Agent implements AutoCloseable {
             @Override
             public void run() {
               logger.info("Agent: {} received a shutdown request. Exiting...", agentID);
-              try {
-                Thread.sleep(1_000);
-              } catch (InterruptedException ignored) {
-              }
               System.exit(0);
             }
           }.start();
