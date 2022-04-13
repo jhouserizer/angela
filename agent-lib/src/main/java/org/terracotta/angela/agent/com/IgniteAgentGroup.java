@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static java.util.Objects.requireNonNull;
@@ -53,9 +54,9 @@ public class IgniteAgentGroup extends AgentGroup {
   private final transient Ignite ignite;
 
   @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
-  private final transient Map<AgentID, CompletableFuture<Void>> shutdowns = new LinkedHashMap<>();
+  private final transient Map<AgentID, CompletableFuture<Void>> shutdowns = new ConcurrentHashMap<>();
 
-  private final Map<AgentID, Meta> discoveredAgents = new LinkedHashMap<>();
+  private final Map<AgentID, Meta> discoveredAgents = new ConcurrentHashMap<>();
 
   IgniteAgentGroup(UUID id, AgentID me, Ignite ignite) {
     super(id, me);

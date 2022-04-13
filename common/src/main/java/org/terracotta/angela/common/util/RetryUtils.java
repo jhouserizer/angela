@@ -24,7 +24,7 @@ public class RetryUtils {
   public static boolean waitFor(Callable<Boolean> condition, long maxWaitTimeMillis) {
     return waitFor(condition, maxWaitTimeMillis, MILLISECONDS, () -> {
       try {
-        Thread.sleep(500);
+        Thread.sleep(200);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }

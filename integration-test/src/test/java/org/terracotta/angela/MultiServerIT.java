@@ -51,7 +51,7 @@ public class MultiServerIT extends BaseIT {
   private static final Logger logger = LoggerFactory.getLogger(MultiServerIT.class);
 
   private static final int STATE_TIMEOUT = 60_000;
-  private static final int STATE_POLL_INTERVAL = 1_000;
+  private static final int STATE_POLL_INTERVAL = 200;
 
   public MultiServerIT(String mode, String hostname, boolean inline, boolean ssh) {
     super(mode, hostname, inline, ssh);
@@ -75,7 +75,7 @@ public class MultiServerIT extends BaseIT {
         );
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("MultiServerTest::testPartitionBetweenActivePassives", configContext)) {
-      try (Tsa tsa = factory.tsa().startAll()) {
+      try (Tsa tsa = factory.tsa().spawnAll()) {
         System.out.println(tcConfig.toXml());
         System.out.println(tcConfig.getServers());
 

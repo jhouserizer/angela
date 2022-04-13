@@ -97,7 +97,7 @@ public class EhcacheIT extends BaseIT {
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("EhcacheTest::testClusteredEhcacheOperations", configContext)) {
       Tsa tsa = factory.tsa();
-      tsa.startAll();
+      tsa.spawnAll();
       tsa.waitForActive();
       String uri = tsa.uri().toString() + "/clustered-cache-manager";
       ClientArray clientArray = factory.clientArray(0);
