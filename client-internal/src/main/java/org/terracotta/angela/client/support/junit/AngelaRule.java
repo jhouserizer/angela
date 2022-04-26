@@ -17,6 +17,8 @@ package org.terracotta.angela.client.support.junit;
 
 import org.hamcrest.Matcher;
 import org.junit.runner.Description;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.terracotta.angela.client.AngelaOrchestrator;
 import org.terracotta.angela.client.ClientArray;
 import org.terracotta.angela.client.ClusterFactory;
@@ -27,10 +29,13 @@ import org.terracotta.angela.client.Tms;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
+import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -41,8 +46,12 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Properties;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static java.util.stream.IntStream.rangeClosed;
 import static org.hamcrest.Matchers.containsString;
@@ -61,6 +70,8 @@ import static org.terracotta.utilities.test.matchers.Eventually.within;
  * @author Mathieu Carbou
  */
 public class AngelaRule extends ExtendedTestRule implements Closeable {
+
+  private static final Logger logger = LoggerFactory.getLogger(AngelaRule.class);
 
   private final Supplier<AngelaOrchestrator> angelaOrchestratorSupplier;
   private ConfigurationContext configuration;
@@ -118,6 +129,8 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
     configTool = memoize(clusterFactory::configTool);
     clusterTool = memoize(clusterFactory::clusterTool);
 
+    prepareLogging(description);
+
     if (autoStart) {
       startNodes();
       if (autoActivate) {
@@ -125,6 +138,58 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
         configTool().activate();
       }
     }
+  }
+
+  protected void prepareLogging(Description description) {
+    // logback-test.xml
+    Optional.ofNullable(getClass().getResource("/tc-logback.xml")).ifPresent(url -> {
+      tsa.get().getTsaConfigurationContext().getTopology().getServers().forEach(s -> {
+        RemoteFolder folder = tsa.get().browse(s, "");
+        try {
+          folder.upload("logback-test.xml", url);
+        } catch (IOException exp) {
+          logger.warn("unable to upload logback-test.xml configuration: " + url + " on server: " + s.getServerSymbolicName(), exp);
+        }
+      });
+    });
+
+    // logback-ext-test.xml
+    Stream.of(
+            Optional.ofNullable(description.getAnnotation(ExtraLogging.class))
+                .map(ExtraLogging::value)
+                .map(s -> getClass().getResource(s))
+                .orElse(null), // first possibility: user-defined file
+            getClass().getResource("/logback-ext-test.xml")) // second possibility: logback-ext-test.xml
+        .filter(Objects::nonNull)
+        .findFirst()
+        .ifPresent(url -> {
+          tsa.get().getTsaConfigurationContext().getTopology().getServers().forEach(s -> {
+            RemoteFolder folder = tsa.get().browse(s, "");
+            try {
+              folder.upload("logback-ext-test.xml", url);
+            } catch (IOException exp) {
+              logger.warn("unable to upload logback-ext-test.xml configuration: " + url + " on server: " + s.getServerSymbolicName(), exp);
+            }
+          });
+        });
+
+    tsa.get().getTsaConfigurationContext().getTopology().getServers().forEach(s -> {
+      try {
+        RemoteFolder folder = tsa.get().browse(s, "");
+        Properties props = new Properties();
+        props.setProperty("serverWorkingDir", folder.getAbsoluteName());
+        props.setProperty("serverId", s.getServerSymbolicName().getSymbolicName());
+        props.setProperty("test.displayName", description.getDisplayName());
+        props.setProperty("test.className", description.getClassName());
+        props.setProperty("test.methodName", description.getMethodName());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        props.store(bos, "logging properties");
+        bos.close();
+        folder.upload("logbackVars.properties", new ByteArrayInputStream(bos.toByteArray()));
+      } catch (IOException exp) {
+        logger.warn("unable to upload logbackVars.properties on server: " + s.getServerSymbolicName(), exp);
+      }
+    });
   }
 
   protected String createTestId(Description description) {
