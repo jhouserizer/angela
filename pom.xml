@@ -44,7 +44,7 @@
 
   <properties>
     <maven.version>3.6.3</maven.version>
-    <terracotta-utilities.version>0.0.10</terracotta-utilities.version>
+    <terracotta-utilities.version>0.0.11</terracotta-utilities.version>
 
     <!-- Third-party dependencies -->
     <ignite.version>2.12.0</ignite.version>
