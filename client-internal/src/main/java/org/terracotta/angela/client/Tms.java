@@ -181,7 +181,7 @@ public class Tms implements AutoCloseable {
     logger.info("Installing TMS: {} on: {}", instanceId, agentID);
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(instanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath);

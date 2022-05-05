@@ -16,6 +16,7 @@
 package org.terracotta.angela.client;
 
 import org.terracotta.angela.KitResolver;
+import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
@@ -35,7 +36,7 @@ public class DummyKitResolver extends KitResolver {
   }
 
   @Override
-  public void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath) {
+  public void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath, TerracottaCommandLineEnvironment env) {
 
   }
 

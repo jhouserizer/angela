@@ -19,6 +19,7 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.terracotta.angela.KitResolver;
+import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
@@ -51,7 +52,7 @@ public class Ehc3KitResolver extends KitResolver {
   }
 
   @Override
-  public void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath) {
+  public void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath, TerracottaCommandLineEnvironment env) {
     if (packageType == KIT) {
       extractZip(localInstallerPath, rootInstallationPath);
     } else {

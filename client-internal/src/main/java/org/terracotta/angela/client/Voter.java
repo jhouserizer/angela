@@ -152,7 +152,7 @@ public class Voter implements AutoCloseable {
     TerracottaCommandLineEnvironment tcEnv = voterConfigurationContext.commandLineEnv();
     SecurityRootDirectory securityRootDirectory = voterConfigurationContext.getSecurityRootDirectory();
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
     final AgentID agentID = executor.getAgentID(terracottaVoter.getHostName());
     final String kitInstallationName = localKitManager.getKitInstallationName();
 

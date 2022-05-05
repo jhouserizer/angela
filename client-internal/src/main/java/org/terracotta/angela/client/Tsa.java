@@ -145,7 +145,7 @@ public class Tsa implements AutoCloseable {
     License license = tsaConfigurationContext.getLicense();
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tsaConfigurationContext.getTerracottaCommandLineEnvironment("install"));
     final String kitInstallationName = localKitManager.getKitInstallationName();
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
 

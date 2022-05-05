@@ -326,7 +326,7 @@ public class ConfigTool implements AutoCloseable {
     SecurityRootDirectory securityRootDirectory = configContext.getSecurityRootDirectory();
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
 
     logger.info("Installing config-tool: {} on: {}", instanceId, executor.getTarget());
     final String hostName = configContext.getHostName();
