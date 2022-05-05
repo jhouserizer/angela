@@ -17,6 +17,7 @@ package org.terracotta.angela;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.topology.LicenseType;
@@ -73,7 +74,7 @@ public abstract class KitResolver {
    * @param localInstallerPath   path of the installer on the local machine
    * @param rootInstallationPath directory where installs are stored for caching
    */
-  public abstract void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath);
+  public abstract void createLocalInstallFromInstaller(Version version, PackageType packageType, License license, Path localInstallerPath, Path rootInstallationPath, TerracottaCommandLineEnvironment env);
 
   /**
    * Resolves the root of the local Terracotta install path.

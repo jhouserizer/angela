@@ -107,7 +107,7 @@ public class ClusterTool implements AutoCloseable {
     SecurityRootDirectory securityRootDirectory = configContext.getSecurityRootDirectory();
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
 

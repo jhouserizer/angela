@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.util.JDK;
 import org.terracotta.angela.common.util.JavaLocationResolver;
+import org.terracotta.angela.common.util.OS;
 
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -161,6 +162,10 @@ public class TerracottaCommandLineEnvironment implements Serializable {
 
   public TerracottaCommandLineEnvironment withCurrentJavaHome() {
     return new TerracottaCommandLineEnvironment(true, null, emptySet(), javaOpts);
+  }
+
+  public Path getJava() {
+    return getJavaHome().resolve("bin").resolve("java" + (OS.INSTANCE.isWindows() ? ".exe" : ""));
   }
 
   public Path getJavaHome() {

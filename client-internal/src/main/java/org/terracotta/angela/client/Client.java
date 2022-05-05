@@ -90,7 +90,7 @@ public class Client implements Closeable {
     logger.info("Spawning client: {} instance: {} through agent: {}", clientId, instanceId, parentAgentID);
 
     String kitInstallationPath = getEitherOf(KIT_INSTALLATION_DIR, KIT_INSTALLATION_PATH);
-    localKitManager.setupLocalInstall(clientArrayConfigurationContext.getLicense(), kitInstallationPath, OFFLINE.getBooleanValue());
+    localKitManager.setupLocalInstall(clientArrayConfigurationContext.getLicense(), kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
 
     try {
       final List<Path> jars = listClasspathFiles(localKitManager);

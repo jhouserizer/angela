@@ -19,6 +19,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.KitResolver;
+import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.tcconfig.License;
@@ -77,7 +78,7 @@ public class LocalKitManager extends KitManager {
     }
   }
 
-  public void setupLocalInstall(License license, String kitInstallationPath, boolean offline) {
+  public void setupLocalInstall(License license, String kitInstallationPath, boolean offline, TerracottaCommandLineEnvironment env) {
     if (kitInstallationPath != null) {
       logger.debug("Using kitInstallationPath: {}", kitInstallationPath);
       Path path = Paths.get(kitInstallationPath);
@@ -105,7 +106,7 @@ public class LocalKitManager extends KitManager {
             throw new IllegalArgumentException("Can not install the kit version " + distribution + " in offline mode because" +
                 " the kit compressed package is not available. Please run in online mode with an internet connection.");
           }
-          kitResolver.createLocalInstallFromInstaller(distribution.getVersion(), distribution.getPackageType(), license, localInstallerPath, rootInstallationPath);
+          kitResolver.createLocalInstallFromInstaller(distribution.getVersion(), distribution.getPackageType(), license, localInstallerPath, rootInstallationPath, env);
         }
       } finally {
         unlockConcurrentInstall(localInstallerPath);
