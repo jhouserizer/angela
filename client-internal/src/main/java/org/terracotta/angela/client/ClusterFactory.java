@@ -32,7 +32,6 @@ import org.terracotta.angela.common.metrics.MonitoringCommand;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -218,25 +217,22 @@ public class ClusterFactory implements AutoCloseable {
   }
 
   @Override
-  public void close() throws IOException {
-    List<Exception> exceptions = new ArrayList<>();
-
+  public void close() {
+    boolean interrupt = false;
     for (AutoCloseable controller : controllers) {
       try {
         controller.close();
       } catch (Exception e) {
-        e.printStackTrace();
-        exceptions.add(e);
+        logger.error("close() error: " + e.getMessage(), e);
+        if (e instanceof InterruptedException) {
+          interrupt = true;
+        }
       }
     }
     controllers.clear();
-
     monitorInstanceId = null;
-
-    if (!exceptions.isEmpty()) {
-      IOException ioException = new IOException("Error while closing down Cluster Factory prefixed with " + idPrefix);
-      exceptions.forEach(ioException::addSuppressed);
-      throw ioException;
+    if (interrupt) {
+      Thread.currentThread().interrupt();
     }
   }
 }

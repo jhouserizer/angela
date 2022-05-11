@@ -36,7 +36,6 @@ import org.terracotta.angela.common.tcconfig.TerracottaServer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
@@ -69,7 +68,7 @@ import static org.terracotta.utilities.test.matchers.Eventually.within;
 /**
  * @author Mathieu Carbou
  */
-public class AngelaRule extends ExtendedTestRule implements Closeable {
+public class AngelaRule extends ExtendedTestRule implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(AngelaRule.class);
 
@@ -113,8 +112,12 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
   // junit rule
   // =========================================
 
+  public void init(Description description) {
+    before(description);
+  }
+
   @Override
-  protected void before(Description description) throws Throwable {
+  protected void before(Description description) {
     String id = createTestId(description);
 
     AngelaOrchestrator angelaOrchestrator = angelaOrchestratorSupplier.get();
@@ -201,12 +204,12 @@ public class AngelaRule extends ExtendedTestRule implements Closeable {
   }
 
   @Override
-  protected void after(Description description) throws Throwable {
+  protected void after(Description description) {
     close();
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     if (clusterFactory != null) {
       clusterFactory.close();
       clusterFactory = null;
