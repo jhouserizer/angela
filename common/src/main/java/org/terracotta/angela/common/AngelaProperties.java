@@ -28,6 +28,8 @@ import java.nio.file.Paths;
 public enum AngelaProperties {
   // root dir where Angela puts installation, work directories and any file that is needed
   ROOT_DIR("angela.rootDir", Paths.get("/data/angela").toAbsolutePath().toString()),
+  // root dir on remote machines. If null, will be the same value as ROOT_DIR. If set, the value will be used
+  REMOTE_ROOT_DIR("angela.remoteRootDir", null),
   // shortcut for angela.rootDir property above
   KITS_DIR("kitsDir", Paths.get("/data/angela").toAbsolutePath().toString()),
 

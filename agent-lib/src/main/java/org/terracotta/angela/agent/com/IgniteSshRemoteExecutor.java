@@ -30,6 +30,7 @@ import org.apache.ignite.Ignite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.util.AngelaVersions;
 import org.terracotta.angela.common.util.ExternalLoggers;
@@ -49,6 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -66,6 +68,7 @@ import static org.terracotta.angela.common.AngelaProperties.SSH_PORT;
 import static org.terracotta.angela.common.AngelaProperties.SSH_STRICT_HOST_CHECKING;
 import static org.terracotta.angela.common.AngelaProperties.SSH_USERNAME;
 import static org.terracotta.angela.common.AngelaProperties.SSH_USERNAME_KEY_PATH;
+import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 
 /**
  * Executor which will deploy an Ignite agent remotely for all specified non-local hosts
@@ -180,7 +183,6 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
 
     try {
       SSHClient ssh = new SSHClient();
-      final String angelaHome = ".angela/" + hostname;
 
       if (!strictHostKeyChecking) {
         ssh.addHostKeyVerifier(new PromiscuousVerifier());
@@ -199,14 +201,20 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
         ssh.authPublickey(remoteUserName, remoteUserNameKeyPath);
       }
 
-      Path baseDir = Agent.ROOT_DIR.resolve(angelaHome);
-      Path jarsDir = baseDir.resolve("jars");
-      exec(ssh, "mkdir -p " + baseDir);
-      exec(ssh, "chmod a+w " + baseDir.getParent().toString());
-      exec(ssh, "chmod a+w " + baseDir);
-      exec(ssh, "mkdir -p " + jarsDir);
-      exec(ssh, "chmod a+w " + jarsDir);
-      String dest = jarsDir.resolve(agentJarFile.getFileName()).toString().replace('\\', '/');
+      // ensures correct perms are set (or reset if wrong) for each folder
+      final String rootDir = getRemoteRootDir();
+      final String baseDir;
+      final String jarsDir;
+      for (String path : Arrays.asList(
+          rootDir,
+          rootDir + "/.angela",
+          baseDir = rootDir + "/.angela/" + hostname,
+          jarsDir = rootDir + "/.angela/" + hostname + "/jars")) {
+        exec(ssh, "mkdir -p " + path);
+        exec(ssh, "chmod a+w " + path);
+      }
+
+      String dest = jarsDir + "/" + agentJarFile.getFileName();
       if (agentJarFile.getFileName().toString().endsWith("-SNAPSHOT.jar") || !exec(ssh, "[ -e " + dest + " ]").isPresent()) {
         // jar file is a snapshot or does not exist, upload it
         logger.debug("Uploading agent jar: {} to: {}...", agentJarFile, hostname);
@@ -260,6 +268,13 @@ public class IgniteSshRemoteExecutor extends IgniteLocalExecutor {
       }
       throw Exceptions.asRuntime("Failed to launch Ignite agent at: " + remoteUserName + "@" + hostname + " (using SSH)", e);
     }
+  }
+
+  private static String getRemoteRootDir() {
+    // REMOTE_ROOT_DIR allows to override the remote dir for example to have a local root dir different than a remote dir
+    return Optional.ofNullable(AngelaProperties.REMOTE_ROOT_DIR.getValue())
+        .orElseGet(() -> getEitherOf(AngelaProperties.ROOT_DIR, AngelaProperties.KITS_DIR))
+        .replace('\\', '/');
   }
 
   @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
