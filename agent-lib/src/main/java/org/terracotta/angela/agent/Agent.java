@@ -58,7 +58,7 @@ public class Agent implements AutoCloseable {
   public static final String AGENT_IS_READY_MARKER_LOG = "Agent is ready";
   public static final Path ROOT_DIR;
   public static final Path WORK_DIR;
-  public static final Path IGNITE_DIR;
+  private static final Path IGNITE_DIR;
 
   private static final Logger logger;
 
