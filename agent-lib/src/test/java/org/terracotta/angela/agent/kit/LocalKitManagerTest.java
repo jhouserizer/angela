@@ -17,8 +17,10 @@ package org.terracotta.angela.agent.kit;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
+import org.terracotta.utilities.io.Files;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,14 +35,13 @@ import static org.terracotta.angela.agent.kit.LocalKitManager.INSTALLATION_LOCK_
 
 public class LocalKitManagerTest {
 
-  @SuppressWarnings("ResultOfMethodCallIgnored")
   @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
   @Test
-  public void testLock() throws InterruptedException {
+  public void testLock() throws InterruptedException, IOException {
     final File file = Paths.get(".").resolve(INSTALLATION_LOCK_FILE_NAME).toFile();
 
     System.out.println(file.getAbsolutePath());
-    file.delete();
+    Files.deleteIfExists(file.toPath());
 
     final LocalKitManager localKitManager = new LocalKitManager(null, null);
 

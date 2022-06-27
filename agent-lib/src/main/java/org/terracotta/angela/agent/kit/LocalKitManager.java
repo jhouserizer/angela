@@ -38,6 +38,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
@@ -123,11 +124,11 @@ public class LocalKitManager extends KitManager {
     logger.debug("Thread {} unlock", Thread.currentThread().getId());
     File parent = localInstallerPath.toFile().getAbsoluteFile().getParentFile();
     File file = new File(parent, INSTALLATION_LOCK_FILE_NAME);
-    final boolean deleted = file.delete();
-    if (!deleted) {
-      logger.error("Installer lock file {} could not be deleted", file.getAbsolutePath());
-    } else {
+    try {
+      org.terracotta.utilities.io.Files.delete(file.toPath());
       logger.debug("Deleted installer lock file {}", file);
+    } catch (IOException e) {
+      logger.error("Installer lock file {} could not be deleted", file.getAbsolutePath(), e);
     }
   }
 
@@ -144,9 +145,10 @@ public class LocalKitManager extends KitManager {
       if (!file.createNewFile()) {
         long diff = new Date().getTime() - file.lastModified();
         if (diff > TimeUnit.MINUTES.toMillis(5)) {
-          final boolean deleted = file.delete();
-          if (!deleted) {
-            logger.error("Angela Installer lock file can not be deleted when locking at {}", file.getAbsolutePath());
+          try {
+            org.terracotta.utilities.io.Files.delete(file.toPath());
+          } catch (IOException e) {
+            logger.error("Angela Installer lock file can not be deleted when locking at {}", file.getAbsolutePath(), e);
           }
           final boolean created = file.createNewFile();
           if (!created) {
@@ -179,10 +181,14 @@ public class LocalKitManager extends KitManager {
     try {
       String clientJarsRootFolderName = distribution.createDistributionController()
           .clientJarsRootFolderName(distribution);
-      List<File> clientJars = Files.walk(kitInstallationPath.resolve(clientJarsRootFolderName))
-          .filter(Files::isRegularFile)
-          .map(Path::toFile)
-          .collect(toList());
+
+      List<File> clientJars;
+      try (Stream<Path> stream = Files.walk(kitInstallationPath.resolve(clientJarsRootFolderName))) {
+        clientJars = stream
+            .filter(Files::isRegularFile)
+            .map(Path::toFile)
+            .collect(toList());
+      }
 
       for (File clientJar : clientJars) {
         /*
