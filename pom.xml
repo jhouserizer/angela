@@ -44,21 +44,24 @@
 
   <properties>
     <maven.version>3.6.3</maven.version>
-    <terracotta-utilities.version>0.0.11</terracotta-utilities.version>
+    <terracotta-utilities.base.version>0.0.11</terracotta-utilities.base.version>
+    <terracotta-utilities.range.version>[${terracotta-utilities.base.version},)</terracotta-utilities.range.version>
 
     <!-- Third-party dependencies -->
     <ignite.version>2.12.0</ignite.version>
     <json-path.version>4.3.1</json-path.version>
     <hamcrest.version>1.3</hamcrest.version>
     <junit.version>4.12</junit.version>
-    <slf4j-api.version>1.7.25</slf4j-api.version>
+    <slf4j-api.base.version>1.7.32</slf4j-api.base.version>
+    <slf4j-api.range.version>[${slf4j-api.base.version},1.7.9999)</slf4j-api.range.version>
     <sshj.version>0.32.0</sshj.version>
     <awaitility.version>4.0.3</awaitility.version>
     <commons-io.version>2.7</commons-io.version>
     <commons-compress.version>1.20</commons-compress.version>
     <zt-process-killer.version>1.10</zt-process-killer.version>
     <zt-exec.version>1.12</zt-exec.version>
-    <logback-classic.version>1.2.3</logback-classic.version>
+    <logback-classic.base.version>1.2.11</logback-classic.base.version>
+    <logback-classic.range.version>[${logback-classic.base.version},1.2.9999)</logback-classic.range.version>
     <netcrusher-core.version>0.10</netcrusher-core.version>
     <jaxb-runtime.version>2.3.3</jaxb-runtime.version>
     <jna.version>5.9.0</jna.version>
@@ -104,12 +107,12 @@
       <dependency>
         <groupId>org.terracotta</groupId>
         <artifactId>terracotta-utilities-port-chooser</artifactId>
-        <version>${terracotta-utilities.version}</version>
+        <version>${terracotta-utilities.range.version}</version>
       </dependency>
       <dependency>
         <groupId>org.terracotta</groupId>
         <artifactId>terracotta-utilities-test-tools</artifactId>
-        <version>${terracotta-utilities.version}</version>
+        <version>${terracotta-utilities.range.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.ignite</groupId>
@@ -120,11 +123,17 @@
         <groupId>org.apache.ignite</groupId>
         <artifactId>ignite-slf4j</artifactId>
         <version>${ignite.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>${slf4j-api.version}</version>
+        <version>${slf4j-api.range.version}</version>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
@@ -151,6 +160,12 @@
         <groupId>com.hierynomus</groupId>
         <artifactId>sshj</artifactId>
         <version>${sshj.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
@@ -190,6 +205,10 @@
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -204,6 +223,10 @@
           <exclusion>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -220,12 +243,24 @@
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>${logback-classic.version}</version>
+        <version>${logback-classic.range.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.github.netcrusherorg</groupId>
         <artifactId>netcrusher-core</artifactId>
         <version>${netcrusher-core.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jaxb</groupId>
@@ -327,25 +362,18 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <dependencyConvergence>
-                      <uniqueVersions>true</uniqueVersions>
-                    </dependencyConvergence>
-                    <bannedDependencies>
-                      <excludes>
-                        <exclude>com.github.stefanbirkner:system-rules</exclude>
-                      </excludes>
-                    </bannedDependencies>
-                  </rules>
-                </configuration>
-              </execution>
-            </executions>
+            <configuration>
+              <rules>
+                <dependencyConvergence>
+                  <uniqueVersions>true</uniqueVersions>
+                </dependencyConvergence>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>com.github.stefanbirkner:system-rules</exclude>
+                  </excludes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
           </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>

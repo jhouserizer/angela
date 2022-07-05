@@ -39,6 +39,12 @@
       <groupId>org.ehcache</groupId>
       <artifactId>ehcache-clustered</artifactId>
       <version>${ehcache.version.xml}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -70,6 +76,12 @@
       <artifactId>sshd-sftp</artifactId>
       <version>2.8.0</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
