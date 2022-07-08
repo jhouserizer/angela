@@ -106,39 +106,11 @@ public class ActivityTracker implements Closeable {
   }
 
   public void start() {
-    if (enabled && !isRunning()) {
+    if (enabled) {
       CountDownLatch started = new CountDownLatch(1);
-      Thread prev = monitor.getAndUpdate(thread -> {
-        if (thread == null) {
-          thread = new Thread(() -> {
-            try {
-              started.countDown();
-              while (isRunning()) {
-                if (activity.poll(inactivityDelay.toMillis(), TimeUnit.MILLISECONDS) == null) {
-                  // timeout and no new element => inactivity
-                  getListeners("inactivity").forEach(runnable -> {
-                    try {
-                      runnable.run();
-                    } catch (RuntimeException e) {
-                      logger.error(e.getMessage(), e);
-                    }
-                  });
-                }
-              }
-            } catch (InterruptedException ignored) {
-            } finally {
-              internalStop();
-            }
-          });
-          thread.setName("ActivityTracker:" + inactivityDelay + ":" + thread.hashCode());
-          thread.setDaemon(true);
-          thread.start();
-        }
-        return thread;
-      });
-      if (prev == null) {
+      Thread thread = new Thread(() -> {
+        Thread currentThread = Thread.currentThread();
         try {
-          started.await();
           getListeners("start").forEach(runnable -> {
             try {
               runnable.run();
@@ -146,6 +118,38 @@ public class ActivityTracker implements Closeable {
               logger.error(e.getMessage(), e);
             }
           });
+          started.countDown();
+          while (monitor.get() == currentThread) {
+            if (activity.poll(inactivityDelay.toMillis(), TimeUnit.MILLISECONDS) == null) {
+              // timeout and no new element => inactivity
+              getListeners("inactivity").forEach(runnable -> {
+                try {
+                  runnable.run();
+                } catch (RuntimeException e) {
+                  logger.error(e.getMessage(), e);
+                }
+              });
+            }
+          }
+        } catch (InterruptedException ignored) {
+        } finally {
+          getListeners("stop").forEach(runnable -> {
+            try {
+              runnable.run();
+            } catch (RuntimeException e) {
+              logger.error(e.getMessage(), e);
+            }
+          });
+          monitor.compareAndSet(currentThread, null);
+        }
+      });
+      thread.setName("ActivityTracker:" + inactivityDelay + ":" + thread.hashCode());
+      thread.setDaemon(true);
+
+      if (monitor.compareAndSet(null, thread)) {
+        thread.start();
+        try {
+          started.await();
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
@@ -154,17 +158,7 @@ public class ActivityTracker implements Closeable {
   }
 
   private Optional<Thread> internalStop() {
-    Thread prev = monitor.getAndSet(null);
-    if (prev != null) {
-      getListeners("stop").forEach(runnable -> {
-        try {
-          runnable.run();
-        } catch (RuntimeException e) {
-          logger.error(e.getMessage(), e);
-        }
-      });
-    }
-    return Optional.ofNullable(prev);
+    return Optional.ofNullable(monitor.getAndSet(null));
   }
 
   private Collection<Runnable> getListeners(String event) {
