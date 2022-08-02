@@ -43,6 +43,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.lang.String.join;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class Distribution107InlineController extends Distribution107Controller {
   private final static Logger LOGGER = LoggerFactory.getLogger(Distribution107InlineController.class);
@@ -63,8 +65,8 @@ public class Distribution107InlineController extends Distribution107Controller {
 
   private TerracottaServerHandle createServer(Path kitDir, String serverName, Path serverWorking, List<String> cmd) {
     LOGGER.debug("Creating TSA server: {} at: {} from: {} with CLI: {}", serverName, serverWorking, kitDir, String.join(" ", cmd));
-    AtomicReference<Object> ref = new AtomicReference<>(startIsolatedServer(kitDir, serverName, serverWorking, cmd));
-    AtomicBoolean isAlive = new AtomicBoolean(true);
+    final AtomicReference<Object> ref = new AtomicReference<>(startIsolatedServer(kitDir, serverName, serverWorking, cmd));
+    final  AtomicBoolean isAlive = new AtomicBoolean(true);
     Thread t = new Thread(()->{
       try {
         while ((Boolean)invokeOnObject(ref.get(), "waitUntilShutdown")) {
@@ -84,18 +86,18 @@ public class Distribution107InlineController extends Distribution107Controller {
       @Override
       public TerracottaServerState getState() {
         if (isAlive()) {
-          String state = invoke("getState").toString();
+          String state = invokeOnServerMBean("Server", "getState",  null);
           switch (state) {
-            case "State[ DIAGNOSTIC ]":
+            case "DIAGNOSTIC":
               return TerracottaServerState.STARTED_IN_DIAGNOSTIC_MODE;
-            case "State[ START-STATE ]":
+            case "START-STATE":
               if (Boolean.parseBoolean(invokeOnServerMBean("ConsistencyManager", "isBlocked", null))) {
                 return TerracottaServerState.START_SUSPENDED;
               }
               return TerracottaServerState.STARTING;
-            case "State[ STOP-STATE ]":
+            case "STOP-STATE":
               return TerracottaServerState.STOPPED;
-            case "State[ ACTIVE-COORDINATOR ]":
+            case "ACTIVE-COORDINATOR":
               if (Boolean.parseBoolean(invokeOnServerMBean("ConsistencyManager", "isBlocked", null))) {
                 return TerracottaServerState.START_SUSPENDED;
               }
@@ -104,20 +106,29 @@ public class Distribution107InlineController extends Distribution107Controller {
               } else {
                 return TerracottaServerState.START_SUSPENDED;
               }
-            case "State[ PASSIVE ]":
-            case "State[ PASSIVE-SYNCING ]":
-            case "State[ PASSIVE-UNINITIALIZED ]":
+            case "PASSIVE":
+            case "PASSIVE-SYNCING":
+            case "PASSIVE-UNINITIALIZED":
               return TerracottaServerState.STARTING;
-            case "State[ PASSIVE-STANDBY ]":
+            case "PASSIVE-STANDBY":
               if (Boolean.parseBoolean(invokeOnServerMBean("ConsistencyManager", "isBlocked", null))) {
                 return TerracottaServerState.START_SUSPENDED;
               }
               return TerracottaServerState.STARTED_AS_PASSIVE;
             default:
-              return (!isAlive() || ((Boolean)invoke("isStopped"))) ? TerracottaServerState.STOPPED : TerracottaServerState.STARTING;
+              return (!isAlive() || isStopped()) ? TerracottaServerState.STOPPED : TerracottaServerState.STARTING;
           }
         } else {
           return TerracottaServerState.STOPPED;
+        }
+      }
+      
+      public boolean isStopped() {
+        Object server = ref.get();
+        if (server instanceof Future) {
+          return ((Future)server).isDone();
+        } else {
+          return (Boolean)invokeOnObject(server, "isStopped");
         }
       }
 
@@ -153,10 +164,6 @@ public class Distribution107InlineController extends Distribution107Controller {
           LOGGER.warn("unable to call", s);
           return "ERROR";
         }
-      }
-
-      private Object invoke(String method) {
-        return invokeOnObject(ref.get(), method);
       }
     };
   }
