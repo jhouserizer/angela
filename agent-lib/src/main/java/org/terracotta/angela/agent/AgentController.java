@@ -537,6 +537,11 @@ public class AgentController {
     return Jcmd.jcmd(clientPid, tcEnv, arguments);
   }
 
+  public ToolExecutionResult serverCmd(InstanceId instanceId, TerracottaServer terracottaServer, String terracottaCommand) {
+    TerracottaInstall terracottaInstall = tsaInstalls.get(instanceId);
+    return terracottaInstall.getTerracottaServerInstance(terracottaServer).cmd(terracottaCommand);
+  }
+
   public void startHardwareMonitoring(Path workingPath, Map<HardwareMetric, MonitoringCommand> commands) {
     if (monitoringInstance == null) {
       logger.debug("[{}] Starting monitoring: {}...", localAgentID, commands.keySet());

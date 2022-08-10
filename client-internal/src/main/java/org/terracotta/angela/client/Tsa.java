@@ -214,6 +214,10 @@ public class Tsa implements AutoCloseable {
     return this;
   }
 
+  public Cmd cmd(TerracottaServer terracottaServer) {
+    return new Cmd(executor, instanceId, terracottaServer);
+  }
+
   public Jcmd jcmd(TerracottaServer terracottaServer) {
     String whatFor = TsaConfigurationContext.TerracottaCommandLineEnvironmentKeys.JCMD + terracottaServer.getServerSymbolicName().getSymbolicName();
     TerracottaCommandLineEnvironment tcEnv = tsaConfigurationContext.getTerracottaCommandLineEnvironment(whatFor);
