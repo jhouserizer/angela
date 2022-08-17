@@ -18,10 +18,12 @@ package org.terracotta.angela;
 import org.junit.Test;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
+import org.terracotta.angela.client.Cmd;
 import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.common.TerracottaServerState;
+import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.metrics.HardwareMetric;
 import org.terracotta.angela.common.tcconfig.TcConfig;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
@@ -40,6 +42,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
+import static org.terracotta.angela.common.AngelaProperties.KIT_COPY;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTING;
 import static org.terracotta.angela.common.TerracottaServerState.STOPPED;
@@ -102,6 +105,22 @@ public class InstallIT extends BaseIT {
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("InstallTest::testLocalInstall", config)) {
       Tsa tsa = factory.tsa();
       tsa.startAll();
+    }
+  }
+
+  @Test
+  public void testLocalCmd() throws Exception {
+    ConfigurationContext config = CustomConfigurationContext.customConfigurationContext()
+        .tsa(tsa -> tsa.topology(new Topology(getOldDistribution(), tcConfig(version(EHCACHE_VERSION_XML), TC_CONFIG_A))));
+
+    System.setProperty(KIT_COPY.getPropertyName(), "true");
+
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("InstallTest::testLocalCmd", config)) {
+      Tsa tsa = factory.tsa();
+      final Cmd cmd = tsa.cmd(tsa.getServer(0,0));
+      final ToolExecutionResult toolExecutionResult = cmd.executeCommand("./voter/bin/base-voter");
+
+      assertThat(toolExecutionResult.getExitStatus(), is(1));
     }
   }
 
