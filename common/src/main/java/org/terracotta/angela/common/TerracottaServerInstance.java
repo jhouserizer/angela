@@ -131,8 +131,8 @@ public class TerracottaServerInstance implements Closeable {
     return Jcmd.jcmd(getServerHandle().getJavaPid(), env, arguments);
   }
 
-  public ToolExecutionResult cmd(String terracottaCommand) {
-    return Cmd.cmd(kitDir, terracottaCommand);
+  public ToolExecutionResult cmd(String terracottaCommand, String[] arguments) {
+    return Cmd.cmd(kitDir, terracottaCommand, arguments);
   }
 
   public void waitForState(Set<TerracottaServerState> terracottaServerStates) {

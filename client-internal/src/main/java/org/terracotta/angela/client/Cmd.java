@@ -41,11 +41,11 @@ public class Cmd {
     this.terracottaServer = terracottaServer;
   }
 
-  public ToolExecutionResult executeCommand(String terracottaCommand) {
+  public ToolExecutionResult executeCommand(String terracottaCommand, String... arguments) {
     if (terracottaServer != null) {
       final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
       return executor.execute(agentID, () -> AgentController.getInstance()
-          .serverCmd(instanceId, terracottaServer, terracottaCommand));
+          .serverCmd(instanceId, terracottaServer, terracottaCommand, arguments));
     } else {
       throw new AssertionError();
     }
