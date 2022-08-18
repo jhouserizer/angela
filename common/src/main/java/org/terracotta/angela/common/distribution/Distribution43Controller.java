@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -95,23 +96,36 @@ public class Distribution43Controller extends DistributionController {
                                           List<String> startUpArgs, Duration inactivityKillerDelay) {
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(STOPPED);
     AtomicReference<TerracottaServerState> tempStateRef = new AtomicReference<>(STOPPED);
+    AtomicBoolean isManagementServerStarted = new AtomicBoolean(false);
 
     TriggeringOutputStream serverLogOutputStream = TriggeringOutputStream
         .triggerOn(
             compile("^.*\\QTerracotta Server instance has started up as ACTIVE\\E.*$"),
             mr -> {
-              if (stateRef.get() == STOPPED) {
-                tempStateRef.set(STARTED_AS_ACTIVE);
-              } else {
+              if (isManagementServerStarted.get()) {
                 stateRef.set(STARTED_AS_ACTIVE);
+              } else {
+                tempStateRef.set(STARTED_AS_ACTIVE);
               }
             })
         .andTriggerOn(
             compile("^.*\\QMoved to State[ PASSIVE-STANDBY ]\\E.*$"),
-            mr -> tempStateRef.set(STARTED_AS_PASSIVE))
+            mr -> {
+              if (isManagementServerStarted.get()) {
+                stateRef.set(STARTED_AS_PASSIVE);
+              } else {
+                tempStateRef.set(STARTED_AS_PASSIVE);
+              }
+            })
         .andTriggerOn(
             compile("^.*\\QManagement server started\\E.*$"),
-            mr -> stateRef.set(tempStateRef.get()))
+            mr -> {
+              if (isManagementServerStarted.get()) {
+                stateRef.set(tempStateRef.get());
+              } else {
+                isManagementServerStarted.set(true);
+              }
+            })
         .andTriggerOn(
             compile("^.*\\QServer exiting\\E.*$"),
             mr -> stateRef.set(STOPPED));
