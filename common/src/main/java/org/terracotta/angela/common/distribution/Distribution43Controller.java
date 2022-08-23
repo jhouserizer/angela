@@ -95,40 +95,8 @@ public class Distribution43Controller extends DistributionController {
                                           TerracottaCommandLineEnvironment tcEnv, Map<String, String> envOverrides,
                                           List<String> startUpArgs, Duration inactivityKillerDelay) {
     AtomicReference<TerracottaServerState> stateRef = new AtomicReference<>(STOPPED);
-    AtomicReference<TerracottaServerState> tempStateRef = new AtomicReference<>(STOPPED);
-    AtomicBoolean isManagementServerStarted = new AtomicBoolean(false);
 
-    TriggeringOutputStream serverLogOutputStream = TriggeringOutputStream
-        .triggerOn(
-            compile("^.*\\QTerracotta Server instance has started up as ACTIVE\\E.*$"),
-            mr -> {
-              if (isManagementServerStarted.get()) {
-                stateRef.set(STARTED_AS_ACTIVE);
-              } else {
-                tempStateRef.set(STARTED_AS_ACTIVE);
-              }
-            })
-        .andTriggerOn(
-            compile("^.*\\QMoved to State[ PASSIVE-STANDBY ]\\E.*$"),
-            mr -> {
-              if (isManagementServerStarted.get()) {
-                stateRef.set(STARTED_AS_PASSIVE);
-              } else {
-                tempStateRef.set(STARTED_AS_PASSIVE);
-              }
-            })
-        .andTriggerOn(
-            compile("^.*\\QManagement server started\\E.*$"),
-            mr -> {
-              if (isManagementServerStarted.get()) {
-                stateRef.set(tempStateRef.get());
-              } else {
-                isManagementServerStarted.set(true);
-              }
-            })
-        .andTriggerOn(
-            compile("^.*\\QServer exiting\\E.*$"),
-            mr -> stateRef.set(STOPPED));
+    TriggeringOutputStream serverLogOutputStream = getServerLogOutputStream(stateRef);
     serverLogOutputStream = tsaFullLogging ?
         serverLogOutputStream.andForward(line -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), line)) :
         serverLogOutputStream.andTriggerOn(compile("^.*(WARN|ERROR).*$"), mr -> ExternalLoggers.tsaLogger.info("[{}] {}", terracottaServer.getServerSymbolicName().getSymbolicName(), mr.group()));
@@ -193,6 +161,42 @@ public class Distribution43Controller extends DistributionController {
         }
       }
     };
+  }
+
+  TriggeringOutputStream getServerLogOutputStream(AtomicReference<TerracottaServerState> stateRef) {
+    AtomicReference<TerracottaServerState> tempStateRef = new AtomicReference<>(STOPPED);
+    AtomicBoolean isManagementServerStarted = new AtomicBoolean(false);
+
+    return TriggeringOutputStream
+        .triggerOn(
+            compile("^.*\\QTerracotta Server instance has started up as ACTIVE\\E.*$"),
+            mr -> {
+              if (isManagementServerStarted.get()) {
+                stateRef.set(STARTED_AS_ACTIVE);
+              } else {
+                tempStateRef.set(STARTED_AS_ACTIVE);
+              }
+            })
+        .andTriggerOn(
+            compile("^.*\\QMoved to State[ PASSIVE-STANDBY ]\\E.*$"),
+            mr -> {
+              if (isManagementServerStarted.get()) {
+                stateRef.set(STARTED_AS_PASSIVE);
+              } else {
+                tempStateRef.set(STARTED_AS_PASSIVE);
+              }
+            })
+        .andTriggerOn(
+            compile("^.*\\QManagement server started\\E.*$"),
+            mr -> {
+              if (!isManagementServerStarted.get()) {
+                isManagementServerStarted.set(true);
+                stateRef.set(tempStateRef.get());
+              }
+            })
+        .andTriggerOn(
+            compile("^.*\\QServer exiting\\E.*$"),
+            mr -> stateRef.set(STOPPED));
   }
 
   private Number findWithJcmdJavaPidOf(String serverUuid, TerracottaCommandLineEnvironment tcEnv) {
