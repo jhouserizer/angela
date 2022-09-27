@@ -3,3 +3,4 @@ target/
 *.iml
 .DS_Store
 /.mvn/wrapper/maven-wrapper.jar
+/.mvn/repository
