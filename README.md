@@ -147,6 +147,13 @@ We expect the TSA to contain one Terracotta server running on localhost, and thi
 
 Full example : See class [EhcacheTest](integration-test/src/test/java/org/terracotta/angela/EhcacheTest.java)
 
+## IMPORTANT: settings.xml
+
+You can run all the Maven commands with `-s settings.xml` to use the project's settings.xml
+and isolate downloaded libraries inside. Change the repo location to point to your default m2 home if needed.
+
+Example: `./mvnw -s settings.xml clean install`
+
 ## How to build
 
     mvn clean install
