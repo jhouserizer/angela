@@ -127,12 +127,13 @@ public abstract class KitResolver {
   }
 
   protected void download(URL url, Path dest) {
+    logger.info("Downloading: {} to: {}", url, dest);
+
     try {
       URLConnection urlConnection = url.openConnection();
       urlConnection.connect();
 
       int contentLength = urlConnection.getContentLength();
-      logger.debug("Downloading {} from {}", humanReadableByteCount(contentLength), url);
 
       createParentDirs(dest);
 
@@ -161,14 +162,6 @@ public abstract class KitResolver {
       FileUtils.deleteQuietly(dest.getParent());
       throw new UncheckedIOException(e);
     }
-  }
-
-  // Adapted from https://programming.guide/java/formatting-byte-size-to-human-readable-format.html
-  private static String humanReadableByteCount(long bytes) {
-    if (bytes < 1024) return bytes + " B";
-    int exp = (int) (Math.log(bytes) / Math.log(1024));
-    String pre = "" + "KMGTPE".charAt(exp - 1);
-    return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
   }
 
   private static void createParentDirs(Path file) throws IOException {
