@@ -15,12 +15,16 @@
  */
 package org.terracotta.angela.common.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 
-public class AtomicCounter {
+import java.io.Serializable;
 
+public class AtomicCounter implements Serializable {
+  private static final long serialVersionUID = 1L;
   private final String name;
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private final IgniteAtomicLong igniteCounter;
 
   AtomicCounter(Ignite ignite, String name, long initVal) {

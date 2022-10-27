@@ -23,7 +23,6 @@ import org.terracotta.angela.client.ClientJob;
 import org.terracotta.angela.client.ClusterFactory;
 import org.terracotta.angela.client.ClusterMonitor;
 import org.terracotta.angela.client.config.ConfigurationContext;
-import org.terracotta.angela.client.config.custom.CustomConfigurationContext;
 import org.terracotta.angela.common.clientconfig.ClientArrayConfig;
 import org.terracotta.angela.common.clientconfig.ClientId;
 import org.terracotta.angela.common.cluster.AtomicCounter;
@@ -56,6 +55,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.Thread.sleep;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -67,6 +67,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
+import static org.terracotta.angela.client.config.custom.CustomConfigurationContext.customConfigurationContext;
 import static org.terracotta.angela.common.clientconfig.ClientArrayConfig.newClientArrayConfig;
 import static org.terracotta.angela.common.distribution.Distribution.distribution;
 import static org.terracotta.angela.common.tcconfig.TcConfig.tcConfig;
@@ -84,7 +85,7 @@ public class ClientIT extends BaseIT {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     final String cliSymbName = "foo";
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host(cliSymbName, hostname))));
 
     String remoteFolder = "testFolder";
@@ -92,7 +93,7 @@ public class ClientIT extends BaseIT {
     String fileContent = "Test data";
     String localFolder = "target/myNewFolderClient";
 
-    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
+    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayDownloadFiles", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> {
           new File(remoteFolder).mkdirs();
@@ -112,7 +113,7 @@ public class ClientIT extends BaseIT {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     int clientsCount = 3;
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount, hostname))));
 
     String remoteFolder = "testFolder";
@@ -120,7 +121,7 @@ public class ClientIT extends BaseIT {
     String fileContent = "Test data";
     String localFolder = "target/myNewFolderMultipleClients";
 
-    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
+    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testMultipleClientsSameHostArrayDownloadFiles", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
         Set<String> filecontents = new HashSet<>();
 
@@ -151,7 +152,7 @@ public class ClientIT extends BaseIT {
 
     int clientsCount = 3;
     int clientsPerMachine = 2;
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(clientsCount, hostname))));
 
     String remoteFolder = "testFolder";
@@ -159,7 +160,7 @@ public class ClientIT extends BaseIT {
     String fileContent = "Test data";
     String localFolder = "target/myNewFolderMultipleJobs";
 
-    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
+    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testMultipleClientJobsSameHostDownloadFiles", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
         Set<String> filecontents = new HashSet<>();
 
@@ -201,7 +202,7 @@ public class ClientIT extends BaseIT {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     Distribution distribution = getOldDistribution();
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig()
                 .hostSerie(3, hostname)
@@ -222,7 +223,7 @@ public class ClientIT extends BaseIT {
     int serieLength = 3;
     int clientsPerMachine = 2;
     Distribution distribution = getOldDistribution();
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(
                 new ClientArrayTopology(
@@ -231,7 +232,7 @@ public class ClientIT extends BaseIT {
                 )
             )
         );
-    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testMultipleClientsOnSameHost", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testMultipleClientJobsOnSameMachine", configContext)) {
       try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (cluster) -> {
           AtomicCounter counter = cluster.atomicCounter("countJobs", 0);
@@ -255,7 +256,7 @@ public class ClientIT extends BaseIT {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
     Distribution distribution = getOldDistribution();
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("foo", hostname))))
         .clientArray(clientArray -> clientArray
@@ -277,10 +278,10 @@ public class ClientIT extends BaseIT {
   public void testClientArrayNoDistribution() throws Exception {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("localhost", hostname))));
 
-    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testRemoteClient", configContext)) {
+    try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayNoDistribution", configContext)) {
       try (ClientArray clientArray = instance.clientArray(0)) {
         ClientArrayFuture f = clientArray.executeOnAll((cluster) -> System.out.println("hello world 1"));
         f.get();
@@ -292,7 +293,7 @@ public class ClientIT extends BaseIT {
   public void testClientArrayExceptionReported() throws Exception {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, hostname))));
 
     try (ClusterFactory instance = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayExceptionReported", configContext)) {
@@ -331,14 +332,14 @@ public class ClientIT extends BaseIT {
     ClientArrayTopology ct = new ClientArrayTopology(getOldDistribution(),
         newClientArrayConfig().host(cliSymbName, hostname));
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct))
         .monitoring(monitoring -> monitoring.commands(EnumSet.of(HardwareMetric.CPU)));
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientCpuMetricsLogs", configContext)) {
       ClusterMonitor monitor = factory.monitor();
       ClientJob clientJob = (cluster) -> {
-        Thread.sleep(18000);
+        sleep(18000);
       };
 
       ClientArray clientArray = factory.clientArray(0);
@@ -370,7 +371,7 @@ public class ClientIT extends BaseIT {
     ClientArrayTopology ct = new ClientArrayTopology(getOldDistribution(),
         newClientArrayConfig().host(cliSymbName, hostname));
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct))
         .monitoring(monitoring -> monitoring.commands(EnumSet.allOf(HardwareMetric.class)));
 
@@ -378,7 +379,7 @@ public class ClientIT extends BaseIT {
       ClusterMonitor monitor = factory.monitor();
       monitor.startOnAll();
 
-      Thread.sleep(18000);
+      sleep(18000);
 
       monitor.downloadTo(resultPath);
       monitor.stopOnAll();
@@ -402,14 +403,14 @@ public class ClientIT extends BaseIT {
         newClientArrayConfig().host(cliSymbName, hostname));
 
     HardwareMetric metric = HardwareMetric.MEMORY;
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct))
         .monitoring(monitoring -> monitoring.command(metric, new MonitoringCommand("dummy", "command")));
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientDummyMemoryMetrics", configContext)) {
       ClusterMonitor monitor = factory.monitor();
       ClientJob clientJob = (cluster) -> {
-        Thread.sleep(18000);
+        sleep(18000);
       };
 
       ClientArray clientArray = factory.clientArray(0);
@@ -430,10 +431,10 @@ public class ClientIT extends BaseIT {
     ClientArrayTopology ct = new ClientArrayTopology(getOldDistribution(),
         newClientArrayConfig().host("foo", hostname));
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct));
 
-    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientDummyMemoryMetrics", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClusterMonitorWhenNoMonitoringSpecified", configContext)) {
       factory.monitor();
     }
   }
@@ -442,7 +443,7 @@ public class ClientIT extends BaseIT {
   public void testMixingLocalhostWithRemote() throws Exception {
     assumeNotNull("Cannot only run with default Ignite config supporting remoting", sshServer);
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .tsa(tsa -> tsa.topology(new Topology(getOldDistribution(),
                 tcConfig(version(Versions.EHCACHE_VERSION_XML), TC_CONFIG_A)))
             .license(LicenseType.TERRACOTTA_OS.defaultLicense())
@@ -471,7 +472,7 @@ public class ClientIT extends BaseIT {
     final int clientCount = 2;
     final int loopCount = 20;
     Distribution distribution = getOldDistribution();
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray
             .clientArrayTopology(new ClientArrayTopology(distribution, newClientArrayConfig().host("foo", hostname))))
         .clientArray(clientArray -> clientArray
@@ -516,12 +517,12 @@ public class ClientIT extends BaseIT {
 
     ClientArrayTopology ct = new ClientArrayTopology(distribution, clientArrayConfig1);
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.license(LicenseType.TERRACOTTA_OS.defaultLicense()).clientArrayTopology(ct));
 
-    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testMixingLocalhostWithRemote", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testUploadClientJars", configContext)) {
       ClientJob clientJob = (cluster) -> {
-        Thread.sleep(1000);
+        sleep(1000);
       };
 
       { // executeAll
@@ -542,7 +543,7 @@ public class ClientIT extends BaseIT {
   public void testClientArrayReferenceShared() throws Exception {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
 
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().hostSerie(2, hostname))));
 
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
@@ -572,9 +573,9 @@ public class ClientIT extends BaseIT {
 
     ClientArrayConfig hostSerie = newClientArrayConfig()
         .hostSerie(2, hostname);
-    ConfigurationContext configContext = CustomConfigurationContext.customConfigurationContext()
+    ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(hostSerie)));
-    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayReferenceShared", configContext)) {
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayHostNames", configContext)) {
       try (ClientArray clientArray = factory.clientArray(0)) {
         ClientJob clientJob = (Cluster cluster) -> {
           ClientId clientId = cluster.getClientId();
@@ -586,6 +587,116 @@ public class ClientIT extends BaseIT {
         f.get();
         Cluster cluster = factory.cluster();
         assertNull(cluster.getClientId());
+      }
+    }
+  }
+
+  @Test
+  public void testClient_exit_1() throws Exception {
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+
+    ConfigurationContext configContext = customConfigurationContext()
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));
+
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClient_exit", configContext)) {
+      final Barrier started = factory.cluster().barrier("started", 2);
+      final ClientArrayFuture future = factory.clientArray(0).executeOnAll(cluster -> {
+        started.await();
+        System.out.println("SHUTDOWN FROM JOB");
+        System.exit(1);
+      });
+
+      // wait for process to start and job to be received
+      started.await();
+
+      // wait a little for the exit to be done
+      System.out.println("SLEEP");
+      sleep(7_000);
+
+      // wait for result
+      System.out.println("WAIT FROM TEST");
+      try {
+        future.get();
+        fail();
+      } catch (IllegalStateException e) {
+        assertThat(e.getMessage(), containsString("Agent is gone in an abrupt way and Ignite cannot get any result from it anymore"));
+      }
+    }
+  }
+
+  @Test
+  public void testClient_exit_2() throws Exception {
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+
+    ConfigurationContext configContext = customConfigurationContext()
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));
+
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClient_exit", configContext)) {
+      final ClientArrayFuture future = factory.clientArray(0).executeOnAll(cluster -> {
+        System.out.println("SHUTDOWN FROM JOB");
+        System.exit(1);
+      });
+      System.out.println("WAIT FROM TEST");
+      try {
+        future.get();
+        fail();
+      } catch (IllegalStateException e) {
+        assertThat(e.getMessage(), containsString("Agent is gone in an abrupt way and Ignite cannot get any result from it anymore"));
+      }
+    }
+  }
+
+  @Test
+  public void testClient_throw_1() throws Exception {
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+
+    ConfigurationContext configContext = customConfigurationContext()
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));
+
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClient_exit", configContext)) {
+      final Barrier started = factory.cluster().barrier("started", 2);
+      final ClientArrayFuture future = factory.clientArray(0).executeOnAll(cluster -> {
+        started.await();
+        System.out.println("THROWING FROM JOB");
+        throw new OutOfMemoryError("BOOM");
+      });
+
+      // wait for process to start and job to be received
+      started.await();
+
+      // wait a little for the exit to be done
+      System.out.println("SLEEP");
+      sleep(7_000);
+
+      // wait for result
+      System.out.println("WAIT FROM TEST");
+      try {
+        future.get();
+        fail();
+      } catch (ExecutionException e) {
+        assertThat(e.getCause().toString(), containsString("java.lang.OutOfMemoryError: BOOM"));
+      }
+    }
+  }
+
+  @Test
+  public void testClient_throw_2() throws Exception {
+    assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+
+    ConfigurationContext configContext = customConfigurationContext()
+        .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));
+
+    try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClient_exit", configContext)) {
+      final ClientArrayFuture future = factory.clientArray(0).executeOnAll(cluster -> {
+        System.out.println("THROWING FROM JOB");
+        throw new OutOfMemoryError("BOOM");
+      });
+      System.out.println("WAIT FROM TEST");
+      try {
+        future.get();
+        fail();
+      } catch (ExecutionException e) {
+        assertThat(e.getCause().toString(), containsString("java.lang.OutOfMemoryError: BOOM"));
       }
     }
   }

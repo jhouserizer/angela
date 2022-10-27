@@ -18,7 +18,9 @@ package org.terracotta.angela.agent;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
@@ -34,7 +36,10 @@ import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.util.AngelaVersion;
 import org.terracotta.angela.common.util.IpUtils;
 import org.zeroturnaround.process.PidUtil;
+import org.zeroturnaround.process.ProcessUtil;
+import org.zeroturnaround.process.Processes;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -143,6 +148,28 @@ public class Agent implements AutoCloseable {
 
     // cleanup ignite agent and reserved ports
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      // because closing ignite (whether from their shutdown hook or ours) can block in a com
+      // if the client job is causing the shutdown
+      new Thread() {
+        {
+          setDaemon(true);
+        }
+
+        @Override
+        public void run() {
+          try {
+            // let 5 sec for a normal shutdown, otherwise, kill me
+            sleep(5_000);
+            logger.warn("Forcefully killing agent after 10 seconds");
+            ProcessUtil.destroyForcefullyAndWait(Processes.newPidProcess(PidUtil.getMyPid()));
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+      }.start();
+
+      // try a normal close first
+      logger.info("Closing Ignite...");
       agent.close();
       try {
         portAllocator.close();
@@ -167,7 +194,12 @@ public class Agent implements AutoCloseable {
 
   @SuppressWarnings("SwitchStatementWithTooFewBranches")
   public static Agent ignite(UUID group, String instanceName, PortAllocator portAllocator, Collection<String> peers) {
-    System.setProperty("IGNITE_UPDATE_NOTIFIER", "false");
+    // Required to avoid a deadlock if a client job causes a system.exit to be run.
+    // The agent has its own shutdown hook
+    System.setProperty(IgniteSystemProperties.IGNITE_NO_SHUTDOWN_HOOK, "true");
+
+    // do not check for a new version
+    System.setProperty(IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER, "false");
 
     createAndValidateDir(Agent.ROOT_DIR);
     createAndValidateDir(Agent.WORK_DIR);
@@ -192,6 +224,7 @@ public class Agent implements AutoCloseable {
     cfg.setUserAttributes(userAttributes);
 
     boolean enableLogging = Boolean.getBoolean(IGNITE_LOGGING.getValue());
+    cfg.setShutdownPolicy(ShutdownPolicy.IMMEDIATE);
     cfg.setGridLogger(enableLogging ? new Slf4jLogger() : new NullLogger());
     cfg.setPeerClassLoadingEnabled(true);
     cfg.setMetricsLogFrequency(0);

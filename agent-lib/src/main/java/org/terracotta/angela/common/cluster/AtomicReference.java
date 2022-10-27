@@ -15,11 +15,16 @@
  */
 package org.terracotta.angela.common.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicReference;
 
-public class AtomicReference<T> {
+import java.io.Serializable;
 
+public class AtomicReference<T> implements Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private final IgniteAtomicReference<T> igniteReference;
 
   AtomicReference(Ignite ignite, String name, T initialValue) {

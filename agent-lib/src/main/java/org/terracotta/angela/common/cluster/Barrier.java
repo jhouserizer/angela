@@ -15,18 +15,24 @@
  */
 package org.terracotta.angela.common.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCountDownLatch;
 
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class Barrier {
+public class Barrier implements Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private final Ignite ignite;
   private final int count;
   private final int index;
   private final String name;
+  @SuppressFBWarnings("SE_BAD_FIELD")
   private volatile IgniteCountDownLatch countDownLatch;
   private volatile int resetCount;
 
