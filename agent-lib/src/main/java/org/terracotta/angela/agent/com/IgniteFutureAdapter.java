@@ -17,8 +17,11 @@ package org.terracotta.angela.agent.com;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
+import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteFutureTimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -26,12 +29,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class IgniteFutureAdapter<V> implements Future<V> {
+  private static final Logger logger = LoggerFactory.getLogger(IgniteFutureAdapter.class);
+
   private final AgentID agentID;
   private final IgniteFuture<V> igniteFuture;
 
   public IgniteFutureAdapter(AgentID agentID, IgniteFuture<V> igniteFuture) {
     this.agentID = agentID;
     this.igniteFuture = igniteFuture;
+  }
+
+  public AgentID getAgentID() {
+    return agentID;
   }
 
   @Override
@@ -53,6 +62,9 @@ public class IgniteFutureAdapter<V> implements Future<V> {
   public V get() throws InterruptedException, ExecutionException {
     try {
       return igniteFuture.get();
+    } catch (ClusterGroupEmptyException cge) {
+      logger.warn("DETECTED POTENTIAL UNEXPECTED FAILURE (OR KILL) OF JVM WITH NODE: {}", agentID);
+      throw new IllegalStateException("Agent is gone in an abrupt way and Ignite cannot get any result from it anymore: " + agentID, cge);
     } catch (IgniteInterruptedException iie) {
       throw (InterruptedException) new InterruptedException().initCause(iie);
     } catch (IgniteException ie) {
@@ -69,6 +81,9 @@ public class IgniteFutureAdapter<V> implements Future<V> {
   public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
     try {
       return igniteFuture.get(timeout, unit);
+    } catch (ClusterGroupEmptyException cge) {
+      logger.warn("DETECTED POTENTIAL UNEXPECTED FAILURE (OR KILL) OF JVM WITH NODE: {}", agentID);
+      throw new IllegalStateException("Agent is gone in an abrupt way and Ignite cannot get any result from it anymore: " + agentID, cge);
     } catch (IgniteInterruptedException iie) {
       throw (InterruptedException) new InterruptedException().initCause(iie);
     } catch (IgniteFutureTimeoutException ifte) {
