@@ -182,6 +182,11 @@ public class LocalKitManager extends KitManager {
       String clientJarsRootFolderName = distribution.createDistributionController()
           .clientJarsRootFolderName(distribution);
 
+      if (!Files.exists(kitInstallationPath.resolve(clientJarsRootFolderName))) {
+        logger.warn("KIT CLIENT FOLDER '{}' IS MISSING: SKIPPING DISCOVERY OF KIT CLIENT JARS", clientJarsRootFolderName);
+        return;
+      }
+
       List<File> clientJars;
       try (Stream<Path> stream = Files.walk(kitInstallationPath.resolve(clientJarsRootFolderName))) {
         clientJars = stream
