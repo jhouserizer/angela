@@ -309,15 +309,20 @@ public class Distribution107InlineController extends Distribution107Controller {
     }
 
     if (server.getSecurityDir() != null) {
-      throw new IllegalStateException("this option is broken for angela: FIX");
+      options.add("-x");
+      Path securityRootDirectoryPath = workingDir.toPath().resolve("security-root-directory-" + server.getServerSymbolicName().getSymbolicName());
+      server.getSecurityDir().createSecurityRootDirectory(securityRootDirectoryPath);
+      options.add(securityRootDirectoryPath.toString());
     }
 
     if (server.isSslTls()) {
       options.add("-t");
+      options.add("true");
     }
 
     if (server.isWhitelist()) {
       options.add("-w");
+      options.add("true");
     }
 
     if (server.getProperties() != null) {
