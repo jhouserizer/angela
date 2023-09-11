@@ -36,18 +36,9 @@ import org.terracotta.angela.common.tcconfig.TerracottaServer;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.topology.Topology;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static org.terracotta.angela.common.AngelaProperties.KIT_COPY;
-import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
-import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
-import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
-import static org.terracotta.angela.common.AngelaProperties.SKIP_UNINSTALL;
-import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
+import static org.terracotta.angela.common.AngelaProperties.*;
 
 public class ConfigTool implements AutoCloseable {
   private final static Logger logger = LoggerFactory.getLogger(ConfigTool.class);
@@ -74,6 +65,102 @@ public class ConfigTool implements AutoCloseable {
   public ToolExecutionResult executeCommand(Map<String, String> env, String... arguments) {
     logger.debug("Executing config-tool: {} on: {}", instanceId, executor.getTarget());
     return executor.execute(() -> AgentController.getInstance().configTool(instanceId, env, arguments));
+  }
+
+  /**
+   * Add a stripe as part of Dynamic Scale
+   *
+   * @param newServers servers to add
+   * @return the config tool instance
+   */
+  public ConfigTool addStripe(TerracottaServer... newServers) {
+    if (newServers == null || newServers.length == 0) {
+      throw new IllegalArgumentException("Servers list should be non-null and non-empty");
+    }
+
+    Topology topology = tsa.getTsaConfigurationContext().getTopology();
+    topology.addStripe(newServers);
+    for (TerracottaServer server : newServers) {
+      tsa.install(server, topology);
+      tsa.spawn(server);
+    }
+
+    if (newServers.length > 1) {
+      List<String> command = new ArrayList<>();
+      command.add("attach");
+      command.add("-t");
+      command.add("node");
+      command.add("-d");
+      command.add(newServers[0].getHostPort());
+      for (int i = 1; i < newServers.length; i++) {
+        command.add("-s");
+        command.add(newServers[i].getHostPort());
+      }
+
+      ToolExecutionResult result = executeCommand(command.toArray(new String[0]));
+      if (result.getExitStatus() != 0) {
+        throw new RuntimeException("ConfigTool::executeCommand with command parameters failed with: " + result);
+      }
+    }
+
+    List<String> command = new ArrayList<>();
+    command.add("attach");
+    command.add("-to-cluster");
+
+    List<List<TerracottaServer>> stripes = topology.getStripes();
+    TerracottaServer existingServer = stripes.get(0).get(0);
+    command.add(existingServer.getHostPort());
+
+    command.add("-stripe");
+    command.add(newServers[0].getHostPort());
+
+    ToolExecutionResult result = executeCommand(command.toArray(new String[0]));
+    if (result.getExitStatus() != 0) {
+      throw new ToolException("attach stripe failed", String.join(". ", result.getOutput()), result.getExitStatus());
+    }
+    return this;
+  }
+
+  /**
+   * Remove a stripe as part of Dynamic Scale
+   *
+   * @param stripeIndex stripe index
+   * @return the config tool instance
+   */
+  public ConfigTool removeStripe(int stripeIndex) {
+    Topology topology = tsa.getTsaConfigurationContext().getTopology();
+    List<List<TerracottaServer>> stripes = topology.getStripes();
+    if (stripeIndex < -1 || stripeIndex >= stripes.size()) {
+      throw new IllegalArgumentException("stripeIndex should be a non-negative integer less than stripe count");
+    }
+
+    if (stripes.size() == 1) {
+      throw new IllegalArgumentException("Cannot delete the only stripe from cluster");
+    }
+
+    List<String> command = new ArrayList<>();
+    command.add("detach");
+
+    List<TerracottaServer> toDetachStripe = stripes.remove(stripeIndex);
+    TerracottaServer destination;
+    if (stripeIndex != 0) {
+      destination = stripes.get(0).get(0);
+    } else {
+      destination = stripes.get(1).get(0);
+    }
+    command.add("-from-cluster");
+    command.add(destination.getHostPort());
+
+    command.add("-stripe");
+    command.add(toDetachStripe.get(0).getHostPort());
+
+    ToolExecutionResult result = executeCommand(command.toArray(new String[0]));
+    if (result.getExitStatus() != 0) {
+      throw new ToolException("detach stripe failed", String.join(". ", result.getOutput()), result.getExitStatus());
+    }
+
+    topology.removeStripe(stripeIndex);
+    return this;
   }
 
   public ConfigTool attachStripe(TerracottaServer... newServers) {
@@ -391,19 +478,19 @@ public class ConfigTool implements AutoCloseable {
 
   public ConfigTool setServerToServerDisruptionLinks(int stripeId, int size) {
     List<TerracottaServer> stripeServerList = tsa.getTsaConfigurationContext()
-        .getTopology()
-        .getStripes()
-        .get(stripeId - 1);
+            .getTopology()
+            .getStripes()
+            .get(stripeId - 1);
     for (int j = 0; j < size; ++j) {
       TerracottaServer server = stripeServerList.get(j);
       Map<ServerSymbolicName, Integer> proxyGroupPortMapping = tsa.getProxyGroupPortsForServer(server);
       int nodeId = j + 1;
       StringBuilder propertyBuilder = new StringBuilder();
       propertyBuilder.append("stripe.")
-          .append(stripeId)
-          .append(".node.")
-          .append(nodeId)
-          .append(".tc-properties.test-proxy-group-port=");
+              .append(stripeId)
+              .append(".node.")
+              .append(nodeId)
+              .append(".tc-properties.test-proxy-group-port=");
       propertyBuilder.append("\"");
       for (Map.Entry<ServerSymbolicName, Integer> entry : proxyGroupPortMapping.entrySet()) {
         propertyBuilder.append(entry.getKey().getSymbolicName());
