@@ -37,6 +37,12 @@
     <dependency>
       <groupId>com.hierynomus</groupId>
       <artifactId>sshj</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.terracotta</groupId>
