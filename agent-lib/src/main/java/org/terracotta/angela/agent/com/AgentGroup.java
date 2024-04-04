@@ -16,6 +16,7 @@
 package org.terracotta.angela.agent.com;
 
 import org.terracotta.angela.agent.Agent;
+import org.terracotta.angela.common.util.HostPort;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -86,7 +87,8 @@ public abstract class AgentGroup implements Serializable {
   }
 
   public final Collection<String> getPeerAddresses() {
-    return getAllAgents().stream().map(AgentID::getAddress).map(Objects::toString).collect(toList());
+    return getAllAgents().stream().map(AgentID::getAddress)
+            .map(addr -> new HostPort(addr).getHostPort()).collect(toList());
   }
 
   @Override

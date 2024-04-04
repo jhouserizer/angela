@@ -47,7 +47,6 @@ import org.zeroturnaround.exec.stream.slf4j.Slf4jStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -60,6 +59,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -651,7 +651,9 @@ public class Distribution107Controller extends DistributionController {
       command.add(securityDirPath.toString());
     }
     command.add("-s");
-    command.add(terracottaVoter.getHostAddresses().stream().map(InetSocketAddress::toString).collect(Collectors.joining(",")));
+    command.add(terracottaVoter.getHostAddresses().stream()
+            .map(addr -> new HostPort(addr).getHostPort())
+            .collect(Collectors.joining(",")));
     LOGGER.debug("Start voter command: {}", command);
     return command;
   }

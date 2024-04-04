@@ -23,6 +23,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
 import org.terracotta.angela.common.topology.InstanceId;
+import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.util.SshServer;
 
@@ -120,8 +121,8 @@ public class AgentGroupIT {
     AgentID client = spawnClient();
     Collection<String> addresses = executor.getGroup().getPeerAddresses();
     assertEquals(2, addresses.size());
-    assertTrue(addresses.contains(client.getAddress().toString()));
-    assertTrue(addresses.contains(agentID.getAddress().toString()));
+    assertTrue(addresses.contains(new HostPort(client.getAddress()).getHostPort()));
+    assertTrue(addresses.contains(new HostPort(agentID.getAddress()).getHostPort()));
   }
 
   private AgentID spawnClient() throws IOException {

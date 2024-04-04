@@ -15,6 +15,7 @@
  */
 package org.terracotta.angela.common.util;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -22,6 +23,10 @@ import static java.util.Objects.requireNonNull;
 public class HostPort {
   private final String hostname;
   private final int port;
+
+  public HostPort(InetSocketAddress address) {
+    this(address.getHostString(), address.getPort());
+  }
 
   public HostPort(String hostname, int port) {
     this.hostname = requireNonNull(hostname);
