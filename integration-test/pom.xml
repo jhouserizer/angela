@@ -119,9 +119,9 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
         </configuration>
         <dependencies>
           <dependency>
-            <groupId>org.codehaus.groovy</groupId>
+            <groupId>org.apache.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>3.0.7</version>
+            <version>4.0.17</version>
             <scope>runtime</scope>
           </dependency>
         </dependencies>
@@ -160,4 +160,83 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>java-17</id>
+      <activation>
+        <property>
+          <name>java.test.version</name>
+          <value>1.17</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <argLine>
+                --add-opens=java.base/jdk.internal.access=ALL-UNNAMED
+                --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+                --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                --add-opens=java.base/java.io=ALL-UNNAMED
+                --add-opens=java.base/java.nio=ALL-UNNAMED
+                --add-opens=java.base/java.net=ALL-UNNAMED
+                --add-opens=java.base/java.util=ALL-UNNAMED
+                --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+                --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
+                --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+                --add-opens=java.base/java.lang=ALL-UNNAMED
+                --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+                --add-opens=java.base/java.math=ALL-UNNAMED
+                --add-opens=java.sql/java.sql=ALL-UNNAMED
+                --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+                --add-opens=java.base/java.time=ALL-UNNAMED
+                --add-opens=java.base/java.text=ALL-UNNAMED
+                --add-opens=java.management/sun.management=ALL-UNNAMED
+                --add-opens java.desktop/java.awt.font=ALL-UNNAMED
+              </argLine>
+              <systemPropertyVariables>
+                <angela.java.opts>
+                  --add-opens=java.base/jdk.internal.access=ALL-UNNAMED
+                  --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                  --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                  --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+                  --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                  --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                  --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                  --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                  --add-opens=java.base/java.io=ALL-UNNAMED
+                  --add-opens=java.base/java.nio=ALL-UNNAMED
+                  --add-opens=java.base/java.net=ALL-UNNAMED
+                  --add-opens=java.base/java.util=ALL-UNNAMED
+                  --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+                  --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
+                  --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+                  --add-opens=java.base/java.lang=ALL-UNNAMED
+                  --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+                  --add-opens=java.base/java.math=ALL-UNNAMED
+                  --add-opens=java.sql/java.sql=ALL-UNNAMED
+                  --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+                  --add-opens=java.base/java.time=ALL-UNNAMED
+                  --add-opens=java.base/java.text=ALL-UNNAMED
+                  --add-opens=java.management/sun.management=ALL-UNNAMED
+                  --add-opens java.desktop/java.awt.font=ALL-UNNAMED
+                  -Dangela.agent.debug=false
+                  -Djdk.net.hosts.file=${project.build.directory}/fake-hosts.txt
+                  -DIGNITE_UPDATE_NOTIFIER=false
+                </angela.java.opts>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

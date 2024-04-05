@@ -22,6 +22,7 @@ import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.com.IgniteFreeExecutor;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
+import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.IpUtils;
 import org.zeroturnaround.process.PidUtil;
 
@@ -58,7 +59,7 @@ public class AgentIT {
     UUID group = UUID.randomUUID();
     try (DefaultPortAllocator portAllocator = new DefaultPortAllocator();
          Agent agent1 = Agent.igniteOrchestrator(group, portAllocator);
-         Agent agent2 = Agent.ignite(group, "client-job", portAllocator, Collections.singleton(agent1.getAgentID().getAddress().toString()))) {
+         Agent agent2 = Agent.ignite(group, "client-job", portAllocator, Collections.singleton(new HostPort(agent1.getAgentID().getAddress()).getHostPort()))) {
 
       final AgentID agentID1 = agent1.getAgentID();
       int port1 = agentID1.getPort();
@@ -89,7 +90,7 @@ public class AgentIT {
     UUID group = UUID.randomUUID();
     try (DefaultPortAllocator portAllocator = new DefaultPortAllocator();
          Agent agent1 = Agent.igniteOrchestrator(group, portAllocator);
-         Agent agent2 = Agent.ignite(group, "two", portAllocator, Collections.singleton(agent1.getAgentID().getAddress().toString()))) {
+         Agent agent2 = Agent.ignite(group, "two", portAllocator, Collections.singleton(new HostPort(agent1.getAgentID().getAddress()).getHostPort()))) {
 
       final Ignite ignite1 = agent1.getIgnite();
       final ClusterGroup clusterGroup = ignite1.cluster().forAttribute("angela.group", group.toString());

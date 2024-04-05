@@ -143,7 +143,7 @@ public class ClientToServerDisruptor implements Disruptor {
   private String getHostPortList(Collection<ServerSymbolicName> servers) {
     return servers.stream()
         .map(endPoints::get)
-        .map(s -> new HostPort(s.getHostString(), s.getPort()).getHostPort())
+        .map(s -> new HostPort(s).getHostPort())
         .collect(Collectors.joining(","));
   }
 
