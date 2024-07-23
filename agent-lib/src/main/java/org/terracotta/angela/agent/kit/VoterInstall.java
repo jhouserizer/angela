@@ -1,5 +1,6 @@
 /*
  * Copyright Terracotta, Inc.
+ * Copyright Super iPaaS Integration LLC, an IBM Company 2024
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +33,7 @@ public class VoterInstall {
   private final SecurityRootDirectory securityRootDirectory;
   private final TerracottaCommandLineEnvironment tcEnv;
   private final Map<String, TerracottaVoterInstance> terracottaVoterInstances = new HashMap<>();
-  
+
   public VoterInstall(Distribution distribution, File kitLocation, File workingDir, SecurityRootDirectory securityRootDirectory,
                       TerracottaCommandLineEnvironment tcEnv) {
     this.distribution = distribution;
@@ -45,7 +46,7 @@ public class VoterInstall {
   public File getWorkingDir() {
     return workingDir;
   }
-  
+
   public TerracottaVoterInstance getTerracottaVoterInstance(TerracottaVoter terracottaVoter) {
     synchronized (terracottaVoterInstances) {
       return terracottaVoterInstances.get(terracottaVoter.getId());
@@ -66,11 +67,11 @@ public class VoterInstall {
       return terracottaVoterInstances.size();
     }
   }
-  
+
   public int terracottaVoterInstanceCount() {
     synchronized (terracottaVoterInstances) {
       return terracottaVoterInstances.size();
     }
   }
-  
+
 }
