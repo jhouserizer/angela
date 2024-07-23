@@ -1,5 +1,6 @@
 /*
  * Copyright Terracotta, Inc.
+ * Copyright Super iPaaS Integration LLC, an IBM Company 2024
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +123,7 @@ public class Distribution107InlineController extends Distribution107Controller {
           return TerracottaServerState.STOPPED;
         }
       }
-      
+
       public boolean isStopped() {
         Object server = ref.get();
         if (server instanceof Future) {
