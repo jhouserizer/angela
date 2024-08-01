@@ -44,7 +44,7 @@
 
   <properties>
     <maven.version>3.6.3</maven.version>
-    <terracotta-utilities.base.version>0.0.11</terracotta-utilities.base.version>
+    <terracotta-utilities.base.version>0.0.19</terracotta-utilities.base.version>
     <terracotta-utilities.range.version>[${terracotta-utilities.base.version},)</terracotta-utilities.range.version>
 
     <!-- Third-party dependencies -->
