@@ -93,7 +93,7 @@ public class Distribution implements Serializable {
   }
 
   public DistributionController createDistributionController() {
-    if (version.getMajor() == 11
+    if (version.getMajor() >= 11
         || (version.getMajor() == 10 && version.getMinor() >= 7) //tc-ee 10.7
         || (version.getMajor() == 5 && version.getMinor() >= 7) //tc-platform 5.7 and above
         || (version.getMajor() == 3 && version.getMinor() >= 9) //ehcache 3.9 and above
