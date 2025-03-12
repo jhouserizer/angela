@@ -28,7 +28,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
-import org.terracotta.angela.common.util.AngelaVersion;
+import org.terracotta.angela.common.util.AngelaVersions;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -129,8 +129,8 @@ public class IgniteAgentGroup extends AgentGroup {
       if (!attrs.containsKey("angela.group") || !Objects.equals(attrs.get("angela.group"), getId().toString())) {
         throw new IllegalStateException("Agent: " + agentID + " in group: " + attrs.get("angela.group") + " is not part of group: " + getId());
       }
-      if (!attrs.containsKey("angela.version") || !Objects.equals(attrs.get("angela.version"), AngelaVersion.getAngelaVersion())) {
-        throw new IllegalStateException("Agent: " + agentID + " is running version [" + attrs.get("angela.version") + "] but the expected version is [" + AngelaVersion.getAngelaVersion() + "]");
+      if (!attrs.containsKey("angela.version") || !Objects.equals(attrs.get("angela.version"), AngelaVersions.INSTANCE.getAngelaVersion())) {
+        throw new IllegalStateException("Agent: " + agentID + " is running version [" + attrs.get("angela.version") + "] but the expected version is [" + AngelaVersions.INSTANCE.getAngelaVersion() + "]");
       }
 
       logger.info("Agent: {} has joined cluster group: {}", agentID, getId());

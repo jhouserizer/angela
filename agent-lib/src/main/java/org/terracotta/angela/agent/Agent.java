@@ -34,7 +34,7 @@ import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
-import org.terracotta.angela.common.util.AngelaVersion;
+import org.terracotta.angela.common.util.AngelaVersions;
 import org.terracotta.angela.common.util.IpUtils;
 import org.zeroturnaround.process.PidUtil;
 import org.zeroturnaround.process.ProcessUtil;
@@ -220,7 +220,7 @@ public class Agent implements AutoCloseable {
 
     IgniteConfiguration cfg = new IgniteConfiguration();
     Map<String, String> userAttributes = new HashMap<>();
-    userAttributes.put("angela.version", AngelaVersion.getAngelaVersion());
+    userAttributes.put("angela.version", AngelaVersions.INSTANCE.getAngelaVersion());
     userAttributes.put("angela.nodeName", agentID.toString());
     userAttributes.put("angela.group", group.toString());
     // set how the agent was started: inline == embedded in jvm, spawned == agent has its own JVM
