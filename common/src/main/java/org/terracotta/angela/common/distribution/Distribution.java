@@ -16,6 +16,7 @@
  */
 package org.terracotta.angela.common.distribution;
 
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Version;
@@ -76,8 +77,16 @@ public class Distribution implements Serializable {
     return new Distribution(version, packageType, licenseType, EnumSet.noneOf(RuntimeOption.class));
   }
 
+  public static Distribution distribution(PackageType packageType, LicenseType licenseType) {
+    return new Distribution(Version.version(AngelaProperties.DISTRIBUTION.getValue()), packageType, licenseType, EnumSet.noneOf(RuntimeOption.class));
+  }
+
   public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType, RuntimeOption... runtime) {
     return new Distribution(version, packageType, licenseType, runtime.length == 0 ? EnumSet.noneOf(RuntimeOption.class) : EnumSet.copyOf(Arrays.asList(runtime)));
+  }
+
+  public static Distribution distribution(PackageType packageType, LicenseType licenseType, RuntimeOption... runtime) {
+    return new Distribution(Version.version(AngelaProperties.DISTRIBUTION.getValue()), packageType, licenseType, runtime.length == 0 ? EnumSet.noneOf(RuntimeOption.class) : EnumSet.copyOf(Arrays.asList(runtime)));
   }
 
   public Version getVersion() {
