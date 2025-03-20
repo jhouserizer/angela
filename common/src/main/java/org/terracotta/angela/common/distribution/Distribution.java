@@ -22,15 +22,12 @@ import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Version;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
-import static org.terracotta.angela.common.topology.LicenseType.GO;
-import static org.terracotta.angela.common.topology.LicenseType.MAX;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA;
-import static org.terracotta.angela.common.topology.LicenseType.TERRACOTTA_OS;
 
 /**
  * @author Aurelien Broszniowski
@@ -43,34 +40,13 @@ public class Distribution implements Serializable {
   private final PackageType packageType;
   private final LicenseType licenseType;
   private final EnumSet<RuntimeOption> runtimeOptions;
+  private Class<? extends DistributionController> distributionControllerType;
 
   private Distribution(Version version, PackageType packageType, LicenseType licenseType, EnumSet<RuntimeOption> runtimeOptions) {
     this.version = requireNonNull(version);
     this.packageType = requireNonNull(packageType);
-    this.licenseType = validateLicenseType(version, licenseType);
+    this.licenseType = licenseType;
     this.runtimeOptions = runtimeOptions;
-  }
-
-  private LicenseType validateLicenseType(Version version, LicenseType licenseType) {
-    requireNonNull(licenseType);
-    if (version.getMajor() == 4) {
-      if (licenseType != GO && licenseType != MAX) {
-        return throwException("Expected license of type '%s' or '%s for version: %s, but found: %s", GO, MAX, version, licenseType);
-      }
-    } else if (version.getMajor() == 3 || version.getMajor() == 5) {
-      if (licenseType != TERRACOTTA_OS) {
-        throwException("Expected license of type '%s' for version: %s, but found: %s", TERRACOTTA_OS, version, licenseType);
-      }
-    } else {
-      if (licenseType != TERRACOTTA) {
-        throwException("Expected license of type '%s' for version: %s, but found: %s", TERRACOTTA, version, licenseType);
-      }
-    }
-    return licenseType;
-  }
-
-  private LicenseType throwException(String string, Object... args) {
-    throw new IllegalArgumentException(String.format(string, args));
   }
 
   public static Distribution distribution(Version version, PackageType packageType, LicenseType licenseType) {
@@ -89,6 +65,14 @@ public class Distribution implements Serializable {
     return new Distribution(Version.version(AngelaProperties.DISTRIBUTION.getValue()), packageType, licenseType, runtime.length == 0 ? EnumSet.noneOf(RuntimeOption.class) : EnumSet.copyOf(Arrays.asList(runtime)));
   }
 
+  /**
+   * Manually select the DistributionController implementation to use
+   */
+  public Distribution withDistributionController(Class<? extends DistributionController> distributionControllerType) {
+    this.distributionControllerType = requireNonNull(distributionControllerType);
+    return this;
+  }
+
   public Version getVersion() {
     return version;
   }
@@ -101,27 +85,57 @@ public class Distribution implements Serializable {
     return licenseType;
   }
 
-  public DistributionController createDistributionController() {
-    if (version.getMajor() >= 11
-        || (version.getMajor() == 10 && version.getMinor() >= 7) //tc-ee 10.7
-        || (version.getMajor() == 5 && version.getMinor() >= 7) //tc-platform 5.7 and above
-        || (version.getMajor() == 3 && version.getMinor() >= 9) //ehcache 3.9 and above
-    ) {
-      if (runtimeOptions.contains(RuntimeOption.INLINE_SERVERS)) {
-        return new Distribution107InlineController(this);
-      } else {
-        return new Distribution107Controller(this);
-      }
+  public Class<? extends DistributionController> getDistributionControllerType() {
+    // manually set ?
+    if (distributionControllerType != null) {
+      return distributionControllerType;
     }
 
-    if (version.getMajor() == 10 || version.getMajor() == 3) {
-      return new Distribution102Controller(this);
-    } else {
-      if (version.getMinor() >= 3) {
-        return new Distribution43Controller(this);
-      }
+    // 11.x, 12.x and above => TCDB
+    if (version.getMajor() >= 11) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
     }
+
+    // 10.7 and above => TCDB
+    if (version.getMajor() == 10 && version.getMinor() >= 7) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
+    }
+
+    // 10.2 to 10.6 => TCDB before dynamic config
+    if (version.getMajor() == 10 && version.getMinor() < 7) {
+      return Distribution102Controller.class;
+    }
+
+    // 5.7, 5.8, 5.9, 5.10, 5.11 and above => platform layout and test kit
+    if (version.getMajor() == 5 && version.getMinor() >= 7) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
+    }
+
+    // 4.3, 4.4 and above => BM
+    if (version.getMajor() == 4 && version.getMinor() >= 3) {
+      return Distribution43Controller.class;
+    }
+
+    // 3.9 and above => Ehcache
+    if (version.getMajor() == 3 && version.getMinor() >= 9) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
+    }
+
+    // 3.8 at most => Ehcache before dynamic config
+    if (version.getMajor() == 3 || version.getMinor() < 9) {
+      return Distribution102Controller.class;
+    }
+
+    // failed to determine controller to use
     throw new IllegalStateException("Cannot create a DistributionController for version: " + version);
+  }
+
+  public DistributionController createDistributionController() {
+    try {
+      return getDistributionControllerType().getConstructor(getClass()).newInstance(this);
+    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+      throw new IllegalStateException("Cannot create a DistributionController for version: " + version, e);
+    }
   }
 
   @Override
