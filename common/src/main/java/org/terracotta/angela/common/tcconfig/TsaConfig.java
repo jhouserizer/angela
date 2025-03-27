@@ -47,7 +47,7 @@ public class TsaConfig {
   }
 
   public static TsaConfig tsaConfig(Version version, List<TsaStripeConfig> stripeConfigs, Supplier<TcConfig> tcConfigSupplier) {
-    if (version.getMajor() < 10) {
+    if (version.getMajor() == 4) {
       throw new UnsupportedOperationException("Dynamic TcConfig generation for BigMemory is not supported");
     }
     return new TsaConfig(buildTcConfigs(version, stripeConfigs, tcConfigSupplier));

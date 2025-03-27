@@ -83,7 +83,7 @@ public class Distribution102Controller extends DistributionController {
   private final boolean tsaFullLogging = AngelaProperties.TSA_FULL_LOGGING.getBooleanValue();
   private final boolean tmsFullLogging = AngelaProperties.TMS_FULL_LOGGING.getBooleanValue();
 
-  Distribution102Controller(Distribution distribution) {
+  public Distribution102Controller(Distribution distribution) {
     super(distribution);
   }
 

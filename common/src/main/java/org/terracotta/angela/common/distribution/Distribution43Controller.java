@@ -82,12 +82,8 @@ public class Distribution43Controller extends DistributionController {
 
   private final boolean tsaFullLogging = TSA_FULL_LOGGING.getBooleanValue();
 
-  Distribution43Controller(Distribution distribution) {
+  public Distribution43Controller(Distribution distribution) {
     super(distribution);
-    Version version = distribution.getVersion();
-    if (version.getMajor() != 4) {
-      throw new IllegalStateException(getClass().getSimpleName() + " cannot work with distribution version " + version);
-    }
   }
 
   @Override

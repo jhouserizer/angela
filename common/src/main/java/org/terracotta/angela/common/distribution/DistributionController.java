@@ -49,7 +49,7 @@ public abstract class DistributionController {
 
   protected final Distribution distribution;
 
-  DistributionController(Distribution distribution) {
+  protected DistributionController(Distribution distribution) {
     this.distribution = distribution;
   }
 
