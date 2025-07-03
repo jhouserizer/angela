@@ -130,7 +130,11 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
-          <!-- Without this, IT tests do not run on Java 11. Why ?? -->
+          <jdkToolchain>
+            <version>1.11</version>
+          </jdkToolchain>
+          <trimStackTrace>false</trimStackTrace>
+          <reuseForks>false</reuseForks>
           <useModulePath>false</useModulePath>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
