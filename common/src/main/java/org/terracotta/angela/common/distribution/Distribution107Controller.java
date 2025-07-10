@@ -350,6 +350,23 @@ public class Distribution107Controller extends DistributionController {
       throw new RuntimeException(e);
     }
   }
+  
+  @Override
+  public ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+                                              TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    try {
+      ProcessResult processResult = new ProcessExecutor(createImportToolCommand(kitDir, workingDir, securityDir, arguments))
+          .directory(workingDir)
+          .environment(env.buildEnv(envOverrides))
+          .readOutput(true)
+          .redirectOutputAlsoTo(Slf4jStream.of(ExternalLoggers.importToolLogger).asInfo())
+          .redirectErrorStream(true)
+          .execute();
+      return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
   public ToolExecutionResult configureCluster(File kitDir, File workingDir, Topology topology, Map<ServerSymbolicName, Integer> proxyTsaPorts, License license, SecurityRootDirectory securityDir,
@@ -600,6 +617,20 @@ public class Distribution107Controller extends DistributionController {
     LOGGER.debug("Cluster tool command: {}", command);
     return command;
   }
+  
+  List<String> createImportToolCommand(File installLocation, File workingDir, SecurityRootDirectory securityDir, String[] arguments) {
+    List<String> command = new ArrayList<>();
+    command.add(getImportToolExecutable(installLocation));
+    if (securityDir != null) {
+      Path securityDirPath = workingDir.toPath().resolve("import-tool-security-dir");
+      securityDir.createSecurityRootDirectory(securityDirPath);
+      command.add("-srd");
+      command.add(securityDirPath.toString());
+    }
+    command.addAll(Arrays.asList(arguments));
+    LOGGER.debug("Import tool command: {}", command);
+    return command;
+  }
 
   private String getConfigToolExecutable(File installLocation) {
     String execPath = "tools" + separator + "bin" + separator + "config-tool" + OS.INSTANCE.getShellExtension();
@@ -614,6 +645,17 @@ public class Distribution107Controller extends DistributionController {
 
   private String getClusterToolExecutable(File installLocation) {
     String execPath = "tools" + separator + "bin" + separator + "cluster-tool" + OS.INSTANCE.getShellExtension();
+
+    if (distribution.getPackageType() == PackageType.KIT) {
+      return installLocation.getAbsolutePath() + separator + execPath;
+    } else if (distribution.getPackageType() == PackageType.SAG_INSTALLER) {
+      return installLocation.getAbsolutePath() + separator + terracottaInstallationRoot() + separator + execPath;
+    }
+    throw new IllegalStateException("Can not define cluster tool command for distribution: " + distribution);
+  }
+  
+  private String getImportToolExecutable(File installLocation) {
+    String execPath = "tools" + separator + "bin" + separator + "import-tool" + OS.INSTANCE.getShellExtension();
 
     if (distribution.getPackageType() == PackageType.KIT) {
       return installLocation.getAbsolutePath() + separator + execPath;

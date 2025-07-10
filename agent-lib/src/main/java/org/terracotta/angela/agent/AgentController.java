@@ -91,6 +91,7 @@ public class AgentController {
   private final Map<InstanceId, VoterInstall> voterInstalls = new HashMap<>();
   private final Map<InstanceId, ToolInstall> clusterToolInstalls = new HashMap<>();
   private final Map<InstanceId, ToolInstall> configToolInstalls = new HashMap<>();
+  private final Map<InstanceId, ToolInstall> importToolInstalls = new HashMap<>();
 
   private final AgentID localAgentID;
   private final PortAllocator portAllocator;
@@ -184,6 +185,15 @@ public class AgentController {
     TerracottaToolInstance clusterToolInstance = toolInstall.getInstance();
     if (clusterToolInstance == null) {
       throw new IllegalStateException("Cluster tool has not been installed");
+    }
+    return toolInstall.getWorkingDir().getPath();
+  }
+
+  public String getImportToolInstallPath(InstanceId instanceId) {
+    ToolInstall toolInstall = importToolInstalls.get(instanceId);
+    TerracottaToolInstance clusterToolInstance = toolInstall.getInstance();
+    if (clusterToolInstance == null) {
+      throw new IllegalStateException("Import tool has not been installed");
     }
     return toolInstall.getWorkingDir().getPath();
   }
@@ -294,6 +304,28 @@ public class AgentController {
     return true;
   }
 
+  public boolean installImportTool(InstanceId instanceId, String hostName, Distribution distribution,
+                                   License license, String kitInstallationName, SecurityRootDirectory securityRootDirectory,
+                                   TerracottaCommandLineEnvironment tcEnv, String kitInstallationPath) {
+    ToolInstall importToolInstall = importToolInstalls.get(instanceId);
+
+    if (importToolInstall == null) {
+      Optional<Dirs> dirs = Dirs.discover(instanceId, hostName, distribution, license, kitInstallationName, kitInstallationPath);
+      if (!dirs.isPresent()) {
+        return false;
+      }
+
+      importToolInstalls.computeIfAbsent(instanceId, id -> {
+        BiFunction<Map<String, String>, String[], ToolExecutionResult> operation = (env, command) -> {
+          DistributionController distributionController = distribution.createDistributionController();
+          return distributionController.invokeImportTool(dirs.get().kitDir, dirs.get().workingDir, securityRootDirectory, tcEnv, env, command);
+        };
+        return new ToolInstall(dirs.get().kitDir, dirs.get().workingDir, distribution, operation);
+      });
+    }
+    return true;
+  }
+
   public int startTms(InstanceId instanceId, Map<String, String> envOverrides) {
     TerracottaManagementServerInstance serverInstance = tmsInstalls.get(instanceId)
         .getTerracottaManagementServerInstance();
@@ -386,6 +418,19 @@ public class AgentController {
       clusterToolInstalls.remove(instanceId);
       File installLocation = clusterToolInstall.getWorkingDir();
       logger.debug("[{}] Uninstalling kit(s) from {} for cluster tool", localAgentID, installLocation);
+      RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
+      kitManager.deleteInstall(installLocation);
+    } else {
+      logger.debug("[{}] No installed kit for " + hostName);
+    }
+  }
+
+  public void uninstallImportTool(InstanceId instanceId, Distribution distribution, String hostName, String kitInstallationName) {
+    ToolInstall importToolInstall = importToolInstalls.get(instanceId);
+    if (importToolInstall != null) {
+      clusterToolInstalls.remove(instanceId);
+      File installLocation = importToolInstall.getWorkingDir();
+      logger.debug("[{}] Uninstalling kit(s) from {} for import tool", localAgentID, installLocation);
       RemoteKitManager kitManager = new RemoteKitManager(instanceId, distribution, kitInstallationName);
       kitManager.deleteInstall(installLocation);
     } else {
@@ -514,6 +559,14 @@ public class AgentController {
       throw new IllegalStateException("Cluster tool has not been installed");
     }
     return clusterToolInstall.getInstance().execute(env, command);
+  }
+
+  public ToolExecutionResult importTool(InstanceId instanceId, Map<String, String> env, String... command) {
+    ToolInstall importToolInstall = importToolInstalls.get(instanceId);
+    if (importToolInstall == null) {
+      throw new IllegalStateException("Import tool has not been installed");
+    }
+    return importToolInstall.getInstance().execute(env, command);
   }
 
   public ToolExecutionResult configTool(InstanceId instanceId, Map<String, String> env, String... command) {

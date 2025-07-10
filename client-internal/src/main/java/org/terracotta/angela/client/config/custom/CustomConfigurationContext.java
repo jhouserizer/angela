@@ -38,6 +38,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
   private final List<CustomClientArrayConfigurationContext> customClientArrayConfigurationContexts = new ArrayList<>();
   private CustomVoterConfigurationContext customVoterConfigurationContext;
   private CustomClusterToolConfigurationContext customClusterToolConfigurationContext;
+  private CustomImportToolConfigurationContext customImportToolConfigurationContext;
   private CustomConfigToolConfigurationContext customConfigToolConfigurationContext;
 
   public static CustomConfigurationContext customConfigurationContext() {
@@ -135,6 +136,11 @@ public class CustomConfigurationContext implements ConfigurationContext {
   public ToolConfigurationContext configTool() {
     return customConfigToolConfigurationContext;
   }
+  
+  @Override
+  public ToolConfigurationContext importTool() {
+    return customImportToolConfigurationContext;
+  }
 
   @Override
   public VoterConfigurationContext voter() {
@@ -156,6 +162,15 @@ public class CustomConfigurationContext implements ConfigurationContext {
     }
     customConfigToolConfigurationContext = new CustomConfigToolConfigurationContext();
     configTool.accept(customConfigToolConfigurationContext);
+    return this;
+  }
+  
+  public CustomConfigurationContext importTool(Consumer<CustomImportToolConfigurationContext> importTool) {
+    if (customImportToolConfigurationContext != null) {
+      throw new IllegalStateException("Import tool config already defined");
+    }
+    customImportToolConfigurationContext = new CustomImportToolConfigurationContext();
+    importTool.accept(customImportToolConfigurationContext);
     return this;
   }
 
