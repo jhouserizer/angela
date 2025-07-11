@@ -84,7 +84,7 @@ public enum AngelaProperties {
   JAVA_RESOLVER("angela.java.resolver", "toolchain"),
   JAVA_HOME("angela.java.home", System.getProperty("java.home")),
   JAVA_VENDOR("angela.java.vendor", "zulu"),
-  JAVA_VERSION("angela.java.version", "1.8"),
+  JAVA_VERSION("angela.java.version", "1.11"),
   JAVA_OPTS("angela.java.opts", "-Djdk.security.allowNonCaAnchor=false"),
   ;
 
