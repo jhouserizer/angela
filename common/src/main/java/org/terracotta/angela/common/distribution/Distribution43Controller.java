@@ -285,6 +285,12 @@ public class Distribution43Controller extends DistributionController {
     throw new UnsupportedOperationException("Running config tool is not supported in this distribution version");
   }
 
+  @Override
+  public ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+                                              TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running import tool is not supported in this distribution version"); 
+  }
+
   /**
    * Construct the Start Command with the Version, Tc Config file and server name
    *

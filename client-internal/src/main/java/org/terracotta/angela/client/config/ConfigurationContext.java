@@ -44,6 +44,8 @@ public interface ConfigurationContext {
   ToolConfigurationContext clusterTool();
 
   ToolConfigurationContext configTool();
+  
+  ToolConfigurationContext importTool();
 
   VoterConfigurationContext voter();
 }

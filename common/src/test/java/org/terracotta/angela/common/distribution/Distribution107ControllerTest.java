@@ -190,6 +190,47 @@ public class Distribution107ControllerTest {
   }
 
   @Test
+  public void testCreateSimpleImportToolCommandForKit() {
+    Distribution distribution = mock(Distribution.class);
+    when(distribution.getPackageType()).thenReturn(PackageType.KIT);
+    Distribution107Controller controller = new Distribution107Controller(distribution);
+
+    final File installLocation = new File("/somedir");
+    final List<String> importToolCommand = controller.createImportToolCommand(installLocation, null, null, new String[]{});
+    assertThat(importToolCommand.get(0), is(equalTo(new File("/somedir/tools/bin/import-tool").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
+    assertThat(importToolCommand.size(), is(1));
+  }
+
+  @Test
+  public void testCreateImportToolWithSecurityCommandForKit() {
+    Distribution distribution = mock(Distribution.class);
+    when(distribution.getPackageType()).thenReturn(PackageType.KIT);
+    Distribution107Controller controller = new Distribution107Controller(distribution);
+
+    final File installLocation = new File("/somedir");
+    final File workDir = new File("/workdir");
+    final File securityDir = new File("/securedir");
+    final SecurityRootDirectory securityRootDirectory = SecurityRootDirectory.securityRootDirectory(securityDir.toPath());
+    final List<String> importToolCommand = controller.createImportToolCommand(installLocation, workDir, securityRootDirectory, new String[]{});
+    assertThat(importToolCommand.get(0), is(equalTo(new File("/somedir/tools/bin/import-tool").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
+    assertThat(importToolCommand.get(1), is(equalTo("-srd")));
+    assertThat(importToolCommand.get(2), is(equalTo(new File("/workdir/import-tool-security-dir").getPath())));
+    assertThat(importToolCommand.size(), is(3));
+  }
+  
+  @Test
+  public void testCreateSimpleImportToolCommandForSAG() {
+    Distribution distribution = mock(Distribution.class);
+    when(distribution.getPackageType()).thenReturn(PackageType.SAG_INSTALLER);
+    Distribution107Controller controller = new Distribution107Controller(distribution);
+
+    final File installLocation = new File("/somedir");
+    final List<String> importToolCommand = controller.createImportToolCommand(installLocation, null, null, new String[]{});
+    assertThat(importToolCommand.get(0), is(equalTo(new File("/somedir/TerracottaDB/tools/bin/import-tool").getAbsolutePath() + OS.INSTANCE.getShellExtension())));
+    assertThat(importToolCommand.size(), is(1));
+  }
+
+  @Test
   public void testStartTmsCommandForKit() {
     Distribution distribution = mock(Distribution.class);
     when(distribution.getPackageType()).thenReturn(PackageType.KIT);

@@ -194,6 +194,12 @@ public class Distribution102Controller extends DistributionController {
     List<String> command = createClusterToolCommand(kitDir, workingDir, securityDir, arguments);
     return executeCommand(command, env, workingDir, envOverrides);
   }
+  
+  @Override
+  public ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+                                              TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
+    throw new UnsupportedOperationException("Running import tool is not supported in this distribution version");
+  }
 
   @Override
   public ToolExecutionResult invokeConfigTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
