@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>angela-client-internal</artifactId>
-
+  <name>angela-client-internal</name>
 
   <dependencies>
     <dependency>

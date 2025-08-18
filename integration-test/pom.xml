@@ -28,6 +28,7 @@
   </parent>
 
   <artifactId>integration-test</artifactId>
+  <name>angela-integration-test</name>
 
   <properties>
     <ehcache.version.xml>3.8.1</ehcache.version.xml>

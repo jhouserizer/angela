@@ -28,6 +28,7 @@
   </parent>
 
   <artifactId>docs</artifactId>
+  <name>angela-docs</name>
 
   <dependencies>
     <dependency>
