@@ -28,6 +28,7 @@
   </parent>
 
   <artifactId>angela</artifactId>
+  <name>angela</name>
 
   <dependencies>
     <dependency>

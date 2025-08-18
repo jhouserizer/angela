@@ -28,6 +28,7 @@
   </parent>
 
   <artifactId>angela-agent</artifactId>
+  <name>angela-agent</name>
 
   <dependencies>
     <dependency>
