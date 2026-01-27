@@ -62,6 +62,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
+import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_RELAY;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_IN_DIAGNOSTIC_MODE;
 import static org.terracotta.angela.common.TerracottaServerState.STOPPED;
 import static org.terracotta.utilities.test.matchers.Eventually.within;
@@ -406,6 +407,10 @@ public class AngelaRule extends ExtendedTestRule implements AutoCloseable {
 
   public final void waitForPassive(int stripeId, int nodeId) {
     waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_PASSIVE)));
+  }
+
+  public final void waitForPassiveRelay(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_PASSIVE_RELAY)));
   }
 
   public final void waitForDiagnostic(int stripeId, int nodeId) {
