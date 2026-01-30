@@ -116,6 +116,8 @@ public class Distribution107InlineController extends Distribution107Controller {
                 return TerracottaServerState.START_SUSPENDED;
               }
               return TerracottaServerState.STARTED_AS_PASSIVE;
+            case "PASSIVE-RELAY":
+              return TerracottaServerState.STARTED_AS_PASSIVE_RELAY;
             default:
               return (!isAlive() || isStopped()) ? TerracottaServerState.STOPPED : TerracottaServerState.STARTING;
           }
