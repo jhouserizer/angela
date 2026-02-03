@@ -16,7 +16,10 @@
  */
 package org.terracotta.angela.common.cluster;
 
-import org.terracotta.angela.agent.com.grid.GridBarrier;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicLong;
+import org.apache.ignite.IgniteCountDownLatch;
 
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
@@ -25,18 +28,53 @@ import java.util.concurrent.TimeoutException;
 public class Barrier implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private final GridBarrier delegate;
+  @SuppressFBWarnings("SE_BAD_FIELD")
+  private final Ignite ignite;
+  private final int count;
+  private final int index;
+  private final String name;
+  @SuppressFBWarnings("SE_BAD_FIELD")
+  private volatile IgniteCountDownLatch countDownLatch;
+  private volatile int resetCount;
 
-  Barrier(GridBarrier delegate) {
-    this.delegate = delegate;
+  Barrier(Ignite ignite, int count, String name) {
+    this.ignite = ignite;
+    this.count = count;
+    IgniteAtomicLong igniteCounter = ignite.atomicLong("Barrier-Counter-" + name, 0, true);
+    this.index = (int) igniteCounter.getAndIncrement();
+    igniteCounter.compareAndSet(count, 0);
+    this.name = name;
+    resetLatch();
+  }
+
+  private void resetLatch() {
+    countDownLatch = ignite.countDownLatch("Barrier-" + name + "#" + (resetCount++), count, true, true);
   }
 
   public int await() {
-    return delegate.await();
+    int countDown = countDownLatch.countDown();
+    try {
+      if (countDown > 0) {
+        countDownLatch.await();
+      }
+      return index;
+    } finally {
+      resetLatch();
+    }
   }
 
   public int await(long time, TimeUnit unit) throws TimeoutException {
-    return delegate.await(time, unit);
+    int countDown = countDownLatch.countDown();
+    try {
+      if (countDown > 0) {
+        if (!countDownLatch.await(time, unit)) {
+          throw new TimeoutException();
+        }
+      }
+      return index;
+    } finally {
+      resetLatch();
+    }
   }
 
 }

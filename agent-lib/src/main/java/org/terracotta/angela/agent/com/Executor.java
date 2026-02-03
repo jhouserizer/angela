@@ -16,6 +16,8 @@
  */
 package org.terracotta.angela.agent.com;
 
+import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.clientconfig.ClientId;
@@ -23,8 +25,6 @@ import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.FileUtils;
-import org.terracotta.angela.agent.com.grid.RemoteCallable;
-import org.terracotta.angela.agent.com.grid.RemoteRunnable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -62,11 +62,11 @@ public interface Executor extends AutoCloseable {
 
   Cluster getCluster(ClientId clientId);
 
-  // remote calls to target agents
+  // ignite calls to target remote agents
 
-  Future<Void> executeAsync(AgentID agentID, RemoteRunnable job);
+  Future<Void> executeAsync(AgentID agentID, IgniteRunnable job);
 
-  <R> Future<R> executeAsync(AgentID agentID, RemoteCallable<R> job);
+  <R> Future<R> executeAsync(AgentID agentID, IgniteCallable<R> job);
 
   BlockingQueue<FileTransfer> getFileTransferQueue(InstanceId instanceId);
 
@@ -81,7 +81,7 @@ public interface Executor extends AutoCloseable {
 
   // defaults
 
-  default void execute(AgentID agentID, RemoteRunnable job) {
+  default void execute(AgentID agentID, IgniteRunnable job) {
     try {
       executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {
@@ -89,7 +89,7 @@ public interface Executor extends AutoCloseable {
     }
   }
 
-  default <R> R execute(AgentID agentID, RemoteCallable<R> job) {
+  default <R> R execute(AgentID agentID, IgniteCallable<R> job) {
     try {
       return executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {

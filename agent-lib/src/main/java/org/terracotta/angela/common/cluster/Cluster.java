@@ -16,8 +16,9 @@
  */
 package org.terracotta.angela.common.cluster;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.ignite.Ignite;
 import org.terracotta.angela.agent.com.AgentID;
-import org.terracotta.angela.agent.com.grid.GridCluster;
 import org.terracotta.angela.common.clientconfig.ClientId;
 
 import java.io.Serializable;
@@ -27,30 +28,35 @@ import static java.util.Objects.requireNonNull;
 public class Cluster implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private final GridCluster gridCluster;
+  @SuppressFBWarnings("SE_BAD_FIELD")
+  private final Ignite ignite;
   private final AgentID from;
   private final ClientId clientId;
 
-  public Cluster(GridCluster gridCluster, AgentID from, ClientId clientId) {
-    this.gridCluster = requireNonNull(gridCluster);
+  public Cluster(Ignite ignite, AgentID from, ClientId clientId) {
+    this.ignite = requireNonNull(ignite);
     this.from = requireNonNull(from);
     this.clientId = clientId;
   }
 
+  public Ignite getIgnite() {
+    return ignite;
+  }
+
   public Barrier barrier(String name, int count) {
-    return new Barrier(gridCluster.barrier(name, count));
+    return new Barrier(ignite, count, name);
   }
 
   public AtomicCounter atomicCounter(String name, long initialValue) {
-    return new AtomicCounter(gridCluster.atomicCounter(name, initialValue), name);
+    return new AtomicCounter(ignite, name, initialValue);
   }
 
   public AtomicBoolean atomicBoolean(String name, boolean initialValue) {
-    return new AtomicBoolean(gridCluster.atomicBoolean(name, initialValue), name);
+    return new AtomicBoolean(ignite, name, initialValue);
   }
 
   public <T> AtomicReference<T> atomicReference(String name, T initialValue) {
-    return new AtomicReference<>(gridCluster.atomicReference(name, initialValue), name);
+    return new AtomicReference<>(ignite, name, initialValue);
   }
 
   /**
@@ -72,7 +78,6 @@ public class Cluster implements Serializable {
    * The current local agent where we are executing the closure
    */
   public AgentID getLocalAgentId() {
-    String nodeName = gridCluster.getLocalNodeName();
-    return nodeName == null ? null : AgentID.valueOf(nodeName);
+    return AgentID.valueOf(ignite.cluster().localNode().attribute("angela.nodeName"));
   }
 }

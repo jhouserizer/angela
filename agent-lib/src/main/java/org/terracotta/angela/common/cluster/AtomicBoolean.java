@@ -16,34 +16,37 @@
  */
 package org.terracotta.angela.common.cluster;
 
-import org.terracotta.angela.agent.com.grid.GridAtomicBoolean;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicLong;
 
 import java.io.Serializable;
 
 public class AtomicBoolean implements Serializable {
   private static final long serialVersionUID = 1L;
   private final String name;
-  private final GridAtomicBoolean delegate;
+  @SuppressFBWarnings("SE_BAD_FIELD")
+  private final IgniteAtomicLong igniteCounter;
 
-  AtomicBoolean(GridAtomicBoolean delegate, String name) {
-    this.delegate = delegate;
+  AtomicBoolean(Ignite ignite, String name, boolean initVal) {
     this.name = name;
+    igniteCounter = ignite.atomicLong("Atomic-Boolean-" + name, initVal ? 1L : 0L, true);
   }
 
   public boolean get() {
-    return delegate.get();
+    return igniteCounter.get() != 0L;
   }
 
   public void set(boolean value) {
-    delegate.set(value);
+    igniteCounter.getAndSet(value ? 1L : 0L);
   }
 
   public boolean getAndSet(boolean value) {
-    return delegate.getAndSet(value);
+    return igniteCounter.getAndSet(value ? 1L : 0L) != 0L;
   }
 
   public boolean compareAndSet(boolean expVal, boolean newVal) {
-    return delegate.compareAndSet(expVal, newVal);
+    return igniteCounter.compareAndSet(expVal ? 1L : 0L, newVal ? 1L : 0L);
   }
 
   @Override
