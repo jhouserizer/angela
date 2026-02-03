@@ -16,35 +16,31 @@
  */
 package org.terracotta.angela.common.cluster;
 
-import org.terracotta.angela.agent.com.grid.GridAtomicReference;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicReference;
 
 import java.io.Serializable;
 
 public class AtomicReference<T> implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  private final GridAtomicReference<T> delegate;
-  private final String name;
+  @SuppressFBWarnings("SE_BAD_FIELD")
+  private final IgniteAtomicReference<T> igniteReference;
 
-  AtomicReference(GridAtomicReference<T> delegate, String name) {
-    this.delegate = delegate;
-    this.name = name;
+  AtomicReference(Ignite ignite, String name, T initialValue) {
+    igniteReference = ignite.atomicReference("Atomic-Reference-" + name, initialValue, true);
   }
 
   public void set(T value) {
-    delegate.set(value);
+    igniteReference.set(value);
   }
 
   public boolean compareAndSet(T expect, T update) {
-    return delegate.compareAndSet(expect, update);
+    return igniteReference.compareAndSet(expect, update);
   }
 
   public T get() {
-    return delegate.get();
-  }
-
-  @Override
-  public String toString() {
-    return name + ":" + get();
+    return igniteReference.get();
   }
 }
