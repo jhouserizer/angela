@@ -16,8 +16,8 @@
  */
 package org.terracotta.angela.agent.com;
 
-import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteRunnable;
+import org.terracotta.angela.agent.com.RemoteCallable;
+import org.terracotta.angela.agent.com.RemoteRunnable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -138,16 +138,16 @@ public class IgniteLocalExecutorIT {
   public void testExecute() throws ExecutionException, InterruptedException {
     try (Agent agent2 = Agent.ignite(agent.getGroupId(), "client-1", portAllocator, executor.getGroup().getPeerAddresses());
          Executor executor2 = new IgniteLocalExecutor(agent2)) {
-      executor.execute(agentID, (IgniteRunnable) () -> counter.incrementAndGet());
-      executor.execute(agent2.getAgentID(), (IgniteRunnable) () -> counter.incrementAndGet());
+      executor.execute(agentID, (RemoteRunnable) () -> counter.incrementAndGet());
+      executor.execute(agent2.getAgentID(), (RemoteRunnable) () -> counter.incrementAndGet());
       assertEquals(2, counter.get());
 
-      executor2.executeAsync(agentID, (IgniteRunnable) () -> counter.incrementAndGet()).get();
-      executor2.executeAsync(agent2.getAgentID(), (IgniteRunnable) () -> counter.incrementAndGet()).get();
+      executor2.executeAsync(agentID, (RemoteRunnable) () -> counter.incrementAndGet()).get();
+      executor2.executeAsync(agent2.getAgentID(), (RemoteRunnable) () -> counter.incrementAndGet()).get();
       assertEquals(4, counter.get());
 
-      assertEquals(5, executor.execute(agent2.getAgentID(), (IgniteCallable<? extends Object>) () -> counter.incrementAndGet()));
-      assertEquals(6, executor2.executeAsync(agentID, (IgniteCallable<? extends Object>) () -> counter.incrementAndGet()).get());
+      assertEquals(5, executor.execute(agent2.getAgentID(), (RemoteCallable<? extends Object>) () -> counter.incrementAndGet()));
+      assertEquals(6, executor2.executeAsync(agentID, (RemoteCallable<? extends Object>) () -> counter.incrementAndGet()).get());
     }
   }
 

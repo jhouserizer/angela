@@ -16,8 +16,6 @@
  */
 package org.terracotta.angela.agent.com;
 
-import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.clientconfig.ClientId;
@@ -64,9 +62,9 @@ public interface Executor extends AutoCloseable {
 
   // ignite calls to target remote agents
 
-  Future<Void> executeAsync(AgentID agentID, IgniteRunnable job);
+  Future<Void> executeAsync(AgentID agentID, RemoteRunnable job);
 
-  <R> Future<R> executeAsync(AgentID agentID, IgniteCallable<R> job);
+  <R> Future<R> executeAsync(AgentID agentID, RemoteCallable<R> job);
 
   BlockingQueue<FileTransfer> getFileTransferQueue(InstanceId instanceId);
 
@@ -81,7 +79,7 @@ public interface Executor extends AutoCloseable {
 
   // defaults
 
-  default void execute(AgentID agentID, IgniteRunnable job) {
+  default void execute(AgentID agentID, RemoteRunnable job) {
     try {
       executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {
@@ -89,7 +87,7 @@ public interface Executor extends AutoCloseable {
     }
   }
 
-  default <R> R execute(AgentID agentID, IgniteCallable<R> job) {
+  default <R> R execute(AgentID agentID, RemoteCallable<R> job) {
     try {
       return executeAsync(agentID, job).get();
     } catch (InterruptedException | ExecutionException e) {

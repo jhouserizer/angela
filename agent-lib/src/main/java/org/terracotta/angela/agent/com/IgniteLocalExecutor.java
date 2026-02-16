@@ -151,18 +151,20 @@ public class IgniteLocalExecutor implements Executor {
   }
 
   @Override
-  public Future<Void> executeAsync(AgentID agentID, IgniteRunnable job) {
+  public Future<Void> executeAsync(AgentID agentID, RemoteRunnable job) {
     logger.debug("Executing job on: {}", agentID);
+    IgniteRunnable igniteJob = job::run;
     return agentGroup.clusterGroup(agentID)
-        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).runAsync(job)))
+        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).runAsync(igniteJob)))
         .orElseThrow(() -> new IllegalArgumentException("No agent found matching: " + agentID + " in group " + group));
   }
 
   @Override
-  public <R> Future<R> executeAsync(AgentID agentID, IgniteCallable<R> job) {
+  public <R> Future<R> executeAsync(AgentID agentID, RemoteCallable<R> job) {
     logger.debug("Executing job on: {}", agentID);
+    IgniteCallable<R> igniteJob = job::call;
     return agentGroup.clusterGroup(agentID)
-        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).callAsync(job)))
+        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).callAsync(igniteJob)))
         .orElseThrow(() -> new IllegalArgumentException("No agent found matching: " + agentID + " in group " + group));
   }
 
