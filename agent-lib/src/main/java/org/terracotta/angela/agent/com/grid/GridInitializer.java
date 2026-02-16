@@ -25,9 +25,8 @@ package org.terracotta.angela.agent.com.grid;
  * This is typically used for setting up distributed data structures that should only
  * be initialized by one node (e.g., populating initial values, creating shared resources).
  * <p>
- * Note: Instances of this interface and the objects they operate on (like {@link GridCluster}
- * and its primitives) are not meant to be serialized across the network. They are created
- * locally on each node and wrap the underlying distributed primitives.
+ * Note: Instances of this interface are not meant to be serialized across the network.
+ * They are created locally on each node and wrap the underlying distributed primitives.
  */
 public interface GridInitializer {
 

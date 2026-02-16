@@ -60,7 +60,7 @@ public interface Executor extends AutoCloseable {
 
   Cluster getCluster(ClientId clientId);
 
-  // ignite calls to target remote agents
+  // remote job execution
 
   Future<Void> executeAsync(AgentID agentID, RemoteRunnable job);
 
