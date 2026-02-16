@@ -16,7 +16,6 @@
  */
 package org.terracotta.angela.agent.kit;
 
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.common.distribution.Distribution;
@@ -24,13 +23,13 @@ import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.util.FileUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
@@ -111,8 +110,9 @@ public abstract class KitManager {
       throw new RuntimeException("Error reading " + md5File, ioe);
     }
 
-    try (InputStream fis = Files.newInputStream(localInstallerFile)) {
-      if (!IgniteUtils.calculateMD5(fis).equalsIgnoreCase(md5FileHash)) {
+    try {
+      String localInstallerHash = calculateMd5Hex(localInstallerFile);
+      if (!localInstallerHash.equalsIgnoreCase(md5FileHash)) {
         // MD5 does not match? let's consider the archive corrupt
         logger.warn("{} secure hash does not match the contents of {} secure hash file on disk, considering it corrupt", localInstallerFile, md5File);
         FileUtils.deleteQuietly(localInstallerFile.getParent());
@@ -133,5 +133,15 @@ public abstract class KitManager {
 
   public Path getKitInstallationPath() {
     return kitInstallationPath;
+  }
+
+  private static String calculateMd5Hex(Path file) throws IOException, NoSuchAlgorithmException {
+    MessageDigest md = MessageDigest.getInstance("MD5");
+    byte[] digest = md.digest(Files.readAllBytes(file));
+    StringBuilder hex = new StringBuilder(digest.length * 2);
+    for (byte b : digest) {
+      hex.append(String.format("%02x", b));
+    }
+    return hex.toString();
   }
 }
