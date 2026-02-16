@@ -19,7 +19,7 @@ package org.terracotta.angela.client.config.custom;
 import java.nio.file.Path;
 import org.terracotta.angela.client.config.ToolConfigurationContext;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
-import org.terracotta.angela.common.TerracottaImportTool;
+import org.terracotta.angela.common.TerracottaRestoreTool;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.tcconfig.License;
 import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
@@ -28,38 +28,38 @@ import org.terracotta.angela.common.tcconfig.SecurityRootDirectory;
  *
  * @author dpra
  */
-public class CustomImportToolConfigurationContext implements ToolConfigurationContext {
+public class CustomRestoreToolConfigurationContext implements ToolConfigurationContext {
 
   private TerracottaCommandLineEnvironment commandLineEnv = TerracottaCommandLineEnvironment.DEFAULT;
-  private TerracottaImportTool terracottaImportTool;
+  private TerracottaRestoreTool terracottaRestoreTool;
   private SecurityRootDirectory securityRootDirectory;
   private Distribution distribution;
   private License license;
 
-  protected CustomImportToolConfigurationContext() {
+  protected CustomRestoreToolConfigurationContext() {
   }
 
-  public CustomImportToolConfigurationContext importTool(TerracottaImportTool terracottaImportTool) {
-    this.terracottaImportTool = terracottaImportTool;
+  public CustomRestoreToolConfigurationContext restoreTool(TerracottaRestoreTool terracottaRestoreTool) {
+    this.terracottaRestoreTool = terracottaRestoreTool;
     return this;
   }
 
-  public CustomImportToolConfigurationContext securityRootDirectory(Path securityDir) {
+  public CustomRestoreToolConfigurationContext securityRootDirectory(Path securityDir) {
     this.securityRootDirectory = SecurityRootDirectory.securityRootDirectory(securityDir);
     return this;
   }
 
-  public CustomImportToolConfigurationContext distribution(Distribution distribution) {
+  public CustomRestoreToolConfigurationContext distribution(Distribution distribution) {
     this.distribution = distribution;
     return this;
   }
 
-  public CustomImportToolConfigurationContext license(License license) {
+  public CustomRestoreToolConfigurationContext license(License license) {
     this.license = license;
     return this;
   }
 
-  public CustomImportToolConfigurationContext commandLineEnv(TerracottaCommandLineEnvironment commandLineEnv) {
+  public CustomRestoreToolConfigurationContext commandLineEnv(TerracottaCommandLineEnvironment commandLineEnv) {
     this.commandLineEnv = commandLineEnv;
     return this;
   }
@@ -86,11 +86,11 @@ public class CustomImportToolConfigurationContext implements ToolConfigurationCo
 
   @Override
   public String getHostName() {
-    return terracottaImportTool.getHostName();
+    return terracottaRestoreTool.getHostName();
   }
 
-  public TerracottaImportTool getTerracottaImportTool() {
-    return terracottaImportTool;
+  public TerracottaRestoreTool getTerracottaRestoreTool() {
+    return terracottaRestoreTool;
   }
 
 }

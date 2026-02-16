@@ -286,9 +286,9 @@ public class Distribution43Controller extends DistributionController {
   }
 
   @Override
-  public ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+  public ToolExecutionResult invokeRestoreTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
                                               TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
-    throw new UnsupportedOperationException("Running import tool is not supported in this distribution version"); 
+    throw new UnsupportedOperationException("Running restore tool is not supported in this distribution version");
   }
 
   /**

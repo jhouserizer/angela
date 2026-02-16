@@ -38,7 +38,7 @@ public class CustomConfigurationContext implements ConfigurationContext {
   private final List<CustomClientArrayConfigurationContext> customClientArrayConfigurationContexts = new ArrayList<>();
   private CustomVoterConfigurationContext customVoterConfigurationContext;
   private CustomClusterToolConfigurationContext customClusterToolConfigurationContext;
-  private CustomImportToolConfigurationContext customImportToolConfigurationContext;
+  private CustomRestoreToolConfigurationContext customRestoreToolConfigurationContext;
   private CustomConfigToolConfigurationContext customConfigToolConfigurationContext;
 
   public static CustomConfigurationContext customConfigurationContext() {
@@ -138,8 +138,8 @@ public class CustomConfigurationContext implements ConfigurationContext {
   }
   
   @Override
-  public ToolConfigurationContext importTool() {
-    return customImportToolConfigurationContext;
+  public ToolConfigurationContext restoreTool() {
+    return customRestoreToolConfigurationContext;
   }
 
   @Override
@@ -165,12 +165,12 @@ public class CustomConfigurationContext implements ConfigurationContext {
     return this;
   }
   
-  public CustomConfigurationContext importTool(Consumer<CustomImportToolConfigurationContext> importTool) {
-    if (customImportToolConfigurationContext != null) {
-      throw new IllegalStateException("Import tool config already defined");
+  public CustomConfigurationContext restoreTool(Consumer<CustomRestoreToolConfigurationContext> restoreTool) {
+    if (customRestoreToolConfigurationContext != null) {
+      throw new IllegalStateException("Restore tool config already defined");
     }
-    customImportToolConfigurationContext = new CustomImportToolConfigurationContext();
-    importTool.accept(customImportToolConfigurationContext);
+    customRestoreToolConfigurationContext = new CustomRestoreToolConfigurationContext();
+    restoreTool.accept(customRestoreToolConfigurationContext);
     return this;
   }
 

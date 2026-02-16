@@ -56,7 +56,7 @@ public class ClusterFactory implements AutoCloseable {
   private static final String CLIENT_ARRAY = "clientArray";
   private static final String MONITOR = "monitor";
   private static final String CLUSTER_TOOL = "clusterTool";
-  private static final String IMPORT_TOOL = "importTool";
+  private static final String RESTORE_TOOL = "restoreTool";
   private static final String CONFIG_TOOL = "configTool";
   private static final String VOTER = "voter";
   private static final DateTimeFormatter PATH_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-hhmmssSSS");
@@ -146,20 +146,20 @@ public class ClusterFactory implements AutoCloseable {
     return clusterTool;
   }
   
-  public ImportTool importTool() {
-    ToolConfigurationContext importToolConfigurationContext = configurationContext.importTool();
-    if (importToolConfigurationContext == null) {
-      throw new IllegalArgumentException("importTool() configuration missing in the ConfigurationContext");
+  public RestoreTool restoreTool() {
+    ToolConfigurationContext restoreToolConfigurationContext = configurationContext.restoreTool();
+    if (restoreToolConfigurationContext == null) {
+      throw new IllegalArgumentException("restoreTool() configuration missing in the ConfigurationContext");
     }
-    InstanceId instanceId = init(IMPORT_TOOL, Collections.singleton(importToolConfigurationContext.getHostName()));
+    InstanceId instanceId = init(RESTORE_TOOL, Collections.singleton(restoreToolConfigurationContext.getHostName()));
     Tsa tsa = controllers.stream()
         .filter(controller -> controller instanceof Tsa)
         .map(autoCloseable -> (Tsa) autoCloseable)
         .findAny()
-        .orElseThrow(() -> new IllegalStateException("Tsa should be defined before import tool in ConfigurationContext"));
-    ImportTool importTool = new ImportTool(executor, portAllocator, instanceId, importToolConfigurationContext, tsa);
-    controllers.add(importTool);
-    return importTool;
+        .orElseThrow(() -> new IllegalStateException("Tsa should be defined before restore tool in ConfigurationContext"));
+    RestoreTool restoreTool = new RestoreTool(executor, portAllocator, instanceId, restoreToolConfigurationContext, tsa);
+    controllers.add(restoreTool);
+    return restoreTool;
   }
 
   public ConfigTool configTool() {

@@ -45,7 +45,7 @@ public interface ConfigurationContext {
 
   ToolConfigurationContext configTool();
   
-  ToolConfigurationContext importTool();
+  ToolConfigurationContext restoreTool();
 
   VoterConfigurationContext voter();
 }
