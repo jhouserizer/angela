@@ -67,7 +67,7 @@ public abstract class DistributionController {
   public abstract ToolExecutionResult invokeClusterTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
                                                         TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments);
   
-  public abstract ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+  public abstract ToolExecutionResult invokeRestoreTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
                                                        TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments);
 
   public abstract ToolExecutionResult configureCluster(File kitDir, File workingDir, Topology topology, Map<ServerSymbolicName, Integer> proxyTsaPorts, License license, SecurityRootDirectory securityDir,

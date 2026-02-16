@@ -45,9 +45,9 @@ import org.terracotta.angela.common.topology.InstanceId;
  *
  * @author dpra
  */
-public class ImportTool implements AutoCloseable {
+public class RestoreTool implements AutoCloseable {
 
-  private final static Logger logger = LoggerFactory.getLogger(ImportTool.class);
+  private final static Logger logger = LoggerFactory.getLogger(RestoreTool.class);
 
   private final InstanceId instanceId;
   private final transient AgentExecutor executor;
@@ -55,7 +55,7 @@ public class ImportTool implements AutoCloseable {
   private final transient LocalKitManager localKitManager;
   private final transient Tsa tsa;
 
-  ImportTool(Executor executor, PortAllocator portAllocator, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
+  RestoreTool(Executor executor, PortAllocator portAllocator, InstanceId instanceId, ToolConfigurationContext configContext, Tsa tsa) {
     this.instanceId = instanceId;
     this.executor = executor.forAgent(executor.getAgentID(configContext.getHostName()));
     this.configContext = configContext;
@@ -69,11 +69,11 @@ public class ImportTool implements AutoCloseable {
   }
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... command) {
-    logger.debug("Executing import-tool: {} on: {}", instanceId, executor.getTarget());
-    return executor.execute(() -> AgentController.getInstance().importTool(instanceId, env, command));
+    logger.debug("Executing restore-tool: {} on: {}", instanceId, executor.getTarget());
+    return executor.execute(() -> AgentController.getInstance().restoreTool(instanceId, env, command));
   }
 
-  public ImportTool install() {
+  public RestoreTool install() {
     Distribution distribution = configContext.getDistribution();
     License license = tsa.getTsaConfigurationContext().getLicense();
     TerracottaCommandLineEnvironment tcEnv = configContext.getCommandLineEnv();
@@ -84,9 +84,9 @@ public class ImportTool implements AutoCloseable {
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
-    logger.info("Installing import-tool: {} on: {}", instanceId, executor.getTarget());
+    logger.info("Installing restore-tool: {} on: {}", instanceId, executor.getTarget());
 
-    IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installImportTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
@@ -99,12 +99,12 @@ public class ImportTool implements AutoCloseable {
     return this;
   }
 
-  public ImportTool uninstall() {
-    logger.info("Uninstalling import-tool: {} on: {}", instanceId, executor.getTarget());
+  public RestoreTool uninstall() {
+    logger.info("Uninstalling restore-tool: {} on: {}", instanceId, executor.getTarget());
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    IgniteRunnable uninstaller = () -> AgentController.getInstance().uninstallImportTool(instanceId, distribution, hostName, kitInstallationName);
+    IgniteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(instanceId, distribution, hostName, kitInstallationName);
     executor.execute(uninstaller);
     return this;
   }

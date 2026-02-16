@@ -22,22 +22,22 @@ import org.terracotta.angela.common.util.IpUtils;
  *
  * @author dpra
  */
-public class TerracottaImportTool {
+public class TerracottaRestoreTool {
 
   private final String id;
   private final String hostName;
 
-  private TerracottaImportTool(String id, String hostName) {
+  private TerracottaRestoreTool(String id, String hostName) {
     this.id = id;
     this.hostName = hostName;
   }
 
-  public static TerracottaImportTool importTool(String id, String hostName) {
-    return new TerracottaImportTool(id, hostName);
+  public static TerracottaRestoreTool restoreTool(String id, String hostName) {
+    return new TerracottaRestoreTool(id, hostName);
   }
 
-  public static TerracottaImportTool importTool(String id) {
-    return new TerracottaImportTool(id, IpUtils.getHostName());
+  public static TerracottaRestoreTool restoreTool(String id) {
+    return new TerracottaRestoreTool(id, IpUtils.getHostName());
   }
 
   public String getId() {

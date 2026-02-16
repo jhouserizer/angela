@@ -352,14 +352,14 @@ public class Distribution107Controller extends DistributionController {
   }
   
   @Override
-  public ToolExecutionResult invokeImportTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
+  public ToolExecutionResult invokeRestoreTool(File kitDir, File workingDir, SecurityRootDirectory securityDir,
                                               TerracottaCommandLineEnvironment env, Map<String, String> envOverrides, String... arguments) {
     try {
-      ProcessResult processResult = new ProcessExecutor(createImportToolCommand(kitDir, workingDir, securityDir, arguments))
+      ProcessResult processResult = new ProcessExecutor(createRestoreToolCommand(kitDir, workingDir, securityDir, arguments))
           .directory(workingDir)
           .environment(env.buildEnv(envOverrides))
           .readOutput(true)
-          .redirectOutputAlsoTo(Slf4jStream.of(ExternalLoggers.importToolLogger).asInfo())
+          .redirectOutputAlsoTo(Slf4jStream.of(ExternalLoggers.restoreToolLogger).asInfo())
           .redirectErrorStream(true)
           .execute();
       return new ToolExecutionResult(processResult.getExitValue(), processResult.getOutput().getLines());
@@ -618,17 +618,17 @@ public class Distribution107Controller extends DistributionController {
     return command;
   }
   
-  List<String> createImportToolCommand(File installLocation, File workingDir, SecurityRootDirectory securityDir, String[] arguments) {
+  List<String> createRestoreToolCommand(File installLocation, File workingDir, SecurityRootDirectory securityDir, String[] arguments) {
     List<String> command = new ArrayList<>();
-    command.add(getImportToolExecutable(installLocation));
+    command.add(getRestoreToolExecutable(installLocation));
     if (securityDir != null) {
-      Path securityDirPath = workingDir.toPath().resolve("import-tool-security-dir");
+      Path securityDirPath = workingDir.toPath().resolve("restore-tool-security-dir");
       securityDir.createSecurityRootDirectory(securityDirPath);
       command.add("-srd");
       command.add(securityDirPath.toString());
     }
     command.addAll(Arrays.asList(arguments));
-    LOGGER.debug("Import tool command: {}", command);
+    LOGGER.debug("Restore tool command: {}", command);
     return command;
   }
 
@@ -654,8 +654,8 @@ public class Distribution107Controller extends DistributionController {
     throw new IllegalStateException("Can not define cluster tool command for distribution: " + distribution);
   }
   
-  private String getImportToolExecutable(File installLocation) {
-    String execPath = "tools" + separator + "bin" + separator + "import-tool" + OS.INSTANCE.getShellExtension();
+  private String getRestoreToolExecutable(File installLocation) {
+    String execPath = "tools" + separator + "bin" + separator + "restore-tool" + OS.INSTANCE.getShellExtension();
 
     if (distribution.getPackageType() == PackageType.KIT) {
       return installLocation.getAbsolutePath() + separator + execPath;
