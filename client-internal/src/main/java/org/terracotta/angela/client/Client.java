@@ -24,8 +24,8 @@ import org.terracotta.angela.agent.AgentController;
 import org.terracotta.angela.agent.com.AgentGroup;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
-import org.terracotta.angela.agent.com.IgniteFutureAdapter;
 import org.terracotta.angela.agent.kit.LocalKitManager;
+import org.terracotta.angela.agent.com.RemoteExecutionException;
 import org.terracotta.angela.client.config.ClientArrayConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
@@ -154,7 +154,7 @@ public class Client implements Closeable {
         return null;
       } catch (Throwable t) {
         logger.error("clientJob failed", t);
-        throw new IgniteFutureAdapter.RemoteExecutionException("Remote ClientJob failed", exceptionToString(t));
+        throw new RemoteExecutionException("Remote ClientJob failed", exceptionToString(t));
       }
     };
     return executor.executeAsync(clientAgentID, call);
