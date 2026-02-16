@@ -18,8 +18,6 @@ package org.terracotta.angela.agent.com;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CollectionConfiguration;
-import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.Agent;
@@ -153,18 +151,16 @@ public class IgniteLocalExecutor implements Executor {
   @Override
   public Future<Void> executeAsync(AgentID agentID, RemoteRunnable job) {
     logger.debug("Executing job on: {}", agentID);
-    IgniteRunnable igniteJob = job::run;
     return agentGroup.clusterGroup(agentID)
-        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).runAsync(igniteJob)))
+        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).runAsync(job)))
         .orElseThrow(() -> new IllegalArgumentException("No agent found matching: " + agentID + " in group " + group));
   }
 
   @Override
   public <R> Future<R> executeAsync(AgentID agentID, RemoteCallable<R> job) {
     logger.debug("Executing job on: {}", agentID);
-    IgniteCallable<R> igniteJob = job::call;
     return agentGroup.clusterGroup(agentID)
-        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).callAsync(igniteJob)))
+        .map(clusterGroup -> new IgniteFutureAdapter<>(agentID, ignite.compute(clusterGroup).callAsync(job)))
         .orElseThrow(() -> new IllegalArgumentException("No agent found matching: " + agentID + " in group " + group));
   }
 

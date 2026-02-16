@@ -16,8 +16,15 @@
  */
 package org.terracotta.angela.agent.com;
 
-import java.io.Serializable;
+import org.apache.ignite.lang.IgniteRunnable;
 
+/**
+ * Backend-neutral interface for remote job execution.
+ * Extends {@link IgniteRunnable} temporarily so that lambdas can be passed
+ * directly to Ignite's compute API without a wrapping layer that would
+ * break peer class loading. This extends-clause will be removed when
+ * the Ignite backend is replaced.
+ */
 @FunctionalInterface
-public interface RemoteRunnable extends Runnable, Serializable {
+public interface RemoteRunnable extends IgniteRunnable {
 }

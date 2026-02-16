@@ -16,9 +16,15 @@
  */
 package org.terracotta.angela.agent.com;
 
-import java.io.Serializable;
-import java.util.concurrent.Callable;
+import org.apache.ignite.lang.IgniteCallable;
 
+/**
+ * Backend-neutral interface for remote job execution returning a value.
+ * Extends {@link IgniteCallable} temporarily so that lambdas can be passed
+ * directly to Ignite's compute API without a wrapping layer that would
+ * break peer class loading. This extends-clause will be removed when
+ * the Ignite backend is replaced.
+ */
 @FunctionalInterface
-public interface RemoteCallable<V> extends Callable<V>, Serializable {
+public interface RemoteCallable<V> extends IgniteCallable<V> {
 }
