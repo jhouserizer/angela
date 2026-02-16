@@ -104,7 +104,7 @@ public class RestoreTool implements AutoCloseable {
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(instanceId, distribution, hostName, kitInstallationName);
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().installRestoreTool(instanceId, distribution, hostName, kitInstallationName);
     executor.execute(uninstaller);
     return this;
   }
