@@ -17,7 +17,7 @@
 package org.terracotta.angela.client;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.terracotta.angela.agent.com.IgniteFutureAdapter;
+import org.terracotta.angela.agent.com.RemoteExecutionException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,8 +61,8 @@ public class ClientArrayFuture implements Future<Void> {
         if (t instanceof ExecutionException) {
           t = t.getCause();
         }
-        if (t instanceof IgniteFutureAdapter.RemoteExecutionException) {
-          ((IgniteFutureAdapter.RemoteExecutionException) t).setRemoteStackTraceIndentation(2);
+        if (t instanceof RemoteExecutionException) {
+          ((RemoteExecutionException) t).setRemoteStackTraceIndentation(2);
         }
         exception.addSuppressed(t);
       }

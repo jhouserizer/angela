@@ -18,8 +18,8 @@ package org.terracotta.angela.client;
 
 import java.util.Collections;
 import java.util.Map;
-import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.lang.IgniteRunnable;
+import org.terracotta.angela.agent.com.RemoteCallable;
+import org.terracotta.angela.agent.com.RemoteRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.AgentController;
@@ -86,7 +86,7 @@ public class RestoreTool implements AutoCloseable {
 
     logger.info("Installing restore-tool: {} on: {}", instanceId, executor.getTarget());
 
-    IgniteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
@@ -104,7 +104,7 @@ public class RestoreTool implements AutoCloseable {
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    IgniteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(instanceId, distribution, hostName, kitInstallationName);
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(instanceId, distribution, hostName, kitInstallationName);
     executor.execute(uninstaller);
     return this;
   }
