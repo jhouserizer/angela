@@ -21,7 +21,7 @@ import org.junit.Test;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
-import org.terracotta.angela.agent.com.grid.ignite.IgniteLocalExecutor;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
@@ -38,12 +38,16 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * @author Mathieu Carbou
+ *
+ * TODO : remove this class when the Ignite 2 provider is removed - it hardcodes Agent.igniteOrchestrator().
  */
 public class RemoteClientManagerIT {
 
   UUID group = UUID.randomUUID();
   PortAllocator portAllocator = new DefaultPortAllocator();
-  Agent agent = Agent.igniteOrchestrator(group, portAllocator);
+  Agent agent = "baton".equals(AngelaProperties.GRID_PROVIDER.getValue())
+      ? Agent.batonOrchestrator(group, portAllocator)
+      : Agent.igniteOrchestrator(group, portAllocator);
   Executor executor = agent.getGridProvider().createExecutor(agent.getGroupId(), agent.getAgentID());
 
   @After

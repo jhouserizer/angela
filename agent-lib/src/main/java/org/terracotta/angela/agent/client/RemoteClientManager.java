@@ -44,6 +44,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import io.baton.BatonRuntime;
+import org.terracotta.angela.common.AngelaProperties;
+
 import static org.terracotta.angela.common.AngelaProperties.ROOT_DIR;
 
 /**
@@ -104,6 +107,7 @@ public class RemoteClientManager {
       cmdLine.add("-Dangela.group=" + group.getId());
       cmdLine.add("-Dangela.instanceName=" + instanceId);
       cmdLine.add("-D" + ROOT_DIR.getPropertyName() + "=" + Agent.ROOT_DIR);
+      cmdLine.add("-D" + AngelaProperties.GRID_PROVIDER.getPropertyName() + "=" + AngelaProperties.GRID_PROVIDER.getValue());
       cmdLine.add(Agent.class.getName());
 
       if (logger.isDebugEnabled()) {
@@ -118,6 +122,7 @@ public class RemoteClientManager {
             @Override
             protected void processLine(String line) {
               ExternalLoggers.clientLogger.info("[{}] {}", instanceId, line);
+              BatonRuntime.emit("process", instanceId.toString(), "-", line);
               if (line.startsWith(Agent.AGENT_IS_READY_MARKER_LOG)) {
                 agentID.set(AgentID.valueOf(line.substring(Agent.AGENT_IS_READY_MARKER_LOG.length() + 2)));
                 started.set(true);

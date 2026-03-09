@@ -94,9 +94,9 @@ public class Ehc3KitResolver extends KitResolver {
           baseUrl = "https://repo.maven.apache.org/maven2/";
         }
         StringBuilder sb = new StringBuilder(baseUrl)
-            .append("org/ehcache/ehcache-clustered/")
-            .append(realVersion).append("/")
-            .append("ehcache-clustered-").append(realVersion).append("-kit.zip");
+                .append("org/ehcache/ehcache-clustered/")
+                .append(realVersion).append("/")
+                .append("ehcache-clustered-").append(realVersion).append("-kit.zip");
 
         URL kitUrl = new URL(sb.toString());
         URL md5Url = new URL(sb.toString() + ".md5");

@@ -73,7 +73,8 @@ public class ClusterTool implements AutoCloseable {
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... command) {
     logger.debug("Executing config-tool: {} on: {}", instanceId, executor.getTarget());
-    return executor.execute(() -> AgentController.getInstance().clusterTool(instanceId, env, command));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(() -> AgentController.getInstance().clusterTool(localInstanceId, env, command));
   }
 
   public ClusterTool configure(Map<String, String> env) {
@@ -89,8 +90,8 @@ public class ClusterTool implements AutoCloseable {
     final Map<ServerSymbolicName, Integer> proxyTsaPorts = tsa.updateToProxiedPorts();
 
     logger.debug("Executing config-tool configure: {} on: {}", instanceId, executor.getTarget());
-
-    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().configure(instanceId, topology, proxyTsaPorts, license, securityRootDirectory, tcEnv, env, command));
+    final InstanceId localInstanceId = instanceId;
+    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().configure(localInstanceId, topology, proxyTsaPorts, license, securityRootDirectory, tcEnv, env, command));
     if (result.getExitStatus() != 0) {
       throw new IllegalStateException("Failed to execute cluster-tool configure:\n" + result);
     }
@@ -113,8 +114,8 @@ public class ClusterTool implements AutoCloseable {
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     logger.info("Installing config-tool: {} on: {}", instanceId, executor.getTarget());
-
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installClusterTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    final InstanceId localInstanceId = instanceId;
+    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installClusterTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
@@ -132,14 +133,16 @@ public class ClusterTool implements AutoCloseable {
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallClusterTool(instanceId, distribution, hostName, kitInstallationName);
+    final InstanceId localInstanceId = instanceId;
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallClusterTool(localInstanceId, distribution, hostName, kitInstallationName);
     executor.execute(uninstaller);
     return this;
   }
 
   public RemoteFolder browse(String root) {
     logger.debug("Browsing config-tool: {} on: {}", instanceId, executor.getTarget());
-    String path = executor.execute(() -> AgentController.getInstance().getClusterToolInstallPath(instanceId));
+    final InstanceId localInstanceId = instanceId;
+    String path = executor.execute(() -> AgentController.getInstance().getClusterToolInstallPath(localInstanceId));
     return new RemoteFolder(executor, path, root);
   }
 

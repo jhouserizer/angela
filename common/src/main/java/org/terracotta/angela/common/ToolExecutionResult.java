@@ -16,9 +16,11 @@
  */
 package org.terracotta.angela.common;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class ToolExecutionResult {
+public class ToolExecutionResult implements Serializable {
+  private static final long serialVersionUID = 1L;
   private final int exitStatus;
   private final List<String> output;
 

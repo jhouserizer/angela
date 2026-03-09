@@ -70,7 +70,8 @@ public class RestoreTool implements AutoCloseable {
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... command) {
     logger.debug("Executing restore-tool: {} on: {}", instanceId, executor.getTarget());
-    return executor.execute(() -> AgentController.getInstance().restoreTool(instanceId, env, command));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(() -> AgentController.getInstance().restoreTool(localInstanceId, env, command));
   }
 
   public RestoreTool install() {
@@ -86,7 +87,8 @@ public class RestoreTool implements AutoCloseable {
 
     logger.info("Installing restore-tool: {} on: {}", instanceId, executor.getTarget());
 
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    final InstanceId localInstanceId = instanceId;
+    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
@@ -104,7 +106,8 @@ public class RestoreTool implements AutoCloseable {
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(instanceId, distribution, hostName, kitInstallationName);
+    final InstanceId localInstanceId = instanceId;
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallRestoreTool(localInstanceId, distribution, hostName, kitInstallationName);
     executor.execute(uninstaller);
     return this;
   }

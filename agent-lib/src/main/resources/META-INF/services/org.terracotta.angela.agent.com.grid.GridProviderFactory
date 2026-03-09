@@ -1,0 +1,2 @@
+org.terracotta.angela.agent.com.grid.ignite.IgniteGridProviderFactory
+org.terracotta.angela.agent.com.grid.baton.BatonGridProviderFactory

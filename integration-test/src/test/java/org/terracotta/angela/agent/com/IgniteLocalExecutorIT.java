@@ -51,6 +51,8 @@ import static org.terracotta.angela.common.topology.Version.version;
 
 /**
  * @author Mathieu Carbou
+ *
+ * TODO : remove this class when the Ignite 2 provider is removed - it tests Ignite-specific executor behaviour.
  */
 public class IgniteLocalExecutorIT {
 

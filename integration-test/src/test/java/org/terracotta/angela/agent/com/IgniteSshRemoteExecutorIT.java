@@ -44,6 +44,8 @@ import static org.junit.Assume.assumeThat;
 
 /**
  * @author Mathieu Carbou
+ *
+ * TODO : remove this class when the Ignite 2 provider is removed - it tests Ignite SSH remote executor behaviour.
  */
 public class IgniteSshRemoteExecutorIT {
 

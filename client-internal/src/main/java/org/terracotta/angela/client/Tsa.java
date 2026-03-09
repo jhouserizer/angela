@@ -120,7 +120,8 @@ public class Tsa implements AutoCloseable {
     }
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     logger.debug("Reading license path of TSA: {} from: {}", instanceId, agentID);
-    return executor.execute(agentID, () -> AgentController.getInstance().getTsaLicensePath(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(agentID, () -> AgentController.getInstance().getTsaLicensePath(localInstanceId, terracottaServer));
   }
 
   void installAll() {
@@ -154,16 +155,17 @@ public class Tsa implements AutoCloseable {
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
 
     logger.info("Installing TSA: {} on: {}", instanceId, agentID);
+    final InstanceId localInstanceId = instanceId;
 
     if (kitInstallationPath == null || KIT_COPY.getBooleanValue()) {
       // "kitInstallationPath" is either not provided (=> kit download)
       // or it is provided but we specifically ask for a kit copy
-      final RemoteCallable<Boolean> installClosure = () -> AgentController.getInstance().installTsa(instanceId, terracottaServer, license, kitInstallationName, distribution, topology, null);
+      final RemoteCallable<Boolean> installClosure = () -> AgentController.getInstance().installTsa(localInstanceId, terracottaServer, license, kitInstallationName, distribution, topology, null);
       boolean isRemoteInstallationSuccessful = executor.execute(agentID, installClosure);
       if (!isRemoteInstallationSuccessful) {
         try {
           logger.debug("Uploading: {} on: {}", distribution, agentID);
-          executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+          executor.uploadKit(agentID, localInstanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
           executor.execute(agentID, installClosure);
         } catch (Exception e) {
           throw new RuntimeException("Cannot upload kit to " + terracottaServer.getHostName(), e);
@@ -172,7 +174,7 @@ public class Tsa implements AutoCloseable {
     } else {
       // We are trying to reuse the "kitInstallationPath" if provided (kitInstallationPath != null)
       // To end up here, KIT_COPY should be false
-      executor.execute(agentID, () -> AgentController.getInstance().installTsa(instanceId, terracottaServer, license, kitInstallationName, distribution, topology, kitInstallationPath));
+      executor.execute(agentID, () -> AgentController.getInstance().installTsa(localInstanceId, terracottaServer, license, kitInstallationName, distribution, topology, kitInstallationPath));
     }
   }
 
@@ -206,8 +208,9 @@ public class Tsa implements AutoCloseable {
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     logger.info("Uninstalling TSA: {} from: {}", instanceId, agentID);
+    final InstanceId localInstanceId = instanceId;
 
-    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallTsa(instanceId, topology, terracottaServer, kitInstallationName, kitInstallationPath);
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallTsa(localInstanceId, topology, terracottaServer, kitInstallationName, kitInstallationPath);
     executor.execute(agentID, uninstaller);
   }
 
@@ -249,7 +252,8 @@ public class Tsa implements AutoCloseable {
         String whatFor = SERVER_START_PREFIX + terracottaServer.getServerSymbolicName().getSymbolicName();
         TerracottaCommandLineEnvironment cliEnv = tsaConfigurationContext.getTerracottaCommandLineEnvironment(whatFor);
         Duration inactivityKillerDelay = tsaConfigurationContext.getInactivityKillerDelay();
-        RemoteRunnable tsaCreator = () -> AgentController.getInstance().createTsa(instanceId, terracottaServer, cliEnv, envOverrides, Arrays.asList(startUpArgs), inactivityKillerDelay);
+        final InstanceId localInstanceId = instanceId;
+        RemoteRunnable tsaCreator = () -> AgentController.getInstance().createTsa(localInstanceId, terracottaServer, cliEnv, envOverrides, Arrays.asList(startUpArgs), inactivityKillerDelay);
         executor.execute(agentID, tsaCreator);
         return this;
     }
@@ -273,7 +277,8 @@ public class Tsa implements AutoCloseable {
 
   public Tsa start(TerracottaServer terracottaServer, Map<String, String> envOverrides, String... startUpArgs) {
     spawn(terracottaServer, envOverrides, startUpArgs);
-    RemoteRunnable runnable = () -> AgentController.getInstance().waitForTsaInState(instanceId, terracottaServer, of(STARTED_AS_ACTIVE, STARTED_AS_PASSIVE, STARTED_IN_DIAGNOSTIC_MODE, START_SUSPENDED, STOPPED,
+    final InstanceId localInstanceId = instanceId;
+    RemoteRunnable runnable = () -> AgentController.getInstance().waitForTsaInState(localInstanceId, terracottaServer, of(STARTED_AS_ACTIVE, STARTED_AS_PASSIVE, STARTED_IN_DIAGNOSTIC_MODE, START_SUSPENDED, STOPPED,
             STARTED_AS_PASSIVE_RELAY, STARTED_AS_PASSIVE_REPLICA_START, STARTED_AS_PASSIVE_REPLICA));
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     executor.execute(agentID, runnable);
@@ -326,7 +331,8 @@ public class Tsa implements AutoCloseable {
     }
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     logger.info("Stopping TSA: {} on: {}", instanceId, agentID);
-    executor.execute(agentID, () -> AgentController.getInstance().stopTsa(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(agentID, () -> AgentController.getInstance().stopTsa(localInstanceId, terracottaServer));
     return this;
   }
 
@@ -337,13 +343,15 @@ public class Tsa implements AutoCloseable {
   public TerracottaServerState getState(TerracottaServer terracottaServer) {
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     logger.debug("Getting state for TSA: {} on: {}", instanceId, agentID);
-    return executor.execute(agentID, () -> AgentController.getInstance().getTsaState(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(agentID, () -> AgentController.getInstance().getTsaState(localInstanceId, terracottaServer));
   }
 
   public Map<ServerSymbolicName, Integer> getProxyGroupPortsForServer(TerracottaServer terracottaServer) {
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     logger.debug("Getting proxy group ports for TSA: {} on: {}", instanceId, agentID);
-    return executor.execute(agentID, () -> AgentController.getInstance().getProxyGroupPortsForServer(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(agentID, () -> AgentController.getInstance().getProxyGroupPortsForServer(localInstanceId, terracottaServer));
   }
 
   public Collection<TerracottaServer> getStarted() {
@@ -514,14 +522,16 @@ public class Tsa implements AutoCloseable {
   public RemoteFolder browse(TerracottaServer terracottaServer, String root) {
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     final AgentExecutor agentExecutor = executor.forAgent(agentID);
-    String path = agentExecutor.execute(() -> AgentController.getInstance().getTsaInstallPath(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    String path = agentExecutor.execute(() -> AgentController.getInstance().getTsaInstallPath(localInstanceId, terracottaServer));
     return new RemoteFolder(agentExecutor, path, root);
   }
 
   public RemoteFolder browseFromKitLocation(TerracottaServer terracottaServer, String relativePath) {
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     final AgentExecutor agentExecutor = executor.forAgent(agentID);
-    String kitLocation = agentExecutor.execute(() -> AgentController.getInstance().getTsaKitLocation(instanceId, terracottaServer));
+    final InstanceId localInstanceId = instanceId;
+    String kitLocation = agentExecutor.execute(() -> AgentController.getInstance().getTsaKitLocation(localInstanceId, terracottaServer));
     return new RemoteFolder(agentExecutor, kitLocation, relativePath);
   }
 

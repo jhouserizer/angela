@@ -33,6 +33,7 @@
   <properties>
     <ehcache.version.xml>3.8.1</ehcache.version.xml>
     <ehcache.version.dc>3.9.9</ehcache.version.dc>
+    <angela.grid.provider>ignite2</angela.grid.provider>
   </properties>
 
   <dependencies>
@@ -114,6 +115,7 @@ new File(project.build.directory, "fake-hosts.txt").text = """
 127.0.0.1 localhost ${"hostname".execute().text.trim()} ${"hostname".execute().text.trim().split('[.]')[0]} testhostname
 ${InetAddress.getByName("central.sonatype.com").getHostAddress()} central.sonatype.com
 ${InetAddress.getByName("repo.maven.apache.org").getHostAddress()} repo.maven.apache.org
+${InetAddress.getByName("oss.sonatype.org").getHostAddress()} oss.sonatype.org
 """
 println(new File(project.build.directory, "fake-hosts.txt").text)
           ]]></script>
@@ -138,6 +140,7 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
           <trimStackTrace>false</trimStackTrace>
           <reuseForks>false</reuseForks>
           <useModulePath>false</useModulePath>
+          <argLine>-Dangela.grid.provider=${angela.grid.provider}</argLine>
           <systemPropertyVariables>
             <angela.rootDir>${project.build.directory}/angela</angela.rootDir>
             <angela.skipUninstall>false</angela.skipUninstall>
@@ -161,6 +164,7 @@ println(new File(project.build.directory, "fake-hosts.txt").text)
             <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
             <ehcache.version.xml>${ehcache.version.xml}</ehcache.version.xml>
             <ehcache.version.dc>${ehcache.version.dc}</ehcache.version.dc>
+            <angela.grid.provider>${angela.grid.provider}</angela.grid.provider>
           </systemPropertyVariables>
         </configuration>
       </plugin>

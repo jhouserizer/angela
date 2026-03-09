@@ -22,8 +22,10 @@ import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.AgentController;
 import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.agent.com.IgniteFreeExecutor;
+import org.terracotta.angela.agent.com.grid.GridProviderFactory;
 import org.terracotta.angela.agent.com.grid.ignite.IgniteLocalExecutor;
 import org.terracotta.angela.agent.com.grid.ignite.IgniteSshRemoteExecutor;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.config.ConfigurationContextVisitor;
 import org.terracotta.angela.client.config.TsaConfigurationContext;
@@ -169,7 +171,12 @@ public class AngelaOrchestrator implements Closeable {
     private String mode; // just for toString()
 
     private AngelaOrchestratorBuilder() {
-      igniteRemote();
+      String backend = AngelaProperties.GRID_PROVIDER.getValue();
+      if ("baton".equals(backend)) {
+        baton();
+      } else {
+        igniteRemote();
+      }
     }
 
     /**
@@ -237,6 +244,21 @@ public class AngelaOrchestrator implements Closeable {
       agentBuilder = () -> Agent.local(group);
       executorBuilder = IgniteFreeExecutor::new;
       mode = IgniteFreeExecutor.class.getSimpleName();
+      return this;
+    }
+
+    /**
+     * Baton-backed orchestrator: a Baton HTTP fabric started locally; remote agents are deployed
+     * by Baton's own SSH mechanism via {@code Fabric.deployAndConnect()}.
+     * Client jobs run on whichever agent node the job targets.
+     *
+     * <p>The backend can also be selected automatically at construction time by setting
+     * {@code -Dangela.grid.provider=baton}; see {@link AngelaProperties#GRID_PROVIDER}.
+     */
+    public AngelaOrchestratorBuilder baton() {
+      agentBuilder = () -> Agent.batonOrchestrator(group, portAllocator);
+      executorBuilder = agent -> agent.getGridProvider().createExecutor(agent.getGroupId(), agent.getAgentID());
+      mode = "baton";
       return this;
     }
 
