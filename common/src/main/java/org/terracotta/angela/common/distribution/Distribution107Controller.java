@@ -105,6 +105,9 @@ public class Distribution107Controller extends DistributionController {
             compile("^.*\\QMoved to State[ PASSIVE-STANDBY ]\\E.*$"),
             mr -> stateRef.set(TerracottaServerState.STARTED_AS_PASSIVE))
         .andTriggerOn(
+                compile("^.*\\QMoved to State[ PASSIVE-RELAY ]\\E.*$"),
+                mr -> stateRef.set(TerracottaServerState.STARTED_AS_PASSIVE_RELAY))
+        .andTriggerOn(
                 compile("^.*\\QMoved to State[ PASSIVE-REPLICA-START ]\\E.*$"),
                 mr -> stateRef.set(TerracottaServerState.STARTED_AS_PASSIVE_REPLICA_START))
         .andTriggerOn(
