@@ -579,7 +579,8 @@ public class AgentController {
 
   public ToolExecutionResult serverJcmd(InstanceId instanceId, TerracottaServer terracottaServer, TerracottaCommandLineEnvironment tcEnv, String... arguments) {
     TerracottaServerState tsaState = getTsaState(instanceId, terracottaServer);
-    if (!EnumSet.of(TerracottaServerState.STARTED_AS_ACTIVE, TerracottaServerState.STARTED_AS_PASSIVE, TerracottaServerState.STARTED_AS_PASSIVE_REPLICA_START)
+    if (!EnumSet.of(TerracottaServerState.STARTED_AS_ACTIVE, TerracottaServerState.STARTED_AS_PASSIVE,
+                    TerracottaServerState.STARTED_AS_PASSIVE_REPLICA_START, TerracottaServerState.STARTED_AS_PASSIVE_REPLICA)
         .contains(tsaState)) {
       throw new IllegalStateException("Cannot control jcmd: server " + terracottaServer.getServerSymbolicName() + " has not started");
     }

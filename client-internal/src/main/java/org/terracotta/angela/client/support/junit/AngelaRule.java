@@ -31,6 +31,7 @@ import org.terracotta.angela.client.Tsa;
 import org.terracotta.angela.client.Voter;
 import org.terracotta.angela.client.config.ConfigurationContext;
 import org.terracotta.angela.client.filesystem.RemoteFolder;
+import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.ToolExecutionResult;
 import org.terracotta.angela.common.cluster.Cluster;
 import org.terracotta.angela.common.tcconfig.TerracottaServer;
@@ -59,10 +60,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isIn;
 import static org.junit.Assert.assertThat;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_RELAY;
+import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_REPLICA;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_REPLICA_START;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_IN_DIAGNOSTIC_MODE;
 import static org.terracotta.angela.common.TerracottaServerState.STOPPED;
@@ -416,6 +419,14 @@ public class AngelaRule extends ExtendedTestRule implements AutoCloseable {
 
   public final void waitForPassiveReplicaStart(int stripeId, int nodeId) {
     waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_PASSIVE_REPLICA_START)));
+  }
+
+  public final void waitForPassiveReplica(int stripeId, int nodeId) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), is(equalTo(STARTED_AS_PASSIVE_REPLICA)));
+  }
+
+  public final void waitForServerState(int stripeId, int nodeId, TerracottaServerState... states) {
+    waitUntil(() -> tsa().getState(getNode(stripeId, nodeId)), isIn(states));
   }
 
   public final void waitForDiagnostic(int stripeId, int nodeId) {

@@ -65,6 +65,7 @@ import static org.terracotta.angela.common.AngelaProperties.SKIP_UNINSTALL;
 import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_ACTIVE;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE;
+import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_REPLICA;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_AS_PASSIVE_REPLICA_START;
 import static org.terracotta.angela.common.TerracottaServerState.STARTED_IN_DIAGNOSTIC_MODE;
 import static org.terracotta.angela.common.TerracottaServerState.START_SUSPENDED;
@@ -237,6 +238,7 @@ public class Tsa implements AutoCloseable {
       case STARTED_AS_ACTIVE:
       case STARTED_AS_PASSIVE:
       case STARTED_AS_PASSIVE_REPLICA_START:
+      case STARTED_AS_PASSIVE_REPLICA:
       case STARTED_IN_DIAGNOSTIC_MODE:
         return this;
       case STOPPED:
@@ -270,7 +272,7 @@ public class Tsa implements AutoCloseable {
   public Tsa start(TerracottaServer terracottaServer, Map<String, String> envOverrides, String... startUpArgs) {
     spawn(terracottaServer, envOverrides, startUpArgs);
     RemoteRunnable runnable = () -> AgentController.getInstance().waitForTsaInState(instanceId, terracottaServer, of(STARTED_AS_ACTIVE, STARTED_AS_PASSIVE, STARTED_IN_DIAGNOSTIC_MODE, START_SUSPENDED, STOPPED,
-    STARTED_AS_PASSIVE_REPLICA_START));
+    STARTED_AS_PASSIVE_REPLICA_START, STARTED_AS_PASSIVE_REPLICA));
     final AgentID agentID = executor.getAgentID(terracottaServer.getHostName());
     executor.execute(agentID, runnable);
     logger.info("TSA: {} started on: {}", instanceId, agentID);
@@ -375,7 +377,7 @@ public class Tsa implements AutoCloseable {
     Collection<TerracottaServer> result = new ArrayList<>();
     for (TerracottaServer terracottaServer : tsaConfigurationContext.getTopology().getServers()) {
       TerracottaServerState state = getState(terracottaServer);
-      if (state == STARTED_AS_PASSIVE_REPLICA_START) {
+      if (state == STARTED_AS_PASSIVE_REPLICA_START || state == STARTED_AS_PASSIVE_REPLICA) {
         result.add(terracottaServer);
       }
     }
