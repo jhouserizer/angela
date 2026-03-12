@@ -112,7 +112,8 @@
             <script><![CDATA[
 new File(project.build.directory, "fake-hosts.txt").text = """
 127.0.0.1 localhost ${"hostname".execute().text.trim()} ${"hostname".execute().text.trim().split('[.]')[0]} testhostname
-${InetAddress.getByName("oss.sonatype.org").getHostAddress()} oss.sonatype.org
+${InetAddress.getByName("central.sonatype.com").getHostAddress()} central.sonatype.com
+${InetAddress.getByName("repo.maven.apache.org").getHostAddress()} repo.maven.apache.org
 """
 println(new File(project.build.directory, "fake-hosts.txt").text)
           ]]></script>

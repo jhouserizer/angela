@@ -87,13 +87,16 @@ public class Ehc3KitResolver extends KitResolver {
     try {
       if (packageType == KIT) {
         String realVersion = version.getVersion(true);
-        StringBuilder sb = new StringBuilder("https://oss.sonatype.org/service/local/artifact/maven/redirect?")
-            .append("g=org.ehcache&")
-            .append("a=ehcache-clustered&")
-            .append("c=kit&")
-            .append(realVersion.contains("SNAPSHOT") ? "r=snapshots&" : "r=releases&")
-            .append("v=").append(realVersion).append("&")
-            .append("e=zip");
+        String baseUrl;
+        if (realVersion.contains("SNAPSHOT")) {
+          baseUrl = "https://central.sonatype.com/repository/maven-snapshots/";
+        } else {
+          baseUrl = "https://repo.maven.apache.org/maven2/";
+        }
+        StringBuilder sb = new StringBuilder(baseUrl)
+            .append("org/ehcache/ehcache-clustered/")
+            .append(realVersion).append("/")
+            .append("ehcache-clustered-").append(realVersion).append("-kit.zip");
 
         URL kitUrl = new URL(sb.toString());
         URL md5Url = new URL(sb.toString() + ".md5");
