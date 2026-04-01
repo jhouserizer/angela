@@ -25,6 +25,7 @@ import org.junit.runners.Parameterized;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.Executor;
 import org.terracotta.angela.client.AngelaOrchestrator;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.distribution.RuntimeOption;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
@@ -56,15 +57,22 @@ public abstract class BaseIT {
   public static Iterable<Object[]> data() {
     List<Object[]> cases = new ArrayList<>(6);
 
-    cases.add(new Object[]{"igniteFree()", IpUtils.getHostName(), true, false});
-    cases.add(new Object[]{"igniteFree()", IpUtils.getHostName(), false, false});
-    cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), true, false});
-    cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), false, false});
+    String gridProvider = AngelaProperties.GRID_PROVIDER.getValue();
 
-    if (!System.getProperty("java.version").startsWith("1.8") && !OS.INSTANCE.isWindows()) {
-      // ssh tests only on 1.11 since they require the usage of -Djdk.net.hosts.file
-      cases.add(new Object[]{"igniteRemote()", "testhostname", true, true});
-      cases.add(new Object[]{"igniteRemote()", "testhostname", false, true});
+    if ("baton".equals(gridProvider)) {
+      cases.add(new Object[]{"baton()", IpUtils.getHostName(), true, false});
+      cases.add(new Object[]{"baton()", IpUtils.getHostName(), false, false});
+    } else {
+      cases.add(new Object[]{"igniteFree()", IpUtils.getHostName(), true, false});
+      cases.add(new Object[]{"igniteFree()", IpUtils.getHostName(), false, false});
+      cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), true, false});
+      cases.add(new Object[]{"igniteLocal()", IpUtils.getHostName(), false, false});
+
+      if (!System.getProperty("java.version").startsWith("1.8") && !OS.INSTANCE.isWindows()) {
+        // ssh tests only on 1.11 since they require the usage of -Djdk.net.hosts.file
+        cases.add(new Object[]{"igniteRemote()", "testhostname", true, true});
+        cases.add(new Object[]{"igniteRemote()", "testhostname", false, true});
+      }
     }
 
     return cases;
@@ -107,6 +115,12 @@ public abstract class BaseIT {
         this.angelaOrchestrator = AngelaOrchestrator.builder()
             .withPortAllocator(portAllocator)
             .igniteRemote(igniteSshRemoteExecutor -> igniteSshRemoteExecutor.setPort(requireNonNull(sshServer).getPort()))
+            .build();
+        break;
+      case "baton()":
+        this.angelaOrchestrator = AngelaOrchestrator.builder()
+            .withPortAllocator(portAllocator)
+            .baton()
             .build();
         break;
       default:

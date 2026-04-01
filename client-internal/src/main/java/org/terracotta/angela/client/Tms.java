@@ -105,14 +105,16 @@ public class Tms implements AutoCloseable {
     final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     final AgentExecutor agentExecutor = executor.forAgent(agentID);
     logger.debug("Browse TMS: {} on: {}", instanceId, agentID);
-    String path = agentExecutor.execute(() -> AgentController.getInstance().getTmsInstallationPath(instanceId));
+    final InstanceId localInstanceId = instanceId;
+    String path = agentExecutor.execute(() -> AgentController.getInstance().getTmsInstallationPath(localInstanceId));
     return new RemoteFolder(agentExecutor, path, root);
   }
 
   public TerracottaManagementServerState getTmsState() {
     final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.debug("Get state of TMS: {} on: {}", instanceId, agentID);
-    return executor.execute(agentID, () -> AgentController.getInstance().getTmsState(instanceId));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(agentID, () -> AgentController.getInstance().getTmsState(localInstanceId));
   }
 
   public Tms start() {
@@ -122,7 +124,8 @@ public class Tms implements AutoCloseable {
   public Tms start(Map<String, String> envOverrides) {
     final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Starting TMS: {} on: {}", instanceId, agentID);
-    port = executor.execute(agentID, () -> AgentController.getInstance().startTms(instanceId, envOverrides));
+    final InstanceId localInstanceId = instanceId;
+    port = executor.execute(agentID, () -> AgentController.getInstance().startTms(localInstanceId, envOverrides));
     logger.info("TMS started on port: {}", port);
     return this;
   }
@@ -168,7 +171,8 @@ public class Tms implements AutoCloseable {
     final Distribution distribution = tmsConfigurationContext.getDistribution();
     final TmsServerSecurityConfig securityConfig = tmsConfigurationContext.getSecurityConfig();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    executor.execute(agentID, () -> AgentController.getInstance().uninstallTms(instanceId, distribution, securityConfig, kitInstallationName, tmsHostname, kitInstallationPath));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(agentID, () -> AgentController.getInstance().uninstallTms(localInstanceId, distribution, securityConfig, kitInstallationName, tmsHostname, kitInstallationPath));
   }
 
   private void install() {
@@ -185,7 +189,8 @@ public class Tms implements AutoCloseable {
     localKitManager.setupLocalInstall(license, kitInstallationPath, OFFLINE.getBooleanValue(), tcEnv);
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(instanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath);
+    final InstanceId localInstanceId = instanceId;
+    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(localInstanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
 
     if (!isRemoteInstallationSuccessful) {
@@ -210,7 +215,8 @@ public class Tms implements AutoCloseable {
 
     final AgentID agentID = executor.getAgentID(tmsConfigurationContext.getHostName());
     logger.info("Stopping TMS: {} on: {}", instanceId, agentID);
-    executor.execute(agentID, () -> AgentController.getInstance().stopTms(instanceId));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(agentID, () -> AgentController.getInstance().stopTms(localInstanceId));
     ensureStopped(this::getTmsState);
   }
 

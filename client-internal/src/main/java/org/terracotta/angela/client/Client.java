@@ -195,7 +195,8 @@ public class Client implements Closeable {
     if (!SKIP_UNINSTALL.getBooleanValue()) {
       logger.debug("Wiping up data for client: {} instance: {} started from: {}", clientId, instanceId, parentAgentID);
       try {
-        executor.execute(parentAgentID, (RemoteRunnable) () -> AgentController.getInstance().deleteClient(instanceId));
+        final InstanceId localInstanceId = instanceId; // (Client is not Serializable)
+        executor.execute(parentAgentID, (RemoteRunnable) () -> AgentController.getInstance().deleteClient(localInstanceId));
       } catch (Throwable e) {
         logger.error("Error wiping data for client {} instance {}", clientId, instanceId, e);
         if (e instanceof Error) {
@@ -213,8 +214,9 @@ public class Client implements Closeable {
 
     logger.info("Killing agent: {} for client:{} instance: {} started from: {}", clientAgentID, clientId, instanceId, parentAgentID);
     final int pid = clientAgentID.getPid();
+    final InstanceId localInstanceId = instanceId;
     try {
-      executor.execute(parentAgentID, (RemoteRunnable) () -> AgentController.getInstance().stopClient(instanceId, pid));
+      executor.execute(parentAgentID, (RemoteRunnable) () -> AgentController.getInstance().stopClient(localInstanceId, pid));
       executor.getGroup().getAllAgents().remove(clientAgentID);   // Dead agent -- remove
     } catch (Throwable e) {
       logger.error("Error killing agent {} for client {}", clientAgentID, clientId, e);

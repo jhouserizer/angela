@@ -70,7 +70,9 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       logger.info("Starting monitoring: {} on: {} with agent: {}", commands.keySet(), entry.getKey(), entry.getValue().getTarget());
       try {
-        entry.getValue().execute(() -> AgentController.getInstance().startHardwareMonitoring(getWorkingPath(), commands));
+        final InstanceId localInstanceId = instanceId;
+        final Map<HardwareMetric, MonitoringCommand> localCommands = commands;
+        entry.getValue().execute(() -> AgentController.getInstance().startHardwareMonitoring(getWorkingPath(localInstanceId), localCommands));
       } catch (RuntimeException e) {
         exceptions.add(new RuntimeException("Error starting hardware monitoring on: " + entry.getValue().getTarget() + ". Err: " + e.getMessage(), e));
       }
@@ -113,7 +115,8 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       try {
         // a way to grab a path remotely from an OS (win or lin) and transfer it locally
-        UniversalPath fromRemote = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
+        final InstanceId localInstanceId = instanceId;
+        UniversalPath fromRemote = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getMetricsPath(localInstanceId)));
         Path toLocal = localPath.resolve(entry.getKey());
         logger.info("Downloading remote metrics from: {} to: {}", fromRemote, toLocal);
         new RemoteFolder(entry.getValue(), null, fromRemote.toString()).downloadTo(toLocal);
@@ -134,7 +137,8 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     for (Map.Entry<String, AgentExecutor> entry : executors.entrySet()) {
       try {
         // a way to grab a path remotely from an OS (win or lin) and transfer it locally
-        UniversalPath metricsPath = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getWorkingPath().resolve(HardwareMetricsCollector.METRICS_DIRECTORY)));
+        final InstanceId localInstanceId = instanceId;
+        UniversalPath metricsPath = entry.getValue().execute(() -> UniversalPath.fromLocalPath(getMetricsPath(localInstanceId)));
         RemoteFolder remoteFolder = new RemoteFolder(entry.getValue(), null, metricsPath.toString());
         remoteFolder.list().forEach(remoteFile -> processor.accept(entry.getKey(), remoteFile.toTransportableFile()));
       } catch (Exception e) {
@@ -149,8 +153,12 @@ public class ClusterMonitor implements AutoCloseable, Serializable {
     }
   }
 
-  private Path getWorkingPath() {
+  private static Path getWorkingPath(InstanceId instanceId) {
     return Agent.WORK_DIR.resolve(instanceId.toString());
+  }
+
+  private static Path getMetricsPath(InstanceId instanceId) {
+    return getWorkingPath(instanceId).resolve(HardwareMetricsCollector.METRICS_DIRECTORY);
   }
 
   public boolean isMonitoringRunning(HardwareMetric metric) {

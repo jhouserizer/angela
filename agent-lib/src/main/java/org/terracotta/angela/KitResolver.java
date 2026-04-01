@@ -132,6 +132,8 @@ public abstract class KitResolver {
 
     try {
       URLConnection urlConnection = url.openConnection();
+      urlConnection.setConnectTimeout(30_000);
+      urlConnection.setReadTimeout(120_000);
       urlConnection.connect();
 
       int contentLength = urlConnection.getContentLength();
@@ -140,7 +142,7 @@ public abstract class KitResolver {
 
       long lastProgress = -1;
       try (OutputStream fos = Files.newOutputStream(dest);
-           InputStream is = url.openStream()) {
+           InputStream is = urlConnection.getInputStream()) {
         byte[] buffer = new byte[8192];
         long len = 0;
         int count;

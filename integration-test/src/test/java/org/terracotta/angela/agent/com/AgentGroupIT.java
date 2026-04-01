@@ -17,10 +17,12 @@
 package org.terracotta.angela.agent.com;
 
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.terracotta.angela.agent.Agent;
 import org.terracotta.angela.agent.client.RemoteClientManager;
 import org.terracotta.angela.agent.com.grid.ignite.IgniteSshRemoteExecutor;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
 import org.terracotta.angela.common.net.PortAllocator;
@@ -28,6 +30,8 @@ import org.terracotta.angela.common.topology.InstanceId;
 import org.terracotta.angela.common.util.HostPort;
 import org.terracotta.angela.common.util.OS;
 import org.terracotta.angela.util.SshServer;
+
+import static org.junit.Assume.assumeFalse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,8 +50,16 @@ import static org.junit.Assume.assumeThat;
 
 /**
  * @author Mathieu Carbou
+ *
+ * TODO : remove this class when the Ignite 2 provider is removed - it tests Ignite-specific agent group behaviour.
  */
 public class AgentGroupIT {
+
+  @BeforeClass
+  public static void checkProvider() {
+    assumeFalse("AgentGroupIT is Ignite-specific and cannot run with the baton provider",
+        "baton".equals(AngelaProperties.GRID_PROVIDER.getValue()));
+  }
 
   PortAllocator portAllocator = new DefaultPortAllocator();
 

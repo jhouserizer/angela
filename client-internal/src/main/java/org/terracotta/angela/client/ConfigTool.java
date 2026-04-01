@@ -65,7 +65,8 @@ public class ConfigTool implements AutoCloseable {
 
   public ToolExecutionResult executeCommand(Map<String, String> env, String... arguments) {
     logger.debug("Executing config-tool: {} on: {}", instanceId, executor.getTarget());
-    return executor.execute(() -> AgentController.getInstance().configTool(instanceId, env, arguments));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(() -> AgentController.getInstance().configTool(localInstanceId, env, arguments));
   }
 
   /**
@@ -396,7 +397,8 @@ public class ConfigTool implements AutoCloseable {
     }
     List<String> args = new ArrayList<>(Arrays.asList("activate", "-n", clusterName, "-s", terracottaServer.getHostPort()));
     logger.debug("Executing config-tool activate: {} on: {}", instanceId, executor.getTarget());
-    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().activate(instanceId, license, securityRootDirectory, tcEnv, env, args));
+    final InstanceId localInstanceId = instanceId;
+    ToolExecutionResult result = executor.execute(() -> AgentController.getInstance().activate(localInstanceId, license, securityRootDirectory, tcEnv, env, args));
     if (result.getExitStatus() != 0) {
       throw new IllegalStateException("Failed to execute config-tool activate:\n" + result);
     }
@@ -419,7 +421,8 @@ public class ConfigTool implements AutoCloseable {
     logger.info("Installing config-tool: {} on: {}", instanceId, executor.getTarget());
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    final RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installConfigTool(instanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    final InstanceId localInstanceId = instanceId;
+    final RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installConfigTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
     boolean isRemoteInstallationSuccessful = executor.execute(callable);
     if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
       try {
@@ -437,7 +440,8 @@ public class ConfigTool implements AutoCloseable {
     final Distribution distribution = configContext.getDistribution();
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
-    executor.execute(() -> AgentController.getInstance().uninstallConfigTool(instanceId, distribution, hostName, kitInstallationName));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(() -> AgentController.getInstance().uninstallConfigTool(localInstanceId, distribution, hostName, kitInstallationName));
     return this;
   }
 
@@ -512,7 +516,8 @@ public class ConfigTool implements AutoCloseable {
 
   public RemoteFolder browse(String root) {
     logger.debug("Browsing config-tool: {} on: {}", instanceId, executor.getTarget());
-    String path = executor.execute(() -> AgentController.getInstance().getConfigToolInstallPath(instanceId));
+    final InstanceId localInstanceId = instanceId;
+    String path = executor.execute(() -> AgentController.getInstance().getConfigToolInstallPath(localInstanceId));
     return new RemoteFolder(executor, path, root);
   }
 

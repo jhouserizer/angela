@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terracotta.angela.agent.com.AgentID;
 import org.terracotta.angela.agent.com.grid.GridProvider;
+import org.terracotta.angela.agent.com.grid.GridProviderFactory;
+import org.terracotta.angela.agent.com.grid.baton.BatonGridProvider;
 import org.terracotta.angela.agent.com.grid.ignite.IgniteGridProvider;
 import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.common.net.DefaultPortAllocator;
@@ -36,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 
+import static org.terracotta.angela.common.AngelaProperties.GRID_PROVIDER;
 import static org.terracotta.angela.common.AngelaProperties.getEitherOf;
 import static org.terracotta.angela.common.util.FileUtils.createAndValidateDir;
 
@@ -118,7 +121,12 @@ public class Agent implements AutoCloseable {
     }
 
     DefaultPortAllocator portAllocator = new DefaultPortAllocator();
-    Agent agent = ignite(UUID.fromString(group), instanceName, portAllocator, Arrays.asList(System.getProperty("angela.directJoin", "").split(",")));
+    String backend = GRID_PROVIDER.getValue();
+    logger.info("Using grid provider {}", backend);
+    Collection<String> peers = Arrays.asList(System.getProperty("angela.directJoin", "").split(","));
+    GridProvider gridProvider =
+        GridProviderFactory.forName(backend).create(UUID.fromString(group), instanceName, portAllocator, peers);
+    Agent agent = new Agent(UUID.fromString(group), gridProvider.getAgentID(), gridProvider);
     AgentID localAgentID = agent.getAgentID();
 
     logger.info("Agent: {} Root directory: {}", localAgentID, ROOT_DIR);
@@ -179,6 +187,17 @@ public class Agent implements AutoCloseable {
     createAndValidateDir(Agent.ROOT_DIR);
     createAndValidateDir(Agent.WORK_DIR);
     IgniteGridProvider provider = new IgniteGridProvider(group, instanceName, portAllocator, peers);
+    return new Agent(group, provider.getAgentID(), provider);
+  }
+
+  public static Agent batonOrchestrator(UUID group, PortAllocator portAllocator) {
+    return baton(group, AGENT_TYPE_ORCHESTRATOR, portAllocator, Collections.emptyList());
+  }
+
+  public static Agent baton(UUID group, String instanceName, PortAllocator portAllocator, Collection<String> peers) {
+    createAndValidateDir(Agent.ROOT_DIR);
+    createAndValidateDir(Agent.WORK_DIR);
+    BatonGridProvider provider = new BatonGridProvider(group, instanceName, portAllocator, peers);
     return new Agent(group, provider.getAgentID(), provider);
   }
 }

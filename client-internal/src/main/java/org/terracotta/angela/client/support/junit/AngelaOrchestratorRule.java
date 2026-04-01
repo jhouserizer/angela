@@ -67,6 +67,11 @@ public class AngelaOrchestratorRule extends ExtendedTestRule {
     return this;
   }
 
+  public AngelaOrchestratorRule baton() {
+    builder = builder.baton();
+    return this;
+  }
+
   public AngelaOrchestrator getAngelaOrchestrator() {
     if (angelaOrchestrator == null) {
       throw new IllegalStateException("Not initialized");

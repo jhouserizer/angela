@@ -37,6 +37,7 @@ import org.terracotta.angela.common.topology.ClientArrayTopology;
 import org.terracotta.angela.common.topology.LicenseType;
 import org.terracotta.angela.common.topology.PackageType;
 import org.terracotta.angela.common.topology.Topology;
+import org.terracotta.angela.common.AngelaProperties;
 import org.terracotta.angela.util.Versions;
 
 import java.io.File;
@@ -578,11 +579,12 @@ public class ClientIT extends BaseIT {
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(hostSerie)));
     try (ClusterFactory factory = angelaOrchestrator.newClusterFactory("ClientTest::testClientArrayHostNames", configContext)) {
       try (ClientArray clientArray = factory.clientArray(0)) {
+        final String expectedHostname = hostname;
         ClientJob clientJob = (Cluster cluster) -> {
           ClientId clientId = cluster.getClientId();
-          assertThat(clientId.getHostName(), is(hostname));
+          assertThat(clientId.getHostName(), is(expectedHostname));
           assertThat(clientId.getSymbolicName().getSymbolicName(),
-              anyOf(is(hostname + "-0"), is(hostname + "-1")));
+              anyOf(is(expectedHostname + "-0"), is(expectedHostname + "-1")));
         };
         ClientArrayFuture f = clientArray.executeOnAll(clientJob);
         f.get();
@@ -595,6 +597,7 @@ public class ClientIT extends BaseIT {
   @Test
   public void testClient_exit_1() throws Exception {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+    assumeFalse("testClient_exit checks for Ignite-specific error messages", "baton".equals(AngelaProperties.GRID_PROVIDER.getValue()));
 
     ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));
@@ -628,6 +631,7 @@ public class ClientIT extends BaseIT {
   @Test
   public void testClient_exit_2() throws Exception {
     assumeFalse("Cannot run without Ignite when using client jobs", agentID.isLocal());
+    assumeFalse("testClient_exit checks for Ignite-specific error messages", "baton".equals(AngelaProperties.GRID_PROVIDER.getValue()));
 
     ConfigurationContext configContext = customConfigurationContext()
         .clientArray(clientArray -> clientArray.clientArrayTopology(new ClientArrayTopology(newClientArrayConfig().host("my-client", hostname))));

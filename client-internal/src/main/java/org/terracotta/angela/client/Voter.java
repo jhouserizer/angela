@@ -74,7 +74,8 @@ public class Voter implements AutoCloseable {
 
   public TerracottaVoterState getTerracottaVoterState(TerracottaVoter terracottaVoter) {
     final AgentID agentID = executor.getAgentID(terracottaVoter.getHostName());
-    return executor.execute(agentID, () -> AgentController.getInstance().getVoterState(instanceId, terracottaVoter));
+    final InstanceId localInstanceId = instanceId;
+    return executor.execute(agentID, () -> AgentController.getInstance().getVoterState(localInstanceId, terracottaVoter));
   }
 
   public Voter startAll() {
@@ -91,7 +92,8 @@ public class Voter implements AutoCloseable {
   public Voter start(TerracottaVoter terracottaVoter, Map<String, String> envOverrides) {
     final AgentID agentID = executor.getAgentID(terracottaVoter.getHostName());
     logger.info("Starting voter: {} on: {}", instanceId, agentID);
-    executor.execute(agentID, () -> AgentController.getInstance().startVoter(instanceId, terracottaVoter, envOverrides));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(agentID, () -> AgentController.getInstance().startVoter(localInstanceId, terracottaVoter, envOverrides));
     return this;
   }
 
@@ -121,7 +123,8 @@ public class Voter implements AutoCloseable {
     }
     final AgentID agentID = executor.getAgentID(terracottaVoter.getHostName());
     logger.info("Stopping Voter: {} on: {}", instanceId, agentID);
-    executor.execute(agentID, () -> AgentController.getInstance().stopVoter(instanceId, terracottaVoter));
+    final InstanceId localInstanceId = instanceId;
+    executor.execute(agentID, () -> AgentController.getInstance().stopVoter(localInstanceId, terracottaVoter));
     return this;
   }
 
@@ -157,7 +160,8 @@ public class Voter implements AutoCloseable {
     final AgentID agentID = executor.getAgentID(terracottaVoter.getHostName());
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installVoter(instanceId, terracottaVoter, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
+    final InstanceId localInstanceId = instanceId;
+    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installVoter(localInstanceId, terracottaVoter, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
 
     logger.info("Installing Voter: {} on: {}", instanceId, agentID);
 
@@ -191,8 +195,8 @@ public class Voter implements AutoCloseable {
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     logger.info("Uninstalling Voter: {} from: {}", instanceId, agentID);
-
-    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallVoter(instanceId, distribution, terracottaVoter, kitInstallationName);
+    final InstanceId localInstanceId = instanceId;
+    RemoteRunnable uninstaller = () -> AgentController.getInstance().uninstallVoter(localInstanceId, distribution, terracottaVoter, kitInstallationName);
     executor.execute(agentID, uninstaller);
   }
 }

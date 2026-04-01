@@ -86,6 +86,9 @@ public enum AngelaProperties {
   JAVA_VENDOR("angela.java.vendor", "zulu"),
   JAVA_VERSION("angela.java.version", "1.11"),
   JAVA_OPTS("angela.java.opts", "-Djdk.security.allowNonCaAnchor=false"),
+
+  // grid provider backend: "ignite2" (default) or "baton"
+  GRID_PROVIDER("angela.grid.provider", "ignite2"),
   ;
 
   private static final Logger logger = LoggerFactory.getLogger(AngelaProperties.class);
