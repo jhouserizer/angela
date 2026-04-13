@@ -770,6 +770,7 @@ public class Distribution107Controller extends DistributionController {
     addOptionIfNotNull(options, optionResolver.apply(ServerOption.CLIENT_RECONNECT_WINDOW), server.getClientReconnectWindow());
     addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_BACKUP_DIR), server.getBackupDir());
 
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.SECURITY_LOG_DIR), server.getSecurityLogDir());
     addOptionIfNotNull(options, optionResolver.apply(ServerOption.SECURITY_AUTHC), server.getAuthc());
 
     if (server.getSecurityDir() != null) {

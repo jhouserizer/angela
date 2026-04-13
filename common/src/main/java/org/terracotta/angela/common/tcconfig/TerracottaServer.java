@@ -60,6 +60,7 @@ public class TerracottaServer implements Serializable {
   private String clientReconnectWindow;
   private String auditLogDir;
   private SecurityRootDirectory securityDir;
+  private String securityLogDir;
   private String authc;
   private boolean sslTls;
   private boolean whitelist;
@@ -183,6 +184,11 @@ public class TerracottaServer implements Serializable {
 
   public TerracottaServer securityDir(Path securityDir) {
     this.securityDir = SecurityRootDirectory.securityRootDirectory(securityDir);
+    return this;
+  }
+
+  public TerracottaServer securityLogDir(String securityLogDir) {
+    this.securityLogDir = securityLogDir;
     return this;
   }
 
@@ -349,6 +355,10 @@ public class TerracottaServer implements Serializable {
     return securityDir;
   }
 
+  public String getSecurityLogDir() {
+    return securityLogDir;
+  }
+
   public String getAuthc() {
     return authc;
   }
@@ -444,6 +454,7 @@ public class TerracottaServer implements Serializable {
         Objects.equals(clientReconnectWindow, that.clientReconnectWindow) &&
         Objects.equals(auditLogDir, that.auditLogDir) &&
         Objects.equals(securityDir, that.securityDir) &&
+        Objects.equals(securityLogDir, that.securityLogDir) &&
         Objects.equals(authc, that.authc) &&
         Objects.equals(relayHostName, that.relayHostName) &&
         Objects.equals(replicaHostName, that.replicaHostName);
@@ -453,7 +464,7 @@ public class TerracottaServer implements Serializable {
   public int hashCode() {
     return Objects.hash(serverSymbolicName, hostName, id, tsaPort, tsaGroupPort, managementPort, jmxPort, proxyPort,
         bindAddress, groupBindAddress, configRepo, configFile, logs, metaData, dataDir, offheap, failoverPriority,
-        clientLeaseDuration, properties, backupDir, clientReconnectWindow, auditLogDir, securityDir, authc, sslTls, whitelist,
+        clientLeaseDuration, properties, backupDir, clientReconnectWindow, auditLogDir, securityDir, securityLogDir, authc, sslTls, whitelist,
         relay, replicaHostName, replicaPort, replica, relayHostName, relayPort, relayGroupPort);
   }
 }

@@ -43,6 +43,7 @@ public enum ServerOption {
   NODE_BACKUP_DIR("-b", "-backup-dir"),
   SECURITY_DIR("-x", "-security-dir"),
   SECURITY_AUDIT_LOG_DIR("-u", "-audit-log-dir"),
+  SECURITY_LOG_DIR(null, "-security-log-dir"),
   SECURITY_AUTHC("-z", "-authc"),
   SECURITY_SSL_TLS("-t", "-ssl-tls"),
   SECURITY_WHITELIST("-w", "-whitelist"),
