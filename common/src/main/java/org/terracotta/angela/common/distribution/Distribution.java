@@ -91,7 +91,12 @@ public class Distribution implements Serializable {
       return distributionControllerType;
     }
 
-    // 11.x, 12.x and above => TCDB
+    // 12.1 and above => TCDB
+    if (version.getMajor() > 12 || (version.getMajor() == 12 && version.getMinor() >= 1)) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution121InlineController.class : Distribution121Controller.class;
+    }
+
+    // 11.x, 12.0 and above => TCDB
     if (version.getMajor() >= 11) {
       return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
     }
@@ -106,7 +111,12 @@ public class Distribution implements Serializable {
       return Distribution102Controller.class;
     }
 
-    // 5.7, 5.8, 5.9, 5.10, 5.11 and above => platform layout and test kit
+    // 5.11 and above => platform layout and test kit
+    if (version.getMajor() == 5 && version.getMinor() >= 11) {
+      return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution121InlineController.class : Distribution121Controller.class;
+    }
+
+    // 5.7, 5.8, 5.9, 5.10 and above => platform layout and test kit
     if (version.getMajor() == 5 && version.getMinor() >= 7) {
       return runtimeOptions.contains(RuntimeOption.INLINE_SERVERS) ? Distribution107InlineController.class : Distribution107Controller.class;
     }

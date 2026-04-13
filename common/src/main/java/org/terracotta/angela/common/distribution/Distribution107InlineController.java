@@ -212,133 +212,134 @@ public class Distribution107InlineController extends Distribution107Controller {
     }
   }
 
-  private List<String> addServerHome(List<String> options, File workingDir) {
+  protected List<String> addServerHome(List<String> options, File workingDir) {
     ArrayList<String> args = new ArrayList<>(options.size() + 2);
-    args.add("--server-home");
+    args.add(ServerOption.NODE_HOME_DIR.getDeprecatedOption());
     args.add(workingDir.toString());
     args.addAll(options);
     return Collections.unmodifiableList(args);
   }
 
-  private List<String> addOptions(TerracottaServer server, File workingDir) {
+  @Override
+  protected List<String> addOptions(TerracottaServer server, File workingDir) {
     List<String> options = new ArrayList<>();
     Path working = workingDir.toPath();
 
-    options.add("--server-home");
+    options.add(ServerOption.NODE_HOME_DIR.getDeprecatedOption());
     options.add(working.toString());
 
     if (server.getConfigFile() != null) {
-      options.add("-f");
+      options.add(ServerOption.CONFIG_FILE.getDeprecatedOption());
       options.add(server.getConfigFile());
     } else {
       // Add server name only if config file option wasn't provided
-      options.add("-n");
+      options.add(ServerOption.NODE_NAME.getDeprecatedOption());
       options.add(server.getServerSymbolicName().getSymbolicName());
     }
 
     // Add hostname
-    options.add("-s");
+    options.add(ServerOption.NODE_HOSTNAME.getDeprecatedOption());
     options.add(server.getHostName());
 
     if (server.getTsaPort() != 0) {
-      options.add("-p");
+      options.add(ServerOption.NODE_PORT.getDeprecatedOption());
       options.add(String.valueOf(server.getTsaPort()));
     }
 
     if (server.getTsaGroupPort() != 0) {
-      options.add("-g");
+      options.add(ServerOption.NODE_GROUP_PORT.getDeprecatedOption());
       options.add(String.valueOf(server.getTsaGroupPort()));
     }
 
     if (server.getBindAddress() != null) {
-      options.add("-a");
+      options.add(ServerOption.NODE_BIND_ADDRESS.getDeprecatedOption());
       options.add(server.getBindAddress());
     }
 
     if (server.getGroupBindAddress() != null) {
-      options.add("-A");
+      options.add(ServerOption.NODE_GROUP_BIND_ADDRESS.getDeprecatedOption());
       options.add(server.getGroupBindAddress());
     }
 
     if (server.getConfigRepo() != null) {
-      options.add("-r");
+      options.add(ServerOption.NODE_CONFIG_DIR.getDeprecatedOption());
       options.add(server.getConfigRepo());
     }
 
     if (server.getMetaData() != null) {
-      options.add("-m");
+      options.add(ServerOption.NODE_METADATA_DIR.getDeprecatedOption());
       options.add(server.getMetaData());
     }
 
     if (server.getDataDir().size() != 0) {
-      options.add("-d");
+      options.add(ServerOption.DATA_DIRS.getDeprecatedOption());
       options.add(server.getDataDir().stream().collect(Collectors.joining(",")));
     }
 
     if (server.getOffheap().size() != 0) {
-      options.add("-o");
+      options.add(ServerOption.OFFHEAP_RESOURCES.getDeprecatedOption());
       options.add(join(",", server.getOffheap()));
     }
 
     if (server.getLogs() != null) {
-      options.add("-L");
+      options.add(ServerOption.NODE_LOG_DIR.getDeprecatedOption());
       options.add(server.getLogs());
     }
 
     if (server.getFailoverPriority() != null) {
-      options.add("-y");
+      options.add(ServerOption.FAILOVER_PRIORITY.getDeprecatedOption());
       options.add(server.getFailoverPriority());
     }
 
     if (server.getClientLeaseDuration() != null) {
-      options.add("-i");
+      options.add(ServerOption.CLIENT_LEASE_DURATION.getDeprecatedOption());
       options.add(server.getClientLeaseDuration());
     }
 
     if (server.getClientReconnectWindow() != null) {
-      options.add("-R");
+      options.add(ServerOption.CLIENT_RECONNECT_WINDOW.getDeprecatedOption());
       options.add(server.getClientReconnectWindow());
     }
 
     if (server.getBackupDir() != null) {
-      options.add("-b");
+      options.add(ServerOption.NODE_BACKUP_DIR.getDeprecatedOption());
       options.add(server.getBackupDir());
     }
 
     if (server.getAuditLogDir() != null) {
-      options.add("-u");
+      options.add(ServerOption.SECURITY_AUDIT_LOG_DIR.getDeprecatedOption());
       options.add(server.getAuditLogDir());
     }
 
     if (server.getAuthc() != null) {
-      options.add("-z");
+      options.add(ServerOption.SECURITY_AUTHC.getDeprecatedOption());
       options.add(server.getAuthc());
     }
 
     if (server.getSecurityDir() != null) {
-      options.add("-x");
+      options.add(ServerOption.SECURITY_DIR.getDeprecatedOption());
       Path securityRootDirectoryPath = workingDir.toPath().resolve("security-root-directory-" + server.getServerSymbolicName().getSymbolicName());
       server.getSecurityDir().createSecurityRootDirectory(securityRootDirectoryPath);
       options.add(securityRootDirectoryPath.toString());
     }
 
     if (server.isSslTls()) {
-      options.add("-t");
+      options.add(ServerOption.SECURITY_SSL_TLS.getDeprecatedOption());
       options.add("true");
     }
 
     if (server.isWhitelist()) {
-      options.add("-w");
+      options.add(ServerOption.SECURITY_WHITELIST.getDeprecatedOption());
       options.add("true");
     }
 
     if (server.getProperties() != null) {
-      options.add("-T");
+      options.add(ServerOption.TC_PROPERTIES.getDeprecatedOption());
       options.add(server.getProperties());
     }
 
     if (server.getClusterName() != null) {
-      options.add("-N");
+      options.add(ServerOption.CLUSTER_NAME.getDeprecatedOption());
       options.add(server.getClusterName());
     }
 
