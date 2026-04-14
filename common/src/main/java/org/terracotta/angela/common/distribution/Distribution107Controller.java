@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.io.File.separator;
@@ -439,123 +440,123 @@ public class Distribution107Controller extends DistributionController {
     return command;
   }
 
-  private List<String> addOptions(TerracottaServer server, File workingDir) throws IOException {
+  protected List<String> addOptions(TerracottaServer server, File workingDir) throws IOException {
     List<String> options = new ArrayList<>();
 
     if (server.getConfigFile() != null) {
-      options.add("-f");
+      options.add(ServerOption.CONFIG_FILE.getDeprecatedOption());
       options.add(server.getConfigFile());
     } else {
       // Add server name only if config file option wasn't provided
-      options.add("-n");
+      options.add(ServerOption.NODE_NAME.getDeprecatedOption());
       options.add(server.getServerSymbolicName().getSymbolicName());
     }
 
     // Add hostname
-    options.add("-s");
+    options.add(ServerOption.NODE_HOSTNAME.getDeprecatedOption());
     options.add(server.getHostName());
 
     if (server.getTsaPort() != 0) {
-      options.add("-p");
+      options.add(ServerOption.NODE_PORT.getDeprecatedOption());
       options.add(String.valueOf(server.getTsaPort()));
     }
 
     if (server.getTsaGroupPort() != 0) {
-      options.add("-g");
+      options.add(ServerOption.NODE_GROUP_PORT.getDeprecatedOption());
       options.add(String.valueOf(server.getTsaGroupPort()));
     }
 
     if (server.getBindAddress() != null) {
-      options.add("-a");
+      options.add(ServerOption.NODE_BIND_ADDRESS.getDeprecatedOption());
       options.add(server.getBindAddress());
     }
 
     if (server.getGroupBindAddress() != null) {
-      options.add("-A");
+      options.add(ServerOption.NODE_GROUP_BIND_ADDRESS.getDeprecatedOption());
       options.add(server.getGroupBindAddress());
     }
 
     if (server.getConfigRepo() != null) {
-      options.add("-r");
+      options.add(ServerOption.NODE_CONFIG_DIR.getDeprecatedOption());
       options.add(server.getConfigRepo());
     }
 
     if (server.getMetaData() != null) {
-      options.add("-m");
+      options.add(ServerOption.NODE_METADATA_DIR.getDeprecatedOption());
       options.add(server.getMetaData());
     }
 
     if (server.getDataDir().size() != 0) {
-      options.add("-d");
+      options.add(ServerOption.DATA_DIRS.getDeprecatedOption());
       options.add(join(",", server.getDataDir()));
     }
 
     if (server.getOffheap().size() != 0) {
-      options.add("-o");
+      options.add(ServerOption.OFFHEAP_RESOURCES.getDeprecatedOption());
       options.add(join(",", server.getOffheap()));
     }
 
     if (server.getLogs() != null) {
-      options.add("-L");
+      options.add(ServerOption.NODE_LOG_DIR.getDeprecatedOption());
       options.add(server.getLogs());
     }
 
     if (server.getFailoverPriority() != null) {
-      options.add("-y");
+      options.add(ServerOption.FAILOVER_PRIORITY.getDeprecatedOption());
       options.add(server.getFailoverPriority());
     }
 
     if (server.getClientLeaseDuration() != null) {
-      options.add("-i");
+      options.add(ServerOption.CLIENT_LEASE_DURATION.getDeprecatedOption());
       options.add(server.getClientLeaseDuration());
     }
 
     if (server.getClientReconnectWindow() != null) {
-      options.add("-R");
+      options.add(ServerOption.CLIENT_RECONNECT_WINDOW.getDeprecatedOption());
       options.add(server.getClientReconnectWindow());
     }
 
     if (server.getBackupDir() != null) {
-      options.add("-b");
+      options.add(ServerOption.NODE_BACKUP_DIR.getDeprecatedOption());
       options.add(server.getBackupDir());
     }
 
     if (server.getAuditLogDir() != null) {
-      options.add("-u");
+      options.add(ServerOption.SECURITY_AUDIT_LOG_DIR.getDeprecatedOption());
       String auditPath = workingDir.getAbsolutePath() + separatorChar + "audit-" + server.getServerSymbolicName().getSymbolicName();
       Files.createDirectories(Paths.get(auditPath));
       options.add(auditPath);
     }
 
     if (server.getAuthc() != null) {
-      options.add("-z");
+      options.add(ServerOption.SECURITY_AUTHC.getDeprecatedOption());
       options.add(server.getAuthc());
     }
 
     if (server.getSecurityDir() != null) {
-      options.add("-x");
+      options.add(ServerOption.SECURITY_DIR.getDeprecatedOption());
       Path securityRootDirectoryPath = workingDir.toPath().resolve("security-root-directory-" + server.getServerSymbolicName().getSymbolicName());
       server.getSecurityDir().createSecurityRootDirectory(securityRootDirectoryPath);
       options.add(securityRootDirectoryPath.toString());
     }
 
     if (server.isSslTls()) {
-      options.add("-t");
+      options.add(ServerOption.SECURITY_SSL_TLS.getDeprecatedOption());
       options.add("true");
     }
 
     if (server.isWhitelist()) {
-      options.add("-w");
+      options.add(ServerOption.SECURITY_WHITELIST.getDeprecatedOption());
       options.add("true");
     }
 
     if (server.getProperties() != null) {
-      options.add("-T");
+      options.add(ServerOption.TC_PROPERTIES.getDeprecatedOption());
       options.add(server.getProperties());
     }
 
     if (server.getClusterName() != null) {
-      options.add("-N");
+      options.add(ServerOption.CLUSTER_NAME.getDeprecatedOption());
       options.add(server.getClusterName());
     }
 
@@ -727,5 +728,102 @@ public class Distribution107Controller extends DistributionController {
   @Override
   public void prepareTMS(File kitDir, File workingDir, TmsServerSecurityConfig tmsServerSecurityConfig) {
     prepareTMS(new Properties(), new File(workingDir, "tms.custom.properties"), tmsServerSecurityConfig, workingDir);
+  }
+
+  protected List<String> getCommonOptions(TerracottaServer server, File workingDir, Function<ServerOption, String> optionResolver) {
+    List<String> options = new ArrayList<>();
+
+    if (server.getConfigFile() != null) {
+      options.add(optionResolver.apply(ServerOption.CONFIG_FILE));
+      options.add(server.getConfigFile());
+    } else {
+      // Add server name only if config file option wasn't provided
+      options.add(optionResolver.apply(ServerOption.NODE_NAME));
+      options.add(server.getServerSymbolicName().getSymbolicName());
+    }
+
+    // Add hostname
+    options.add(optionResolver.apply(ServerOption.NODE_HOSTNAME));
+    options.add(server.getHostName());
+
+    addOptionIfNotZero(options, optionResolver.apply(ServerOption.NODE_PORT), server.getTsaPort());
+    addOptionIfNotZero(options, optionResolver.apply(ServerOption.NODE_GROUP_PORT), server.getTsaGroupPort());
+
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_BIND_ADDRESS), server.getBindAddress());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_GROUP_BIND_ADDRESS), server.getGroupBindAddress());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_CONFIG_DIR), server.getConfigRepo());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_METADATA_DIR), server.getMetaData());
+
+    if (!server.getDataDir().isEmpty()) {
+      options.add(optionResolver.apply(ServerOption.DATA_DIRS));
+      options.add(join(",", server.getDataDir()));
+    }
+
+    if (!server.getOffheap().isEmpty()) {
+      options.add(ServerOption.OFFHEAP_RESOURCES.getOption());
+      options.add(join(",", server.getOffheap()));
+    }
+
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_LOG_DIR), server.getLogs());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.FAILOVER_PRIORITY), server.getFailoverPriority());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.CLIENT_LEASE_DURATION), server.getClientLeaseDuration());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.CLIENT_RECONNECT_WINDOW), server.getClientReconnectWindow());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.NODE_BACKUP_DIR), server.getBackupDir());
+
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.SECURITY_LOG_DIR), server.getSecurityLogDir());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.SECURITY_AUTHC), server.getAuthc());
+
+    if (server.getSecurityDir() != null) {
+      options.add(optionResolver.apply(ServerOption.SECURITY_DIR));
+      Path securityRootDirectoryPath = workingDir.toPath().resolve("security-root-directory-" + server.getServerSymbolicName().getSymbolicName());
+      server.getSecurityDir().createSecurityRootDirectory(securityRootDirectoryPath);
+      options.add(securityRootDirectoryPath.toString());
+    }
+
+    addOptionIfTrue(options, optionResolver.apply(ServerOption.SECURITY_SSL_TLS), server.isSslTls());
+    addOptionIfTrue(options, optionResolver.apply(ServerOption.SECURITY_WHITELIST), server.isWhitelist());
+
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.TC_PROPERTIES), server.getProperties());
+    addOptionIfNotNull(options, optionResolver.apply(ServerOption.CLUSTER_NAME), server.getClusterName());
+
+    options.addAll(getRelayReplicaOptions(server));
+
+    return options;
+  }
+
+  protected static List<String> getRelayReplicaOptions(TerracottaServer server) {
+    List<String> options = new ArrayList<>();
+    // no validation performed here, we want to delegate server startup for validation
+    addOptionIfTrue(options, ServerOption.RELAY.getOption(), server.isRelay());
+    addOptionIfNotNull(options, ServerOption.REPLICA_HOSTNAME.getOption(), server.getReplicaHostName());
+    addOptionIfNotZero(options, ServerOption.REPLICA_PORT.getOption(), server.getReplicaPort());
+
+    addOptionIfTrue(options, ServerOption.REPLICA.getOption(), server.isReplica());
+    addOptionIfNotNull(options, ServerOption.RELAY_HOSTNAME.getOption(), server.getRelayHostName());
+    addOptionIfNotZero(options, ServerOption.RELAY_PORT.getOption(), server.getRelayPort());
+    addOptionIfNotZero(options, ServerOption.RELAY_GROUP_PORT.getOption(), server.getRelayGroupPort());
+
+    return options;
+  }
+
+  protected static void addOptionIfNotNull(List<String> options, String option, String value) {
+    if (value != null) {
+      options.add(option);
+      options.add(value);
+    }
+  }
+
+  protected static void addOptionIfNotZero(List<String> options, String option, int value) {
+    if (value != 0) {
+      options.add(option);
+      options.add(String.valueOf(value));
+    }
+  }
+
+  protected static void addOptionIfTrue(List<String> options, String option, boolean value) {
+    if (value) {
+      options.add(option);
+      options.add("true");
+    }
   }
 }
