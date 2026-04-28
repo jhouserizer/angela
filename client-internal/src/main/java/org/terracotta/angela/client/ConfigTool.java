@@ -422,15 +422,19 @@ public class ConfigTool implements AutoCloseable {
     final String hostName = configContext.getHostName();
     final String kitInstallationName = localKitManager.getKitInstallationName();
     final InstanceId localInstanceId = instanceId;
-    final RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installConfigTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = executor.execute(callable);
-    if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
-      try {
-        executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
-        executor.execute(callable);
-      } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + hostName, e);
+    if (kitInstallationPath == null || KIT_COPY.getBooleanValue()) {
+      final RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installConfigTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, null);
+      boolean isRemoteInstallationSuccessful = executor.execute(callable);
+      if (!isRemoteInstallationSuccessful) {
+        try {
+          executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+          executor.execute(callable);
+        } catch (Exception e) {
+          throw new RuntimeException("Cannot upload kit to " + hostName, e);
+        }
       }
+    } else {
+      executor.execute(() -> AgentController.getInstance().installConfigTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath));
     }
     return this;
   }
