@@ -19,8 +19,6 @@ package org.terracotta.angela.common.metrics;
 public enum HardwareMetric {
 
     CPU(new MonitoringCommand("mpstat",
-        "-P", // Specify the processors
-        "ALL", // Specify ALL processors - duh!
         "10")),
     DISK(new MonitoringCommand( "iostat",
         "-h", // Human-readable output

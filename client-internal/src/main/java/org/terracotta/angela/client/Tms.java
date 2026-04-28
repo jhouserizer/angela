@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static org.terracotta.angela.common.AngelaProperties.KIT_COPY;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_DIR;
 import static org.terracotta.angela.common.AngelaProperties.KIT_INSTALLATION_PATH;
 import static org.terracotta.angela.common.AngelaProperties.OFFLINE;
@@ -190,16 +191,19 @@ public class Tms implements AutoCloseable {
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     final InstanceId localInstanceId = instanceId;
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(localInstanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
-
-    if (!isRemoteInstallationSuccessful) {
-      try {
-        executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
-        executor.execute(agentID, callable);
-      } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + tmsHostname, e);
+    if (kitInstallationPath == null || KIT_COPY.getBooleanValue()) {
+      RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installTms(localInstanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, null);
+      boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
+      if (!isRemoteInstallationSuccessful) {
+        try {
+          executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+          executor.execute(agentID, callable);
+        } catch (Exception e) {
+          throw new RuntimeException("Cannot upload kit to " + tmsHostname, e);
+        }
       }
+    } else {
+      executor.execute(agentID, () -> AgentController.getInstance().installTms(localInstanceId, tmsHostname, distribution, license, tmsServerSecurityConfig, kitInstallationName, tcEnv, tmsHostname, kitInstallationPath));
     }
 
   }

@@ -88,15 +88,19 @@ public class RestoreTool implements AutoCloseable {
     logger.info("Installing restore-tool: {} on: {}", instanceId, executor.getTarget());
 
     final InstanceId localInstanceId = instanceId;
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
-    boolean isRemoteInstallationSuccessful = executor.execute(callable);
-    if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
-      try {
-        executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
-        executor.execute(callable);
-      } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + hostName, e);
+    if (kitInstallationPath == null || KIT_COPY.getBooleanValue()) {
+      RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installRestoreTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, null);
+      boolean isRemoteInstallationSuccessful = executor.execute(callable);
+      if (!isRemoteInstallationSuccessful) {
+        try {
+          executor.uploadKit(instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+          executor.execute(callable);
+        } catch (Exception e) {
+          throw new RuntimeException("Cannot upload kit to " + hostName, e);
+        }
       }
+    } else {
+      executor.execute(() -> AgentController.getInstance().installRestoreTool(localInstanceId, hostName, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath));
     }
     return this;
   }

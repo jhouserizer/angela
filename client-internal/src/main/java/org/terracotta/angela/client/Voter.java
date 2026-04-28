@@ -161,18 +161,21 @@ public class Voter implements AutoCloseable {
     final String kitInstallationName = localKitManager.getKitInstallationName();
 
     final InstanceId localInstanceId = instanceId;
-    RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installVoter(localInstanceId, terracottaVoter, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath);
-
     logger.info("Installing Voter: {} on: {}", instanceId, agentID);
 
-    boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
-    if (!isRemoteInstallationSuccessful && (kitInstallationPath == null || !KIT_COPY.getBooleanValue())) {
-      try {
-        executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
-        executor.execute(agentID, callable);
-      } catch (Exception e) {
-        throw new RuntimeException("Cannot upload kit to " + terracottaVoter.getHostName(), e);
+    if (kitInstallationPath == null || KIT_COPY.getBooleanValue()) {
+      RemoteCallable<Boolean> callable = () -> AgentController.getInstance().installVoter(localInstanceId, terracottaVoter, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, null);
+      boolean isRemoteInstallationSuccessful = executor.execute(agentID, callable);
+      if (!isRemoteInstallationSuccessful) {
+        try {
+          executor.uploadKit(agentID, instanceId, distribution, kitInstallationName, localKitManager.getKitInstallationPath());
+          executor.execute(agentID, callable);
+        } catch (Exception e) {
+          throw new RuntimeException("Cannot upload kit to " + terracottaVoter.getHostName(), e);
+        }
       }
+    } else {
+      executor.execute(agentID, () -> AgentController.getInstance().installVoter(localInstanceId, terracottaVoter, distribution, license, kitInstallationName, securityRootDirectory, tcEnv, kitInstallationPath));
     }
   }
 

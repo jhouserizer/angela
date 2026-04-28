@@ -32,6 +32,7 @@ import org.terracotta.angela.common.TerracottaCommandLineEnvironment;
 import org.terracotta.angela.common.TerracottaServerState;
 import org.terracotta.angela.common.distribution.Distribution;
 import org.terracotta.angela.common.net.PortAllocator;
+import org.terracotta.angela.common.util.IpUtils;
 import org.terracotta.angela.common.provider.ConfigurationManager;
 import org.terracotta.angela.common.provider.TcConfigManager;
 import org.terracotta.angela.common.tcconfig.License;
@@ -174,6 +175,11 @@ public class Tsa implements AutoCloseable {
     } else {
       // We are trying to reuse the "kitInstallationPath" if provided (kitInstallationPath != null)
       // To end up here, KIT_COPY should be false
+      if (!IpUtils.areAllLocal(Collections.singleton(terracottaServer.getHostName()))) {
+        logger.warn("kitInstallationPath is set to '{}' but kitCopy is false: Angela will NOT upload the kit to remote host '{}'. " +
+            "The kit must already be present at that exact path on the remote host, or the installation will fail. " +
+            "Set -DkitCopy=true to have Angela copy the kit automatically.", kitInstallationPath, terracottaServer.getHostName());
+      }
       executor.execute(agentID, () -> AgentController.getInstance().installTsa(localInstanceId, terracottaServer, license, kitInstallationName, distribution, topology, kitInstallationPath));
     }
   }
