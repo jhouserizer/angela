@@ -198,31 +198,27 @@ public class Distribution43Controller extends DistributionController {
 
   private Number findWithJcmdJavaPidOf(String serverUuid, TerracottaCommandLineEnvironment tcEnv) {
     Path javaHome = tcEnv.getJavaHome();
-
-    Path path = JavaBinaries.find("jcmd", javaHome).orElseThrow(() -> new IllegalStateException("jcmd not found"));
-
-    List<String> cmdLine = new ArrayList<>();
-    cmdLine.add(path.toAbsolutePath().toString());
-    cmdLine.add("com.tc.server.TCServerMain");
-    cmdLine.add("VM.system_properties");
+    Path jcmd = JavaBinaries.find("jcmd", javaHome).orElse(null);
+    if (jcmd == null) {
+      logger.warn("jcmd not found in {}, relying on process command line scanning to find the server pid", javaHome);
+    }
 
     final int retries = 100;
     for (int i = 0; i < retries; i++) {
-      ProcessResult processResult;
-      try {
-        processResult = new ProcessExecutor(cmdLine)
-            .redirectErrorStream(true)
-            .readOutput(true)
-            .execute();
-      } catch (Exception e) {
-        logger.warn("Unable to get server pid with jcmd", e);
-        return null;
-      }
+      boolean lastAttempt = i == retries - 1;
 
-      if (processResult.getExitValue() == 0) {
-        List<String> lines = processResult.getOutput().getLines();
-        Number pid = parseOutputAndFindUuid(lines, serverUuid);
-        if (pid != null) return pid;
+      Number pid = null;
+      if (jcmd != null) {
+        pid = findPidWithJcmdSystemProperties(jcmd, serverUuid, lastAttempt);
+        if (pid == null) {
+          pid = findPidWithJcmdList(jcmd, serverUuid, lastAttempt);
+        }
+      }
+      if (pid == null) {
+        pid = findPidFromProcessCommandLines(serverUuid);
+      }
+      if (pid != null) {
+        return pid;
       }
 
       try {
@@ -230,18 +226,60 @@ public class Distribution43Controller extends DistributionController {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-
-      // warn on the last loop
-      if (i == (retries - 1)) {
-        logger.warn("Unable to get server pid with jcmd (rc={})", processResult.getExitValue());
-        logger.warn("{}", processResult.getOutput().getString());
-      }
     }
 
+    logger.warn("Unable to find the pid of the server JVM with identifier {}", serverUuid);
     return null;
   }
 
-  private Number parseOutputAndFindUuid(List<String> lines, String serverUuid) {
+  private Number findPidWithJcmdSystemProperties(Path jcmd, String serverUuid, boolean logFailure) {
+    ProcessResult processResult = executeForOutput(logFailure, jcmd.toAbsolutePath().toString(), "com.tc.server.TCServerMain", "VM.system_properties");
+    if (processResult == null) {
+      return null;
+    }
+    if (processResult.getExitValue() != 0) {
+      // rc != 0 either when no JVM runs TCServerMain yet, or when the JVM does not implement
+      // the VM.system_properties diagnostic command (OpenJ9 / IBM Semeru)
+      if (logFailure) {
+        logger.warn("Unable to get server pid with jcmd (rc={})", processResult.getExitValue());
+        logger.warn("{}", processResult.getOutput().getString());
+      }
+      return null;
+    }
+    return parseSystemPropertiesOutputAndFindUuid(processResult.getOutput().getLines(), serverUuid);
+  }
+
+  private Number findPidWithJcmdList(Path jcmd, String serverUuid, boolean logFailure) {
+    ProcessResult processResult = executeForOutput(logFailure, jcmd.toAbsolutePath().toString(), "-l");
+    if (processResult == null || processResult.getExitValue() != 0) {
+      return null;
+    }
+    return parseJcmdListOutputAndFindUuid(processResult.getOutput().getLines(), serverUuid);
+  }
+
+  private Number findPidFromProcessCommandLines(String serverUuid) {
+    return ProcessHandle.allProcesses()
+        .filter(process -> isServerCommandLineWithUuid(process.info().commandLine().orElse(""), serverUuid))
+        .map(ProcessHandle::pid)
+        .findFirst()
+        .orElse(null);
+  }
+
+  private ProcessResult executeForOutput(boolean logFailure, String... cmdLine) {
+    try {
+      return new ProcessExecutor(cmdLine)
+          .redirectErrorStream(true)
+          .readOutput(true)
+          .execute();
+    } catch (Exception e) {
+      if (logFailure) {
+        logger.warn("Unable to execute {}", String.join(" ", cmdLine), e);
+      }
+      return null;
+    }
+  }
+
+  static Number parseSystemPropertiesOutputAndFindUuid(List<String> lines, String serverUuid) {
     int pid = 0;
     for (String line : lines) {
       if (line.endsWith(":")) {
@@ -259,6 +297,32 @@ public class Distribution43Controller extends DistributionController {
     }
     logger.warn("Unable to parse jcmd output: {} to find serverUuid {}", lines, serverUuid);
     return null;
+  }
+
+  static Number parseJcmdListOutputAndFindUuid(List<String> lines, String serverUuid) {
+    for (String line : lines) {
+      int separator = line.indexOf(' ');
+      if (separator <= 0 || !isServerCommandLineWithUuid(line.substring(separator + 1), serverUuid)) {
+        continue;
+      }
+      try {
+        return Integer.parseInt(line.substring(0, separator));
+      } catch (NumberFormatException e) {
+        // not a "<pid> <command line>" line, skip
+      }
+    }
+    return null;
+  }
+
+  static boolean isServerCommandLineWithUuid(String commandLine, String serverUuid) {
+    String identifier = "-Dangela.processIdentifier=" + serverUuid;
+    int index = commandLine.indexOf(identifier);
+    if (index < 0) {
+      return false;
+    }
+    int end = index + identifier.length();
+    return (end == commandLine.length() || Character.isWhitespace(commandLine.charAt(end)))
+        && commandLine.contains("com.tc.server.TCServerMain");
   }
 
   @Override
