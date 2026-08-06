@@ -251,7 +251,14 @@ public class Distribution43Controller extends DistributionController {
 
   private Number findPidWithJcmdList(Path jcmd, String serverUuid, boolean logFailure) {
     ProcessResult processResult = executeForOutput(logFailure, jcmd.toAbsolutePath().toString(), "-l");
-    if (processResult == null || processResult.getExitValue() != 0) {
+    if (processResult == null) {
+      return null;
+    }
+    if (processResult.getExitValue() != 0) {
+      if (logFailure) {
+        logger.warn("Unable to list JVMs with jcmd -l (rc={})", processResult.getExitValue());
+        logger.warn("{}", processResult.getOutput().getString());
+      }
       return null;
     }
     return parseJcmdListOutputAndFindUuid(processResult.getOutput().getLines(), serverUuid);
