@@ -246,7 +246,12 @@ public class Distribution43Controller extends DistributionController {
       }
       return null;
     }
-    return parseSystemPropertiesOutputAndFindUuid(processResult.getOutput().getLines(), serverUuid);
+    List<String> lines = processResult.getOutput().getLines();
+    Number pid = parseSystemPropertiesOutputAndFindUuid(lines, serverUuid);
+    if (pid == null && logFailure) {
+      logger.warn("Unable to parse jcmd output: {} to find serverUuid {}", lines, serverUuid);
+    }
+    return pid;
   }
 
   private Number findPidWithJcmdList(Path jcmd, String serverUuid, boolean logFailure) {
@@ -302,7 +307,6 @@ public class Distribution43Controller extends DistributionController {
         return pid;
       }
     }
-    logger.warn("Unable to parse jcmd output: {} to find serverUuid {}", lines, serverUuid);
     return null;
   }
 
